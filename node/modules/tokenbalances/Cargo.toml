@@ -1,0 +1,42 @@
+[package]
+name = "tokenbalances"
+version = "0.1.0"
+authors = ["root <technical@stafi.io>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = { version = "1.0", default-features = false, optional = true }
+serde_derive = { version = "1.0", optional = true }
+safe-mix = { version = "1.0", default-features = false }
+parity-codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
+substrate-keyring = { git = "https://github.com/stafiprotocol/stafi-blockchain", optional = true }
+substrate-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+sr-std = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+sr-io = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+sr-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+srml-support = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+srml-system = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+srml-balances = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+srml-timestamp = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+
+stafi-primitives = { path = "../../primitives", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "serde/std",
+    "serde_derive",
+    "safe-mix/std",
+    "parity-codec/std",
+    "substrate-primitives/std",
+    "sr-std/std",
+    "sr-io/std",
+    "srml-support/std",
+    "sr-primitives/std",
+    "srml-system/std",
+    "srml-balances/std",
+    "stafi-primitives/std",
+    "srml-timestamp/std",
+]

@@ -1,0 +1,27 @@
+[package]
+name = "stafi-service"
+version = "0.1.0"
+authors = ["Stafi Protocol"]
+edition = "2018"
+
+[dependencies]
+hex-literal = "0.2"
+serde = { version = "1.0", features = [ "derive" ] }
+primitives = { package = "substrate-primitives", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+substrate-service = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
+chain-spec = { package = "substrate-chain-spec", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+substrate-telemetry = { package = "substrate-telemetry", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+babe-primitives = { package = "substrate-consensus-babe-primitives", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+grandpa = { package = "substrate-finality-grandpa", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+grandpa_primitives = { package = "substrate-finality-grandpa-primitives", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+im_online = { package = "srml-im-online", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+sr-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
+client = { package = "substrate-client", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+
+stafi-primitives = { path = "../primitives" }
+stafi-runtime = { path = "../runtime" }
+stafi-executor = { path = "../executor" }
+
+[dev-dependencies]
+substrate-consensus-common = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
+service-test = { package = "substrate-service-test", git = "https://github.com/stafiprotocol/stafi-blockchain" }
