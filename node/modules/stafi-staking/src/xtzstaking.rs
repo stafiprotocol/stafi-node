@@ -10,8 +10,7 @@ use sr_std::{
 use sr_primitives::traits::Hash;
 use sr_primitives::traits::CheckedAdd;
 use parity_codec::{Encode, Decode};
-use stafi_primitives::StakeTokenType;
-use stafi_primitives::Balance;
+use stafi_primitives::{Balance, StakeTokenType, constants::currency::*};
 use token_balances::Symbol;
 use log::info;
 
@@ -19,10 +18,8 @@ use log::info;
 #[cfg_attr(feature = "std", derive(Debug))]
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq)]
 pub enum XtzStakeStage {
-	// Init
+	// Init - Transfer token to multi sig address
 	Init,
-	// Transfer token to multi sig address
-	Transfering,
 	// Successful transfer
 	Completed,
 }
@@ -30,11 +27,11 @@ pub enum XtzStakeStage {
 #[cfg_attr(feature = "std", derive(Debug))]
 #[derive(Encode, Decode, Clone, PartialEq)]
 pub struct XtzStakeTokenData {
-	pub token_type: StakeTokenType,
+	// pub token_type: StakeTokenType,
 	// decimals of token
 	pub token_decimals: u32,
 	// validator
-	pub validator: Vec<u8>,
+	// pub validator: Vec<u8>,
 	// Amount of stake
 	pub stake_amount: u128,
 	// Reward of stake
@@ -44,7 +41,7 @@ pub struct XtzStakeTokenData {
 #[cfg_attr(feature = "std", derive(Debug))]
 #[derive(Encode, Decode, PartialEq)]
 pub struct XtzStakeData<AccountId, Hash> {
-	// // identifier id
+	// identifier id
 	pub id: Hash,
 	// creator of stake
 	pub initiator: AccountId,
@@ -63,10 +60,10 @@ pub struct XtzTransferData<AccountId, Hash> {
 	pub id: Hash,
 	// creator of stake
 	pub initiator: AccountId,
-	// transaction message
-	pub transfer_msg: Vec<u8>,
-	// signatures of transaction
-	pub signatures: Vec<u8>,
+	// transaction hash
+	pub tx_hash: Vec<u8>,
+	// block hash
+	pub block_hash: Vec<u8>,
 }
 
 pub trait Trait: system::Trait + session::Trait + im_online::Trait + token_balances::Trait {
@@ -80,8 +77,7 @@ decl_storage! {
 		// Just a dummy storage item.
 		pub StakeRecords get(stake_records): map (T::AccountId, T::Hash) => Option<XtzStakeData<T::AccountId, T::Hash>>;
 		pub StakeDataHashRecords get(stake_data_hash_records): map T::AccountId => Vec<T::Hash>;
-		pub TransferInitDataRecords get(transfer_init_data_records): linked_map (T::AccountId, T::Hash) => Option<XtzTransferData<T::AccountId, T::Hash>>;
-		pub TransferingDataRecords get(transfering_data_records): linked_map (T::AccountId, T::Hash) => T::AccountId;
+		pub TransferInitDataRecords get(transfer_init_data_records): linked_map Vec<u8> => Option<XtzTransferData<T::AccountId, T::Hash>>;
 	}
 }
 
@@ -93,21 +89,23 @@ decl_module! {
 		// this is needed only if you are using events in your module
 		fn deposit_event() = default;
 
-		// 
-		pub fn custom_stake(origin, multi_sig_address: Vec<u8>, stake_amount: u128, validator: Vec<u8>, transfer_msg: Vec<u8>, signatures: Vec<u8>) -> Result {
+		// Custom stake xtz
+		pub fn custom_stake(origin, multi_sig_address: Vec<u8>, stake_amount: u128, tx_hash: Vec<u8>, block_hash: Vec<u8>) -> Result {
 			let sender = ensure_signed(origin)?;
 
+			// TODO: Check multi sig address
+			// ensure!(multi_sig_address > 0, "Multi sig address is illegal");
 			ensure!(stake_amount > 0, "Stake amount must be greater than 0");
-			// // TODO: Check multi sig address
-			// ensure!(stake_amount > 0, "Multi sig address is illegal");
-
+			// TODO: Check tx hash
+			// ensure!(tx_hash, "Stake amount must be greater than 0");
+			// TODO: Check block hash
+			// ensure!(block_hash, "Stake amount must be greater than 0");
+			
 			let random_seed = <system::Module<T>>::random_seed();
             let hash = (random_seed, &sender).using_encoded(<T as system::Trait>::Hashing::hash);
 
 			let stake_token_data = XtzStakeTokenData {
-				token_type: StakeTokenType::XTZ,
 				token_decimals: 18,
-				validator: validator,
 				stake_amount: stake_amount,
 				reward_amount: 0,
 			};
@@ -127,10 +125,10 @@ decl_module! {
 			let transfer_data = XtzTransferData {
 				id: hash.clone(),
 				initiator: sender.clone(),
-				transfer_msg: transfer_msg,
-				signatures: signatures,
+				tx_hash: tx_hash.clone(),
+				block_hash: block_hash,
 			};
-			<TransferInitDataRecords<T>>::insert((sender.clone(), hash.clone()), transfer_data);
+			<TransferInitDataRecords<T>>::insert(tx_hash, transfer_data);
 
 			// here we are raising the event
 			Self::deposit_event(RawEvent::StakeInit(sender, hash));
@@ -166,7 +164,7 @@ impl<T: Trait> session::OneSessionHandler<T::AccountId> for Module<T> {
 	fn on_before_session_ending() {
 		info!("bbb {}.", 1);
 
-		Self::handle_transfering();
+		// Self::handle_transfering();
 		Self::handle_init();
 	}
 
@@ -178,36 +176,19 @@ impl<T: Trait> session::OneSessionHandler<T::AccountId> for Module<T> {
 impl<T: Trait> Module<T> {
     // 
     fn handle_init() {
-        for (key, _transfer_data) in <TransferInitDataRecords<T>>::enumerate() {
-			let account_id = &key.0;
-			let hash = &key.1;
+        for (key, transfer_data) in <TransferInitDataRecords<T>>::enumerate() {
+			let account_id = transfer_data.initiator;
+			let hash = transfer_data.id;
 
 			if let Some(mut xtz_stake_data) = Self::stake_records((account_id.clone(), hash.clone())) {
 				if xtz_stake_data.stage == XtzStakeStage::Init {
-					xtz_stake_data.stage = XtzStakeStage::Transfering;
-					<StakeRecords<T>>::insert((account_id.clone(), hash.clone()), xtz_stake_data);
-
-					<TransferInitDataRecords<T>>::remove((account_id.clone(), hash.clone()));
-					<TransferingDataRecords<T>>::insert((account_id.clone(), hash.clone()), account_id.clone());
-				}
-			}
-		}
-    }
-
-	// 
-    fn handle_transfering() {
-        for (key, _) in <TransferingDataRecords<T>>::enumerate() {
-			let account_id = &key.0;
-			let hash = &key.1;
-
-			if let Some(mut xtz_stake_data) = Self::stake_records((account_id.clone(), hash.clone())) {
-				if xtz_stake_data.stage == XtzStakeStage::Transfering {
 					xtz_stake_data.stage = XtzStakeStage::Completed;
 					<StakeRecords<T>>::insert((account_id.clone(), hash.clone()), xtz_stake_data);
-					<TransferingDataRecords<T>>::remove((account_id.clone(), hash.clone()));
+
+					<TransferInitDataRecords<T>>::remove(key);
 
 					let free_balance = <balances::Module<T>>::free_balance(account_id.clone());
-					let add_value: Balance = 10 * 1_000_000_000 * 1_000 * 1_000;
+					let add_value: Balance = 100 * DOLLARS;
 					if let Some(value) = add_value.try_into().ok() {
 						// check
 						match free_balance.checked_add(&value) {
@@ -223,5 +204,35 @@ impl<T: Trait> Module<T> {
 			}
 		}
     }
+
+	// 
+    // fn handle_transfering() {
+    //     for (key, _) in <TransferingDataRecords<T>>::enumerate() {
+	// 		let account_id = &key.0;
+	// 		let hash = &key.1;
+
+	// 		if let Some(mut xtz_stake_data) = Self::stake_records((account_id.clone(), hash.clone())) {
+	// 			if xtz_stake_data.stage == XtzStakeStage::Transfering {
+	// 				xtz_stake_data.stage = XtzStakeStage::Completed;
+	// 				<StakeRecords<T>>::insert((account_id.clone(), hash.clone()), xtz_stake_data);
+	// 				<TransferingDataRecords<T>>::remove((account_id.clone(), hash.clone()));
+
+	// 				let free_balance = <balances::Module<T>>::free_balance(account_id.clone());
+	// 				let add_value: Balance = 10 * 1_000_000_000 * 1_000 * 1_000;
+	// 				if let Some(value) = add_value.try_into().ok() {
+	// 					// check
+	// 					match free_balance.checked_add(&value) {
+	// 						Some(b) => {
+	// 							balances::FreeBalance::<T>::insert(&account_id.clone(), b)
+	// 						},
+	// 						None => (),
+	// 					};
+	// 				}
+
+	// 				token_balances::Module::<T>::add_bond_token(account_id.clone(), Symbol::XtzBond, 10).expect("Error adding xtz bond token");
+	// 			}
+	// 		}
+	// 	}
+    // }
 }
 
