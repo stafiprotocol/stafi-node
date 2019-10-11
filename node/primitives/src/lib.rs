@@ -116,4 +116,4 @@ client::decl_runtime_apis! {
 pub mod constants;
 
 pub mod stafistaking;
-pub use stafistaking::{StakeTokenType};
+pub use stafistaking::{StakeTokenType, XtzTransferData};
