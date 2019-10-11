@@ -23,7 +23,7 @@
 use stafi_staking::atomstaking as atomStaking;
 use stafi_staking::xtzstaking as xtzStaking;
 use tokenbalances;
-use stafi_externalrpc;
+use stafi_externalrpc::{irisnetrpc, tezosrpc};
 use stafi_fund;
 
 use rstd::prelude::*;
@@ -511,7 +511,10 @@ impl xtzStaking::Trait for Runtime {
 	type Event = Event;
 }
 
-impl stafi_externalrpc::Trait for Runtime {	
+impl irisnetrpc::Trait for Runtime {	
+}
+
+impl tezosrpc::Trait for Runtime {	
 }
 
 construct_runtime!(
@@ -546,7 +549,8 @@ construct_runtime!(
 		Tokenbalances: tokenbalances::{Module, Call, Storage, Event<T>},
 		Stafifund: stafi_fund::{Module, Call, Storage, Event<T>},
 		MultiSig: stafi_multisig::{Module, Call, Storage, Event<T>},
-		StafiExternalRpc: stafi_externalrpc::{Module, Call, Storage, Inherent},
+		StafiIrisnetRpc: irisnetrpc::{Module, Call, Storage, Inherent},
+		StafiTezosRpc: tezosrpc::{Module, Call, Storage, Inherent},
 	}
 );
 
