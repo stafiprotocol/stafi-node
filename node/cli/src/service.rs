@@ -221,7 +221,7 @@ macro_rules! new_full {
 
 		let _reg = inherent_data_providers.register_provider(stafi_externalrpc::irisnetrpc::InherentDataProvider::new(String::from("https://lcd.testnet.irisnet.org/"), String::from("http://127.0.0.1:9933"), SLOT_DURATION as u64)).unwrap();
 
-		let _reg_tezos = inherent_data_providers.register_provider(stafi_externalrpc::tezosrpc::InherentDataProvider::new(String::from("https://rpc.tezrpc.me/"), String::from("http://127.0.0.1:9933"), SLOT_DURATION as u64)).unwrap();
+		let _reg_tezos = inherent_data_providers.register_provider(stafi_externalrpc::tezosrpc::InherentDataProvider::new(String::from("https://tezos-test-rpc.wetez.io/"), String::from("http://127.0.0.1:9933"), SLOT_DURATION as u64)).unwrap();
 
 		Ok((service, inherent_data_providers))
 	}};

@@ -100,8 +100,6 @@ fn extract_number(result:String) -> u64 {
 
 #[cfg(feature = "std")]
 fn decode_transfer_data(data: String) -> Vec<XtzTransferData<AccountId, Hash>> {
-	//let data1 = &data[3..data.len()-1];
-
 	let data1 = hex::decode(&data[3..data.len()-1]).unwrap();
 
     let result: Vec<XtzTransferData<AccountId, Hash>> = Decode::decode(&mut &data1[..]).unwrap();
@@ -125,7 +123,7 @@ impl ProvideInherentData for InherentDataProvider {
 			return Ok(());
 		}
 
-		let txhash_list_key = get_hexkey(b"TezosRpc XtzTransferDataVec");
+		let txhash_list_key = get_hexkey(b"XtzStaking TransferInitDataRecords");
 		let transfer_data_str = get_value_from_storage(txhash_list_key, self.host.clone());
 		if transfer_data_str == "null" {
 			sr_io::print_utf8(b"transfer_data is null.");
@@ -179,7 +177,7 @@ fn request_rpc2(self_url: String, blockhash: String, txhash: String) -> Result<b
 	//for test
 	//return Ok(true);
 
-	let url = format!("{}chains/main/blocks/{}", self_url, blockhash);
+	let url = format!("{}chains/main/blocks1/{}", self_url, blockhash);
 	reqwest::get(&url[..])
 	.map_err(|error| {
 			format!("{:?}", error).into()
