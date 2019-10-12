@@ -148,7 +148,7 @@ impl ProvideInherentData for InherentDataProvider {
 				continue;
 			}
 
-			let result2 = request_rpc2(self.url.clone(), blockhash, txhash.clone()).unwrap();
+			let result2 = request_rpc2(self.url.clone(), blockhash, txhash.clone()).unwrap_or_else(|_| false);
 			if result2 {
 				let verified_data = VerifiedData {
 					tx_hash: txhash.as_bytes().to_vec()
@@ -177,7 +177,7 @@ fn request_rpc2(self_url: String, blockhash: String, txhash: String) -> Result<b
 	//for test
 	//return Ok(true);
 
-	let url = format!("{}chains/main/blocks1/{}", self_url, blockhash);
+	let url = format!("{}chains/main/blocks/{}", self_url, blockhash);
 	reqwest::get(&url[..])
 	.map_err(|error| {
 			format!("{:?}", error).into()
@@ -186,16 +186,25 @@ fn request_rpc2(self_url: String, blockhash: String, txhash: String) -> Result<b
 		.map_err(|_| {
 			"Could not get response body".into()
 		}).and_then(|body| {
-			let v: Value = serde_json::from_str(&body).unwrap();
-			let v_operations = serde_json::to_string(&v["operations"]).unwrap();
-			let v1: Value = serde_json::from_str(&v_operations).unwrap();
-			let vl1 = v1.as_array().unwrap().len();
-			let last_operation = serde_json::to_string(&v1[vl1-1]).unwrap();
-			let v2: Value = serde_json::from_str(&last_operation).unwrap();
-			let vl2 = v2.as_array().unwrap().len();
+			let v: Value = serde_json::from_str(&body).unwrap_or_else(|_| serde_json::json!({}));
+			let v_operations: Value = v["operations"].clone();
+			if v_operations.is_null() || !v_operations.is_array() {
+				return Ok(false);
+			}
+
+			let vl1 = v_operations.as_array().unwrap().len();
+			if vl1 == 0 {
+				return Ok(false);
+			}
+			
+			let last_operation: Value = v_operations[vl1-1].clone();
+			if !last_operation.is_array() {
+				return Ok(false);
+			}
+
 			let mut found = false;
-			for index in 0..vl2 {
-				let hash = serde_json::to_string(&v2[index]["hash"]).unwrap();
+			for item in last_operation.as_array().unwrap() {
+				let hash = serde_json::to_string(&item["hash"]).unwrap();
 				//sr_io::print_utf8(&hash.clone().into_bytes());	
 				if hash[1..hash.len()-1] == txhash {
 					sr_io::print_utf8(b"found tx on chian");
