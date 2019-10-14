@@ -12,6 +12,7 @@ use sr_primitives::traits::CheckedAdd;
 use parity_codec::{Encode, Decode};
 use stafi_primitives::{Balance, XtzTransferData, constants::currency::*};
 use token_balances::Symbol;
+use stafi_externalrpc::tezosrpc;
 use log::info;
 
 
@@ -66,7 +67,7 @@ pub struct XtzStakeData<AccountId, Hash> {
 // 	pub block_hash: Vec<u8>,
 // }
 
-pub trait Trait: system::Trait + session::Trait + im_online::Trait + token_balances::Trait {
+pub trait Trait: system::Trait + session::Trait + im_online::Trait + token_balances::Trait + tezosrpc::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -193,7 +194,10 @@ impl<T: Trait> Module<T> {
 			let hash = transfer_data.id;
 
 			if let Some(mut xtz_stake_data) = Self::stake_records((account_id.clone(), hash.clone())) {
-				if xtz_stake_data.stage == XtzStakeStage::Init {
+
+				let tx_check = <tezosrpc::Module<T>>::verified(transfer_data.tx_hash);
+
+				if xtz_stake_data.stage == XtzStakeStage::Init && tx_check == 1 {
 					xtz_stake_data.stage = XtzStakeStage::Completed;
 					<StakeRecords<T>>::insert((account_id.clone(), hash.clone()), xtz_stake_data);
 
