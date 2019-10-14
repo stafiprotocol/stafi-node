@@ -8,5 +8,8 @@ pub type TxHashType = Vec<u8>;
 pub struct VerifiedData {
 	// transaction hash
 	pub tx_hash: Vec<u8>,
-	
+	// time
+	pub timestamp: u64,
+	// status
+	pub status: i8,
 }
