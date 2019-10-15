@@ -9,7 +9,7 @@ use rstd::prelude::*;
 use system::{ensure_none, ensure_signed};
 use inherents::{RuntimeString, InherentIdentifier, ProvideInherent, MakeFatalError, InherentData};
 
-use stafi_primitives::{XtzTransferData, VerifiedData, TxHashType};
+use stafi_primitives::{XtzTransferData, VerifiedData, VerifyStatus, TxHashType};
 use codec::{Encode, Decode};
 
 pub mod tezos;
@@ -27,7 +27,7 @@ pub trait Trait: system::Trait { }
 decl_storage! {
 	trait Store for Module<T: Trait> as TezosRpc {
 		XtzTransferDataVec get(xtz_transfter_data_vec): Vec<XtzTransferData<T::AccountId, T::Hash>>;
-		pub Verified get(verified): map TxHashType => i8;
+		pub Verified get(verified): map TxHashType => (i8, u64);
 	}
 }
 
@@ -40,7 +40,7 @@ decl_module! {
 			<XtzTransferDataVec<T>>::put(v);	
 		}
 
-		fn set_verified(origin, txhash: TxHashType, verified: i8) {
+		fn set_verified(origin, txhash: TxHashType, verified: (i8, u64)) {
 			let _who = ensure_none(origin)?;
 			
 			if txhash != ZERO_HASH.to_vec() {
@@ -70,7 +70,9 @@ fn extract_inherent_data(data: &InherentData) -> Result<InherentType, RuntimeStr
 	} else {
 		let mut verified_data_vec:Vec<VerifiedData> = Vec::new();
 		let verified_data = VerifiedData {
-			tx_hash: ZERO_HASH.to_vec()
+			tx_hash: ZERO_HASH.to_vec(),
+			status: VerifyStatus::UnVerified as i8,
+			timestamp: 0
 		};
 		verified_data_vec.push(verified_data);
 
@@ -89,10 +91,10 @@ impl<T: Trait> ProvideInherent for Module<T> {
 
 		let verified_data_vec:Vec<VerifiedData> = Decode::decode(&mut &data1[..]).unwrap();
 
-		let mut call:Call<T> = Call::set_verified(verified_data_vec[0].tx_hash.to_vec(), 1);
+		let mut call:Call<T> = Call::set_verified(verified_data_vec[0].tx_hash.to_vec(), (verified_data_vec[0].status, verified_data_vec[0].timestamp));
 		for index in 1..verified_data_vec.len() {
 			let txhash = &verified_data_vec[index].tx_hash;
-			call = Call::set_verified(txhash.to_vec(), 1);
+			call = Call::set_verified(txhash.to_vec(), (verified_data_vec[index].status, verified_data_vec[index].timestamp));
 		}
 
 		Some(call)
