@@ -9,7 +9,7 @@ use rstd::prelude::*;
 use system::{ensure_none, ensure_signed};
 use inherents::{RuntimeString, InherentIdentifier, ProvideInherent, MakeFatalError, InherentData};
 
-use stafi_primitives::{XtzTransferData, VerifiedData, TxHashType};
+use stafi_primitives::{XtzTransferData, VerifiedData, VerifyStatus, TxHashType};
 use codec::{Encode, Decode};
 
 pub mod tezos;
@@ -71,7 +71,7 @@ fn extract_inherent_data(data: &InherentData) -> Result<InherentType, RuntimeStr
 		let mut verified_data_vec:Vec<VerifiedData> = Vec::new();
 		let verified_data = VerifiedData {
 			tx_hash: ZERO_HASH.to_vec(),
-			status: 0,
+			status: VerifyStatus::UnVerified as i8,
 			timestamp: 0
 		};
 		verified_data_vec.push(verified_data);

@@ -16,7 +16,7 @@ use codec::{Encode, Decode};
 
 use rstd::prelude::*;
 
-use stafi_primitives::{AccountId, Hash, XtzTransferData, VerifiedData};
+use stafi_primitives::{AccountId, Hash, XtzTransferData, VerifiedData, VerifyStatus};
 
 pub const INHERENT_IDENTIFIER: InherentIdentifier = *b"tezosrpc";
 pub const RPC_REQUEST_INTERVAL: u64 = 60000; //1 minute
@@ -75,7 +75,7 @@ fn get_value_from_storage(key: String, host: String) -> String {
 		.send();
 	let mut resp = match result {
 		Ok(r) => r,
-		Err(_) => return "null".to_string(),
+		Err(_) => return "error".to_string(),
 	};
 
 	let text = resp.text().unwrap();
@@ -88,7 +88,7 @@ fn get_value_from_storage(key: String, host: String) -> String {
 #[cfg(feature = "std")]
 #[allow(dead_code)]
 fn extract_number(result:String) -> u64 {
-	if result == "null" {
+	if result == "null" || result == "error" {
 		return 0;
 	}
 
@@ -107,12 +107,16 @@ fn extract_number(result:String) -> u64 {
 #[cfg(feature = "std")]
 fn extract_status_and_timestamp(result:String) -> (i8, u64) {
 	if result == "null" {
-		return (0, 0);
+		return (VerifyStatus::UnVerified as i8, 0);
+	}
+
+	if result == "error" {
+		return (VerifyStatus::Error as i8, 0);
 	}
 
 	let len = result.len();
 	if len < 6 {
-		return (0, 0);
+		return (VerifyStatus::Error as i8, 0);
 	}
 
 	let status = i8::from_str_radix(&result[3..5], 16).unwrap();
@@ -175,24 +179,31 @@ impl ProvideInherentData for InherentDataProvider {
 			let verified_key = get_maphexkey(b"TezosRpc Verified", &txhash.clone().into_bytes());
 			let result1 = get_value_from_storage(verified_key, self.host.clone());
 			let (status, last_timestamp) = extract_status_and_timestamp(result1);
-			if status == 2 {
-				sr_io::print_utf8(b"status is 2.");
+			let enum_status = VerifyStatus::create(status);
+			if enum_status == VerifyStatus::Error {
+				sr_io::print_utf8(b"error in reading verificaiton status.");
+				continue;	
+			}
+
+			if enum_status == VerifyStatus::Confirmed {
+				sr_io::print_utf8(b"status is Confirmed.");
 				continue;
 			}
 
 			let mut now_millis:u64 = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64;
-			if status == 1 && last_timestamp + self.block_duration > now_millis {
-				sr_io::print_utf8(b"status is 1 and timestamp + 60000 > now_millis.");
+			if enum_status == VerifyStatus::Verified && last_timestamp + self.block_duration > now_millis {
+				sr_io::print_utf8(b"status is Verified and timestamp + 60000 > now_millis.");
 				continue;	
 			}
 
 			let result2 = request_rpc2(self.url.clone(), blockhash, txhash.clone()).unwrap_or_else(|_| false);
 			if result2 {
 				now_millis = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64;
+				let new_status = enum_status as i8 + 1;
 				let verified_data = VerifiedData {
 					tx_hash: txhash.as_bytes().to_vec(),
 					timestamp: now_millis,
-					status: status + 1
+					status: new_status,
 				};
 
 				verified_data_vec.push(verified_data);
