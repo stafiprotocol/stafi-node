@@ -21,6 +21,8 @@ use stafi_primitives::{AccountId, Hash, XtzTransferData, VerifiedData, VerifySta
 pub const INHERENT_IDENTIFIER: InherentIdentifier = *b"tezosrpc";
 pub const RPC_REQUEST_INTERVAL: u64 = 60000; //1 minute
 pub const TXHASH_LEN: u8 = 51;
+pub const BLOCK_CONFIRMED: u64 = 3;
+pub const TEZOS_BLOCK_DURATION: u64 = 60000;
 
 pub type InherentType = Vec<u8>;
 
@@ -29,7 +31,7 @@ pub struct InherentDataProvider {
 	url : String,
 	host : String, 
 	slot_duration : u64,
-	block_duration: u64,
+	blocks_confirmed: u64,
 }
 
 #[cfg(feature = "std")]
@@ -39,7 +41,7 @@ impl InherentDataProvider {
 			url : u,
 			host : h,
 			slot_duration : sd,
-			block_duration: 60000 //1 minute
+			blocks_confirmed: BLOCK_CONFIRMED,
 		}
 	}
 }
@@ -191,20 +193,28 @@ impl ProvideInherentData for InherentDataProvider {
 			}
 
 			let mut now_millis:u64 = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64;
-			if enum_status == VerifyStatus::Verified && last_timestamp + self.block_duration > now_millis {
+			if enum_status == VerifyStatus::Verified && last_timestamp + self.blocks_confirmed * TEZOS_BLOCK_DURATION > now_millis {
 				sr_io::print_utf8(b"status is Verified and timestamp + 60000 > now_millis.");
 				continue;	
 			}
 
-			let result2 = request_rpc2(self.url.clone(), blockhash, txhash.clone()).unwrap_or_else(|_| false);
-			if result2 {
+			let mut level:u64 = 0;
+			let result2 = request_rpc2(self.url.clone(), blockhash, txhash.clone(), &mut level).unwrap_or_else(|_| false);
+			if result2 && level > 0 {
+				let mut new_status = VerifyStatus::Verified as i8;
+				let mut cur_level:u64 = 0;
+				let _ = request_rpc2(self.url.clone(), "head".to_string(), "".to_string(), &mut cur_level).unwrap_or_else(|_| false);
+				if cur_level > 0 && cur_level - level >= self.blocks_confirmed {
+					new_status = VerifyStatus::Confirmed as i8;
+				} 
+
 				now_millis = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64;
-				let new_status = enum_status as i8 + 1;
 				let verified_data = VerifiedData {
 					tx_hash: txhash.as_bytes().to_vec(),
 					timestamp: now_millis,
 					status: new_status,
 				};
+				sr_io::print_utf8(&format!("set new status: {}", new_status).into_bytes());
 
 				verified_data_vec.push(verified_data);
 			}
@@ -227,7 +237,7 @@ impl ProvideInherentData for InherentDataProvider {
 }
 
 #[cfg(feature = "std")]
-fn request_rpc2(self_url: String, blockhash: String, txhash: String) -> Result<bool, RuntimeString> {
+fn request_rpc2(self_url: String, blockhash: String, txhash: String, level: &mut u64) -> Result<bool, RuntimeString> {
 	//for test
 	//return Ok(true);
 
@@ -241,6 +251,17 @@ fn request_rpc2(self_url: String, blockhash: String, txhash: String) -> Result<b
 			"Could not get response body".into()
 		}).and_then(|body| {
 			let v: Value = serde_json::from_str(&body).unwrap_or_else(|_| serde_json::json!({}));
+			let v_level: Value = v["header"]["level"].clone();
+			if v_level.is_null() || !v_level.is_u64() {
+				return Ok(false);
+			}
+
+			*level = v_level.as_u64().unwrap();
+
+			if txhash == "" {
+				return Ok(true);
+			}
+
 			let v_operations: Value = v["operations"].clone();
 			if v_operations.is_null() || !v_operations.is_array() {
 				return Ok(false);
