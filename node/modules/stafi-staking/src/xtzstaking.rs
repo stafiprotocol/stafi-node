@@ -7,10 +7,9 @@ use sr_std::prelude::*;
 use sr_std::{
 	convert::{TryInto},
 };
-use sr_primitives::traits::Hash;
-use sr_primitives::traits::CheckedAdd;
+use sr_primitives::traits::{Hash, CheckedAdd};
 use parity_codec::{Encode, Decode};
-use stafi_primitives::{Balance, XtzTransferData, constants::currency::*};
+use stafi_primitives::{Balance, XtzTransferData, VerifyStatus, constants::currency::*};
 use token_balances::Symbol;
 use stafi_externalrpc::tezosrpc;
 use log::info;
@@ -54,20 +53,7 @@ pub struct XtzStakeData<AccountId, Hash> {
 	pub stake_token_data: XtzStakeTokenData,
 }
 
-// #[cfg_attr(feature = "std", derive(Debug))]
-// #[derive(Encode, Decode, Clone, PartialEq)]
-// pub struct XtzTransferData<AccountId, Hash> {
-// 	// identifier id
-// 	pub id: Hash,
-// 	// creator of stake
-// 	pub initiator: AccountId,
-// 	// transaction hash
-// 	pub tx_hash: Vec<u8>,
-// 	// block hash
-// 	pub block_hash: Vec<u8>,
-// }
-
-pub trait Trait: system::Trait + session::Trait + im_online::Trait + token_balances::Trait + tezosrpc::Trait {
+pub trait Trait: system::Trait + token_balances::Trait + tezosrpc::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -91,6 +77,15 @@ decl_module! {
 		// Initializing events
 		// this is needed only if you are using events in your module
 		fn deposit_event() = default;
+
+		fn on_finalize(n: T::BlockNumber) {
+			if let Some(value) = n.try_into().ok() {
+				info!("ddd {}.", value);
+				if value % 3 == 0 {
+					Self::handle_init();
+				}
+			}
+		}
 
 		// Custom stake xtz
 		pub fn custom_stake(origin, multi_sig_address: Vec<u8>, stake_amount: u128, tx_hash: Vec<u8>, block_hash: Vec<u8>) -> Result {
@@ -137,10 +132,6 @@ decl_module! {
 
 			<TransferInitDataMapRecords<T>>::insert(tx_hash.clone(), transfer_data.clone());
 
-			let mut datas = <TransferInitDataRecords<T>>::get();
-			datas.push(transfer_data);
-			<TransferInitDataRecords<T>>::put(datas);
-
 			<TransferInitCheckRecords>::insert(tx_hash, true);
 
 			// here we are raising the event
@@ -156,48 +147,22 @@ decl_event!(
 	}
 );
 
-
-impl<T: Trait> session::OneSessionHandler<T::AccountId> for Module<T> {
-	type Key = T::AuthorityId;
-
-	fn on_genesis_session<'a, I: 'a>(_validators: I)
-	where
-		I: Iterator<Item = (&'a T::AccountId, Self::Key)>,
-	{
-		// ignore
-	}
-
-	fn on_new_session<'a, I: 'a>(_changed: bool, _validators: I, _next_validators: I)
-	where
-		I: Iterator<Item = (&'a T::AccountId, Self::Key)>,
-	{
-		// ignore
-	}
-
-	fn on_before_session_ending() {
-		info!("bbb {}.", 1);
-
-		// Self::handle_transfering();
-		Self::handle_init();
-	}
-
-	fn on_disabled(_i: usize) {
-		// ignore
-	}
-}
-
 impl<T: Trait> Module<T> {
 
 	fn handle_init() {
+		let mut tmp_datas : Vec<XtzTransferData<T::AccountId, T::Hash>> = Vec::new();
+
         for (key, transfer_data) in <TransferInitDataMapRecords<T>>::enumerate() {
-			let account_id = transfer_data.initiator;
-			let hash = transfer_data.id;
+			let account_id = &transfer_data.initiator;
+			let hash = &transfer_data.id;
 
 			if let Some(mut xtz_stake_data) = Self::stake_records((account_id.clone(), hash.clone())) {
 
-				let tx_check = <tezosrpc::Module<T>>::verified(transfer_data.tx_hash);
+				let (status, _) = <tezosrpc::Module<T>>::verified(&transfer_data.tx_hash);
 
-				if xtz_stake_data.stage == XtzStakeStage::Init && tx_check == 1 {
+				let enum_status = VerifyStatus::create(status);
+
+				if xtz_stake_data.stage == XtzStakeStage::Init && enum_status == VerifyStatus::Confirmed {
 					xtz_stake_data.stage = XtzStakeStage::Completed;
 					<StakeRecords<T>>::insert((account_id.clone(), hash.clone()), xtz_stake_data);
 
@@ -216,9 +181,13 @@ impl<T: Trait> Module<T> {
 					}
 
 					token_balances::Module::<T>::add_bond_token(account_id.clone(), Symbol::XtzBond, 10).expect("Error adding xtz bond token");
+				} else {
+					tmp_datas.push(transfer_data);
 				}
 			}
 		}
+
+		<TransferInitDataRecords<T>>::put(tmp_datas);
     }
 
 }
