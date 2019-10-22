@@ -20,6 +20,7 @@ srml-support = { git = "https://github.com/stafiprotocol/stafi-blockchain", pack
 srml-system = { git = "https://github.com/stafiprotocol/stafi-blockchain", package = "srml-system", default-features = false }
 inherents = { git = "https://github.com/stafiprotocol/stafi-blockchain", package = "substrate-inherents", default-features = false }
 primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain", package = "substrate-primitives", default-features = false }
+babe-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain", package = "substrate-consensus-babe-primitives", default-features = false }
 
 stafi-primitives = { path = "../../primitives", default-features = false }
 

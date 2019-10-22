@@ -26,6 +26,7 @@ grandpa_primitives = { package = "substrate-finality-grandpa-primitives", git = 
 sr-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
 substrate-keystore = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
 substrate-telemetry = { package = "substrate-telemetry", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+app-crypto = { package = "substrate-application-crypto",  git = "https://github.com/stafiprotocol/stafi-blockchain" }
 structopt = "0.2"
 transaction-factory = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
 keyring = { package = "substrate-keyring", git = "https://github.com/stafiprotocol/stafi-blockchain" }

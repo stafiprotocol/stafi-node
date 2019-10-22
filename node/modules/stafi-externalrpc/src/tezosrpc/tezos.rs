@@ -18,10 +18,12 @@ use rstd::prelude::*;
 
 use stafi_primitives::{AccountId, Hash, XtzTransferData, VerifiedData, VerifyStatus};
 
+use babe_primitives::{AuthorityId, BabeAuthorityWeight};
+
 pub const INHERENT_IDENTIFIER: InherentIdentifier = *b"tezosrpc";
 pub const RPC_REQUEST_INTERVAL: u64 = 60000; //1 minute
 pub const TXHASH_LEN: u8 = 51;
-pub const BLOCK_CONFIRMED: u64 = 3;
+pub const BLOCK_CONFIRMED: i64 = 3;
 pub const TEZOS_BLOCK_DURATION: u64 = 60000;
 
 pub type InherentType = Vec<u8>;
@@ -31,17 +33,19 @@ pub struct InherentDataProvider {
 	url : String,
 	host : String, 
 	slot_duration : u64,
-	blocks_confirmed: u64,
+	blocks_confirmed: i64,
+	babe_id: String,
 }
 
 #[cfg(feature = "std")]
 impl InherentDataProvider {
-	pub fn new(u: String, h: String, sd: u64) -> Self {
+	pub fn new(u: String, h: String, sd: u64, b: String) -> Self {
 		Self {
 			url : u,
 			host : h,
 			slot_duration : sd,
 			blocks_confirmed: BLOCK_CONFIRMED,
+			babe_id: b,
 		}
 	}
 }
@@ -64,6 +68,21 @@ fn get_maphexkey(key: &[u8], item_key: &[u8]) -> String {
 	let hexkey = hex::encode(key.to_vec());
 	
 	return hexkey;
+}
+
+//blake256hash(bytes("ModuleName" + " " + "StorageItem") + bytes(scale("StorageItemKey")))
+//blake256hash(bytes("ModuleName" + " " + "StorageItem") + bytes(scale("FirstStorageItemKey"))) + blake256hash(bytes(scale("SecondStorageItemKey")))
+
+#[cfg(feature = "std")]
+fn get_map2hexkey(key: &[u8], item_key: &[u8], item2_key: &[u8]) -> String {
+	let hexkey = get_maphexkey(key, item_key);
+	
+	let encoded_item2_key = Encode::encode(item2_key);
+	let key2 = primitives::blake2_256(encoded_item2_key.as_ref()).to_vec();
+
+	let hexkey2 = hexkey + &hex::encode(key2);
+	
+	return hexkey2;
 }
 
 #[cfg(feature = "std")]
@@ -143,6 +162,15 @@ fn decode_transfer_data(data: String) -> Vec<XtzTransferData<AccountId, Hash>> {
 }
 
 #[cfg(feature = "std")]
+fn decode_authorities_data(data: String) -> Vec<(AuthorityId, BabeAuthorityWeight)> {
+	let data1 = hex::decode(&data[3..data.len()-1]).unwrap();
+
+    let result: Vec<(AuthorityId, BabeAuthorityWeight)> = Decode::decode(&mut &data1[..]).unwrap();
+
+	return result;
+}
+
+#[cfg(feature = "std")]
 impl ProvideInherentData for InherentDataProvider {
 	fn inherent_identifier(&self) -> &'static InherentIdentifier {
 		&INHERENT_IDENTIFIER
@@ -150,7 +178,6 @@ impl ProvideInherentData for InherentDataProvider {
 
 	fn provide_inherent_data(&self, inherent_data: &mut InherentData) -> Result<(), RuntimeString> {
 		use std::time::SystemTime;
-			
 		let verify_in_batch = false;
 		if verify_in_batch {
 			let now_millis:u64 = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64;
@@ -160,6 +187,32 @@ impl ProvideInherentData for InherentDataProvider {
 				return Ok(());
 			}
 		}
+
+		let babe_auth_key = get_hexkey(b"Babe Authorities");
+		let babe_auth_key_str = get_value_from_storage(babe_auth_key, self.host.clone());
+		//sr_io::print_utf8(&babe_auth_key_str.clone().into_bytes());
+		if babe_auth_key_str == "null" {
+			sr_io::print_utf8(b"babe_auth_key_str is null.");	
+			return Ok(());
+		}
+
+		let mut found_babe_id = false;
+		let babe_authorities = decode_authorities_data(babe_auth_key_str);
+		for auth in babe_authorities.clone() {
+			let bid = auth.0.to_string();
+			if bid == self.babe_id {
+				sr_io::print_utf8(b"the node is a validator");
+				found_babe_id = true;
+				break;
+			}
+		}
+
+		if !found_babe_id {
+			sr_io::print_utf8(b"the node isn't a validator");
+			return Ok(());
+		}
+
+		let babe_num = &babe_authorities.len();
 
 		let txhash_list_key = get_hexkey(b"XtzStaking TransferInitDataRecords");
 		let transfer_data_str = get_value_from_storage(txhash_list_key, self.host.clone());
@@ -186,38 +239,54 @@ impl ProvideInherentData for InherentDataProvider {
 				sr_io::print_utf8(b"error in reading verificaiton status.");
 				continue;	
 			}
+			
+			let verified_vec_key = get_map2hexkey(b"TezosRpc NodeResponse", &txhash.clone().into_bytes(), &self.babe_id.clone().into_bytes());
+			let result3 = get_value_from_storage(verified_vec_key, self.host.clone());
+			//sr_io::print_utf8(&result3.clone().into_bytes()); //TODO:
 
-			if enum_status == VerifyStatus::Confirmed {
-				sr_io::print_utf8(b"status is Confirmed.");
+			if enum_status == VerifyStatus::Confirmed || enum_status == VerifyStatus::NotFound || enum_status == VerifyStatus::Rollback || enum_status == VerifyStatus::BadRequest {
+				sr_io::print_utf8(&format!("{:}'s status is {:}.", txhash, enum_status as i8).into_bytes());
 				continue;
 			}
 
 			let mut now_millis:u64 = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64;
-			if enum_status == VerifyStatus::Verified && last_timestamp + self.blocks_confirmed * TEZOS_BLOCK_DURATION > now_millis {
+			if enum_status == VerifyStatus::Verified && last_timestamp + self.blocks_confirmed as u64 * TEZOS_BLOCK_DURATION > now_millis {
 				sr_io::print_utf8(b"status is Verified and timestamp + 60000 > now_millis.");
 				continue;	
 			}
 
-			let mut level:u64 = 0;
+			let mut new_status = VerifyStatus::Verified as i8;
+			let mut cur_level:i64 = 0;
+			let mut level:i64 = 0;
 			let result2 = request_rpc2(self.url.clone(), blockhash, txhash.clone(), &mut level).unwrap_or_else(|_| false);
-			if result2 && level > 0 {
-				let mut new_status = VerifyStatus::Verified as i8;
-				let mut cur_level:u64 = 0;
+			if level < 0 {
+				sr_io::print_utf8(b"bad rpc request.");
+				new_status = VerifyStatus::BadRequest as i8;
+			} else {
 				let _ = request_rpc2(self.url.clone(), "head".to_string(), "".to_string(), &mut cur_level).unwrap_or_else(|_| false);
-				if cur_level > 0 && cur_level - level >= self.blocks_confirmed {
-					new_status = VerifyStatus::Confirmed as i8;
-				} 
-
-				now_millis = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64;
-				let verified_data = VerifiedData {
-					tx_hash: txhash.as_bytes().to_vec(),
-					timestamp: now_millis,
-					status: new_status,
-				};
-				sr_io::print_utf8(&format!("set new status: {}", new_status).into_bytes());
-
-				verified_data_vec.push(verified_data);
+				if result2 {
+					if cur_level > 0 && cur_level - level >= self.blocks_confirmed {
+						new_status = VerifyStatus::Confirmed as i8;
+					} 
+				} else {
+					new_status = VerifyStatus::NotFound as i8;
+					if enum_status == VerifyStatus::Verified && cur_level > 0 && cur_level - level >= self.blocks_confirmed  {
+						new_status = VerifyStatus::Rollback as i8;
+					} 	
+				}
 			}
+
+			now_millis = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64;
+			let verified_data = VerifiedData {
+				tx_hash: txhash.as_bytes().to_vec(),
+				timestamp: now_millis,
+				status: new_status,
+				babe_id: self.babe_id.as_bytes().to_vec(),
+				babe_num: *babe_num as u8,
+			};
+			sr_io::print_utf8(&format!("{} set tx {} new status: {}", self.babe_id, txhash, new_status).into_bytes());
+
+			verified_data_vec.push(verified_data);
 
 			if !verify_in_batch {break;}
 		}
@@ -237,26 +306,29 @@ impl ProvideInherentData for InherentDataProvider {
 }
 
 #[cfg(feature = "std")]
-fn request_rpc2(self_url: String, blockhash: String, txhash: String, level: &mut u64) -> Result<bool, RuntimeString> {
+fn request_rpc2(self_url: String, blockhash: String, txhash: String, level: &mut i64) -> Result<bool, RuntimeString> {
 	//for test
 	//return Ok(true);
 
 	let url = format!("{}chains/main/blocks/{}", self_url, blockhash);
 	reqwest::get(&url[..])
 	.map_err(|error| {
-			format!("{:?}", error).into()
+		*level = -1;
+		format!("{:?}", error).into()
 	}).and_then(|mut resp| {
 		resp.text()
 		.map_err(|_| {
+			*level = -2;
 			"Could not get response body".into()
 		}).and_then(|body| {
 			let v: Value = serde_json::from_str(&body).unwrap_or_else(|_| serde_json::json!({}));
 			let v_level: Value = v["header"]["level"].clone();
 			if v_level.is_null() || !v_level.is_u64() {
+				*level = -3;
 				return Ok(false);
 			}
 
-			*level = v_level.as_u64().unwrap();
+			*level = v_level.as_i64().unwrap();
 
 			if txhash == "" {
 				return Ok(true);
@@ -289,7 +361,7 @@ fn request_rpc2(self_url: String, blockhash: String, txhash: String, level: &mut
 							if kind == "\"transaction\"" {
 								let status:String = serde_json::to_string(&content["metadata"]["operation_result"]["status"]).unwrap();
 								if status == "\"applied\"" {
-									sr_io::print_utf8(b"found tx on chian");
+									sr_io::print_utf8(b"found tx on chain");
 									found = true;
 									break;
 								}

@@ -119,4 +119,4 @@ pub mod stafistaking;
 pub use stafistaking::{StakeTokenType, XtzTransferData};
 
 pub mod externalrpc;
-pub use externalrpc::{VerifiedData, VerifyStatus, TxHashType};
+pub use externalrpc::{VerifiedData, VerifyStatus, TxHashType, BabeIdType};

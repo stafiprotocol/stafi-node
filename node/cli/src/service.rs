@@ -43,6 +43,8 @@ use network::NetworkService;
 use offchain::OffchainWorkers;
 use transaction_pool::ChainApi;
 use primitives::Blake2Hasher;
+use primitives::crypto::KeyTypeId;
+use app_crypto::sr25519;
 
 construct_simple_protocol! {
 	/// Demo protocol attachment for substrate.
@@ -220,9 +222,15 @@ macro_rules! new_full {
 		}
 
 		let _reg = inherent_data_providers.register_provider(stafi_externalrpc::irisnetrpc::InherentDataProvider::new(String::from("https://lcd.testnet.irisnet.org/"), String::from("http://127.0.0.1:9933"), SLOT_DURATION as u64)).unwrap();
-
-		let _reg_tezos = inherent_data_providers.register_provider(stafi_externalrpc::tezosrpc::InherentDataProvider::new(String::from("https://tezos-test-rpc.wetez.io/"), String::from("http://127.0.0.1:9933"), SLOT_DURATION as u64)).unwrap();
-
+		
+		let babe_ids = service.keystore().read().public_keys_by_type::<sr25519::Public>(KeyTypeId(*b"babe")).unwrap_or_default();
+		let mut babe_id = "".to_string();
+		if babe_ids.len() > 0 {
+			babe_id = babe_ids[0].to_string();
+			let _reg_tezos = inherent_data_providers.register_provider(stafi_externalrpc::tezosrpc::InherentDataProvider::new(String::from("https://tezos-test-rpc.wetez.io/"), String::from("http://127.0.0.1:9933"), SLOT_DURATION as u64, babe_id.clone())).unwrap();
+		}
+		println!("my babe id is : {:}", babe_id);
+		
 		Ok((service, inherent_data_providers))
 	}};
 	($config:expr) => {{
