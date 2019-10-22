@@ -30,6 +30,17 @@ pub fn get_vals() -> Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId)> 
 		// 5Fc1JMU1XZUzQv3AQ5pSDosP3k7sBUF7oBbRz5KxzEzqE72e
 		hex!["9c940696dc3a1c41338cf075ad47d0a12d1f7d4f616b54b52511f657b0cd9b18"].unchecked_into(),
 
+	), (
+		// 5CDSNzRxQANpnzFCXrRg7uGJnMe1gz4AM6n4f8GdufZt4gjY
+		hex!["06a91b943ac7624d1b8018922f2f4db7b2d42ad5e720787f4f338fbc54c81c6e"].unchecked_into(),
+		// 5G1R2bASPmgpRyKZaoX31ukAQH7aAthCUbiXE4Rj4ePbX24s
+		hex!["ae6e8bdb333819bbee4b7a4c783ceed2ab55fa33da3eb6c77635a21d67201017"].unchecked_into(),
+		// 5H8ZwmSifeEr5mBYSgfDNcFjQxQmyujS1n9oS6jEL1Ejnc5F
+		hex!["e01f83aedfb211d9321813007a220879ae70b085b6f5150b4be0967c1670ee2d"].unchecked_into(),
+		// 5E7S6Cnn4PsAm8CV4cZi96ZfXCQro3hM3nsnUGwsnsaGFFzx
+		hex!["5a8d20be4acc691068282aab5827d237a7522cf2bec9edc02591606918325c1e"].unchecked_into(),
+		// 5HeNMuD8beMi9JAw7TNiuxesWKLeQshjYCzn7DhxzvbveSbF
+		hex!["f6d9e1b32662705fe3a08991d58e4c02f4e1eca24a1869a212e12d91567b261d"].unchecked_into(),
 	)];
 }
 
