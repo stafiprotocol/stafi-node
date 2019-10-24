@@ -120,12 +120,14 @@ macro_rules! new_full {
 			is_authority,
 			force_authoring,
 			name,
-			disable_grandpa
+			disable_grandpa,
+			rpc_http_addr
 		) = (
 			$config.roles.is_authority(),
 			$config.force_authoring,
 			$config.name.clone(),
-			$config.disable_grandpa
+			$config.disable_grandpa,
+			$config.rpc_http
 		);
 
 		let (builder, mut import_setup, inherent_data_providers) = new_full_start!($config);
@@ -227,7 +229,8 @@ macro_rules! new_full {
 		let mut babe_id = "".to_string();
 		if babe_ids.len() > 0 {
 			babe_id = babe_ids[0].to_string();
-			let _reg_tezos = inherent_data_providers.register_provider(stafi_externalrpc::tezosrpc::InherentDataProvider::new(String::from("https://tezos-test-rpc.wetez.io/"), String::from("http://127.0.0.1:9933"), SLOT_DURATION as u64, babe_id.clone())).unwrap();
+			let rpc_http = format!("http://{}",rpc_http_addr.unwrap().to_string());
+			let _reg_tezos = inherent_data_providers.register_provider(stafi_externalrpc::tezosrpc::InherentDataProvider::new(rpc_http, SLOT_DURATION as u64, babe_id.clone())).unwrap();
 		}
 		println!("my babe id is : {:}", babe_id);
 		

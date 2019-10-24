@@ -19,6 +19,13 @@ pub struct VerifiedData {
 
 #[cfg_attr(feature = "std", derive(Debug))]
 #[derive(Encode, Decode, Clone, PartialEq)]
+pub struct HostData {
+	pub host: Vec<u8>,
+	pub weight: u8,
+}
+
+#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(Encode, Decode, Clone, PartialEq)]
 pub enum VerifyStatus {
 	UnVerified = 0,
 	Verified = 1,

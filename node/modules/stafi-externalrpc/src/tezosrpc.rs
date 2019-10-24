@@ -6,11 +6,11 @@ extern crate srml_system as system;
 
 use support::{decl_module, decl_storage};
 use rstd::prelude::*;
-use system::{ensure_none, ensure_signed};
+use system::{ensure_none, ensure_signed, ensure_root};
 use inherents::{RuntimeString, InherentIdentifier, ProvideInherent, MakeFatalError, InherentData};
 
-use stafi_primitives::{XtzTransferData, VerifiedData, VerifyStatus, TxHashType, BabeIdType};
-use codec::{Encode, Decode};
+use stafi_primitives::{XtzTransferData, VerifiedData, VerifyStatus, TxHashType, BabeIdType, HostData};
+use codec::Decode;
 
 pub mod tezos;
 pub use tezos::INHERENT_IDENTIFIER;
@@ -18,9 +18,6 @@ pub use tezos::INHERENT_IDENTIFIER;
 pub use tezos::InherentDataProvider;
 
 pub use tezos::InherentType;
-pub use tezos::TXHASH_LEN;
-
-//pub const ZERO_HASH: &'static [u8] = b"000000000000000000000000000000000000000000000000000";
 
 pub trait Trait: system::Trait { }
 
@@ -29,6 +26,9 @@ decl_storage! {
 		XtzTransferDataVec get(xtz_transfter_data_vec): Vec<XtzTransferData<T::AccountId, T::Hash>>;
 		pub Verified get(verified): map TxHashType => (i8, u64);
 		pub NodeResponse get(node_response): linked_map (TxHashType, BabeIdType) => Option<VerifiedData>;
+		RpcHost get(rpc_host): Vec<HostData>;
+		BlocksConfirmed: u8;
+		BlockDuration: u64;
 	}
 }
 
@@ -45,6 +45,38 @@ decl_module! {
 			let _who = ensure_none(origin)?;
 			
 			NodeResponse::insert((txhash, babe_key), v_data);
+		}
+
+		fn add_rpc_host(origin, host:Vec<u8>) {
+			let _who = ensure_root(origin)?;
+			
+			let host_data = HostData {
+				host: host,
+				weight: 1,
+			};
+
+			let mut v: Vec<HostData> = RpcHost::get();
+			v.push(host_data);
+			RpcHost::put(v);
+		}
+
+		fn remove_rpc_host(origin, host:Vec<u8>) {
+			let _who = ensure_root(origin)?;
+
+			let v: Vec<HostData> = RpcHost::get().into_iter().filter(|x| x.host != host).collect();
+			RpcHost::put(v);
+		}
+
+		fn set_blocks_confirmed(origin, blocks:u8) {
+			let _who = ensure_root(origin)?;
+			
+			BlocksConfirmed::put(blocks);
+		}
+
+		fn set_block_duration(origin, duration:u64) {
+			let _who = ensure_root(origin)?;
+			
+			BlockDuration::put(duration);
 		}
 
 		fn on_finalize() {
