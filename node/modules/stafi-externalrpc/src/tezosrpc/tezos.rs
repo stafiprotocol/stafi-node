@@ -411,3 +411,39 @@ fn request_rpc2(self_url: String, blockhash: String, txhash: String, level: &mut
 		})
 	})	
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_get_hexkey() {
+		let result = get_hexkey(b"Sudo Key");
+		assert_eq!(result, "50a63a871aced22e88ee6466fe5aa5d9")
+	}
+
+	#[test]
+	fn test_get_maphexkey() {
+		let result = get_maphexkey(b"TezosRpc Verified", b"onv7i9LSacMXjhTdpgzmY4q6PxiZ18TZPq7KrRBRUVX7XJicSDi");
+		assert_eq!(result, "1c5f64057a95d792855eebea477b2c17887b4d3fa87413463cb500012f79b56d")
+	}
+
+	#[test]
+	fn test_request_rpc2() {
+		let tezos_url = String::from("https://rpc.tezrpc.me/");
+		let block_hash = String::from("BKsxzJMXPxxJWRZcsgWG8AAegXNp2uUuUmMr8gzQcoEiGnNeCA6");
+		let tx_hash = String::from("onv7i9LSacMXjhTdpgzmY4q6PxiZ18TZPq7KrRBRUVX7XJicSDi");
+		let mut level = 0;
+		let result = request_rpc2(tezos_url, block_hash, tx_hash, &mut level).unwrap_or_else(|_| false);
+		assert_eq!(result, true);
+		assert_eq!(level, 642208);
+
+		let tezos_url = String::from("https://rpc.tezrpc.me/");
+		let block_hash = String::from("ab12");
+		let tx_hash = String::from("cd34");
+		let mut level = 0;
+		let result = request_rpc2(tezos_url, block_hash, tx_hash, &mut level).unwrap_or_else(|_| false);
+		assert_eq!(result, false);
+		assert_eq!(level <= 0, true);
+	}
+}
