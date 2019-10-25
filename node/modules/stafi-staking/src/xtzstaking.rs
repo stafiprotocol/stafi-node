@@ -140,14 +140,9 @@ decl_module! {
 		}
 
 		// Custom redeem xtz
-		pub fn custom_redeem(origin, stake_id: T::Hash, tezos_account_id: Vec<u8>) -> Result {
+		// pub fn custom_redeem(origin, stake_id: T::Hash, tezos_account_id: Vec<u8>) -> Result {
 
-		}
-
-		// Custom transfer xtz
-		pub fn custom_transfer(origin, stake_id: T::Hash) -> Result {
-			
-		}
+		// }
 	}
 }
 
