@@ -13,6 +13,7 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
+use super::base128;
 
 fn parseInt(hex: &str, radix: u32) -> Result<i32, ParseIntError> {
     i32::from_str_radix(hex, radix)

@@ -15,3 +15,6 @@
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
 
 pub mod transfer;
+
+mod base128;
+mode message_utils;
