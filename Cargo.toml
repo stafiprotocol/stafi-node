@@ -27,6 +27,7 @@ members = [
 	"node/service",
 	"node/modules/stafi-multisig",
 	"node/modules/stafi-crypto",
+	"node/modules/bridge-tezos",
 ]
 
 [badges]
