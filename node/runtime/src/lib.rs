@@ -23,6 +23,7 @@
 use stafi_staking::atomstaking as atomStaking;
 use stafi_staking::xtzstaking as xtzStaking;
 use tokenbalances;
+use tokenbalances::bondtoken as bondToken;
 use stafi_externalrpc::{irisnetrpc, tezosrpc};
 use stafi_fund;
 
@@ -465,7 +466,7 @@ impl stafi_multisig::Trait for Runtime {
 }
 
 impl tokenbalances::Trait for Runtime {
-	const STAFI_SYMBOL: tokenbalances::SymbolString = b"FISH";
+	const STAFI_SYMBOL: tokenbalances::SymbolString = b"FIS";
     const STAFI_TOKEN_DESC: tokenbalances::DescString = b"STAFI";
 	type Event = Event;
 	type TokenBalance = u128;
@@ -511,6 +512,10 @@ impl xtzStaking::Trait for Runtime {
 	type Event = Event;
 }
 
+impl bondToken::Trait for Runtime {
+	type Event = Event;
+}
+
 impl irisnetrpc::Trait for Runtime {	
 }
 
@@ -547,6 +552,7 @@ construct_runtime!(
 		AtomStaking: atomStaking::{Module, Call, Storage, Event<T>},
 		XtzStaking: xtzStaking::{Module, Call, Storage, Event<T>},
 		Tokenbalances: tokenbalances::{Module, Call, Storage, Event<T>},
+		BondToken: bondToken::{Module, Call, Storage, Event<T>},
 		Stafifund: stafi_fund::{Module, Call, Storage, Event<T>},
 		MultiSig: stafi_multisig::{Module, Call, Storage, Event<T>},
 		StafiIrisnetRpc: irisnetrpc::{Module, Call, Storage, Inherent},

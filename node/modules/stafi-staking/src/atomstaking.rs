@@ -13,7 +13,6 @@ use parity_codec::{Encode, Decode};
 use stafi_primitives::StakeTokenType;
 use stafi_primitives::Balance;
 use log::info;
-use token_balances::Symbol;
 
 
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -273,7 +272,7 @@ impl<T: Trait> Module<T> {
 						};
 					}
 
-					token_balances::Module::<T>::add_bond_token(account_id.clone(), Symbol::AtomBond, 10).expect("Error adding atom bond token");
+					// token_balances::Module::<T>::add_bond_token(account_id.clone(), Symbol::AtomBond, 10).expect("Error adding atom bond token");
 				}
 			}
 		}

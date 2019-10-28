@@ -120,3 +120,6 @@ pub use stafistaking::{StakeTokenType, XtzTransferData};
 
 pub mod externalrpc;
 pub use externalrpc::{VerifiedData, VerifyStatus, TxHashType};
+
+pub mod tokenbalances;
+pub use tokenbalances::{BondTokenStatus, Symbol};

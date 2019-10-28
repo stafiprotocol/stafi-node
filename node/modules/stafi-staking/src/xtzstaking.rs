@@ -9,8 +9,8 @@ use sr_std::{
 };
 use sr_primitives::traits::{Hash, CheckedAdd};
 use parity_codec::{Encode, Decode};
-use stafi_primitives::{Balance, XtzTransferData, VerifyStatus, constants::currency::*};
-use token_balances::Symbol;
+use stafi_primitives::{Balance, XtzTransferData, VerifyStatus, Symbol, constants::currency::*};
+use token_balances::bondtoken;
 use stafi_externalrpc::tezosrpc;
 use log::info;
 
@@ -39,7 +39,7 @@ pub struct XtzStakeTokenData {
 }
 
 #[cfg_attr(feature = "std", derive(Debug))]
-#[derive(Encode, Decode, PartialEq)]
+#[derive(Encode, Decode, Clone, PartialEq)]
 pub struct XtzStakeData<AccountId, Hash> {
 	// identifier id
 	pub id: Hash,
@@ -53,7 +53,7 @@ pub struct XtzStakeData<AccountId, Hash> {
 	pub stake_token_data: XtzStakeTokenData,
 }
 
-pub trait Trait: system::Trait + token_balances::Trait + tezosrpc::Trait {
+pub trait Trait: system::Trait + bondtoken::Trait + tezosrpc::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -91,7 +91,7 @@ decl_module! {
 		pub fn custom_stake(origin, multi_sig_address: Vec<u8>, stake_amount: u128, tx_hash: Vec<u8>, block_hash: Vec<u8>) -> Result {
 			let sender = ensure_signed(origin)?;
 
-			 // Check that the tx_hash exists
+			// Check that the tx_hash exists
             ensure!(!<TransferInitDataMapRecords<T>>::exists(tx_hash.clone()), "This tx_hash exist");
 
 			// TODO: Check multi sig address
@@ -169,7 +169,7 @@ impl<T: Trait> Module<T> {
 
 				if xtz_stake_data.stage == XtzStakeStage::Init && enum_status == VerifyStatus::Confirmed {
 					xtz_stake_data.stage = XtzStakeStage::Completed;
-					<StakeRecords<T>>::insert((account_id.clone(), hash.clone()), xtz_stake_data);
+					<StakeRecords<T>>::insert((account_id.clone(), hash.clone()), xtz_stake_data.clone());
 
 					<TransferInitDataMapRecords<T>>::remove(key);
 
@@ -185,7 +185,7 @@ impl<T: Trait> Module<T> {
 						};
 					}
 
-					token_balances::Module::<T>::add_bond_token(account_id.clone(), Symbol::XtzBond, 10).expect("Error adding xtz bond token");
+					bondtoken::Module::<T>::add_bond_token(account_id.clone(), Symbol::XtzBond, 10, xtz_stake_data.id).expect("Error adding xtz bond token");
 				} else {
 					tmp_datas.push(transfer_data);
 				}
