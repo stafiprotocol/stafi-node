@@ -26,31 +26,17 @@ pub enum XtzStakeStage {
 
 #[cfg_attr(feature = "std", derive(Debug))]
 #[derive(Encode, Decode, Clone, PartialEq)]
-pub struct XtzStakeTokenData {
-	// pub token_type: StakeTokenType,
-	// decimals of token
-	pub token_decimals: u32,
-	// validator
-	// pub validator: Vec<u8>,
-	// Amount of stake
-	pub stake_amount: u128,
-	// Reward of stake
-	pub reward_amount: u128,
-}
-
-#[cfg_attr(feature = "std", derive(Debug))]
-#[derive(Encode, Decode, Clone, PartialEq)]
 pub struct XtzStakeData<AccountId, Hash> {
 	// identifier id
 	pub id: Hash,
 	// creator of stake
 	pub initiator: AccountId,
-	// multi sig address
-	pub multi_sig_address: Vec<u8>,
 	// Stage of stake
 	pub stage: XtzStakeStage,
+	// multi sig address
+	pub multi_sig_address: Vec<u8>,
 	// Token data of stake
-	pub stake_token_data: XtzStakeTokenData,
+	pub stake_amount: Balance,
 }
 
 pub trait Trait: system::Trait + bondtoken::Trait + tezosrpc::Trait {
@@ -88,7 +74,7 @@ decl_module! {
 		}
 
 		// Custom stake xtz
-		pub fn custom_stake(origin, multi_sig_address: Vec<u8>, stake_amount: u128, tx_hash: Vec<u8>, block_hash: Vec<u8>) -> Result {
+		pub fn custom_stake(origin, multi_sig_address: Vec<u8>, stake_amount: Balance, tx_hash: Vec<u8>, block_hash: Vec<u8>) -> Result {
 			let sender = ensure_signed(origin)?;
 
 			// Check that the tx_hash exists
@@ -105,18 +91,12 @@ decl_module! {
 			let random_seed = <system::Module<T>>::random_seed();
             let hash = (random_seed, &sender).using_encoded(<T as system::Trait>::Hashing::hash);
 
-			let stake_token_data = XtzStakeTokenData {
-				token_decimals: 18,
-				stake_amount: stake_amount,
-				reward_amount: 0,
-			};
-
 			<StakeRecords<T>>::insert((sender.clone(), hash.clone()), XtzStakeData {
 				id: hash.clone(),
 				initiator: sender.clone(),
 				multi_sig_address: multi_sig_address,
 				stage: XtzStakeStage::Init,
-				stake_token_data: stake_token_data.clone(),
+				stake_amount: stake_amount,
 			});
 
 			let mut hashs = <StakeDataHashRecords<T>>::get(sender.clone());
@@ -138,11 +118,6 @@ decl_module! {
 			Self::deposit_event(RawEvent::StakeInit(sender, hash));
 			Ok(())
 		}
-
-		// Custom redeem xtz
-		// pub fn custom_redeem(origin, stake_id: T::Hash, tezos_account_id: Vec<u8>) -> Result {
-
-		// }
 	}
 }
 
@@ -185,7 +160,7 @@ impl<T: Trait> Module<T> {
 						};
 					}
 
-					bondtoken::Module::<T>::add_bond_token(account_id.clone(), Symbol::XtzBond, 10, xtz_stake_data.id).expect("Error adding xtz bond token");
+					bondtoken::Module::<T>::add_bond_token(account_id.clone(), Symbol::XtzBond, xtz_stake_data.stake_amount, xtz_stake_data.id).expect("Error adding xtz bond token");
 				} else {
 					tmp_datas.push(transfer_data);
 				}

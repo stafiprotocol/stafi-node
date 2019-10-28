@@ -16,32 +16,33 @@ use codec::{Encode, Decode};
 
 use rstd::prelude::*;
 
-use stafi_primitives::{AccountId, Hash, XtzTransferData, VerifiedData, VerifyStatus};
+use stafi_primitives::{AccountId, Hash, XtzTransferData, VerifiedData, VerifyStatus, HostData};
+
+use babe_primitives::{AuthorityId, BabeAuthorityWeight};
 
 pub const INHERENT_IDENTIFIER: InherentIdentifier = *b"tezosrpc";
 pub const RPC_REQUEST_INTERVAL: u64 = 60000; //1 minute
-pub const TXHASH_LEN: u8 = 51;
-pub const BLOCK_CONFIRMED: u64 = 3;
+pub const TEZOS_TXHASH_LEN: u8 = 51;
+pub const TEZOS_BLOCK_CONFIRMED: u8 = 3;
 pub const TEZOS_BLOCK_DURATION: u64 = 60000;
+pub const TEZOS_RPC_HOST: &'static [u8] = b"https://rpc.tezrpc.me/";
 
 pub type InherentType = Vec<u8>;
 
 #[cfg(feature = "std")]
 pub struct InherentDataProvider {
-	url : String,
-	host : String, 
+	node_rpc_host : String, 
 	slot_duration : u64,
-	blocks_confirmed: u64,
+	babe_id: String,
 }
 
 #[cfg(feature = "std")]
 impl InherentDataProvider {
-	pub fn new(u: String, h: String, sd: u64) -> Self {
+	pub fn new(h: String, sd: u64, b: String) -> Self {
 		Self {
-			url : u,
-			host : h,
+			node_rpc_host : h,
 			slot_duration : sd,
-			blocks_confirmed: BLOCK_CONFIRMED,
+			babe_id: b,
 		}
 	}
 }
@@ -60,10 +61,22 @@ fn get_maphexkey(key: &[u8], item_key: &[u8]) -> String {
 	let mut total_key = key.to_vec();
 	total_key.extend(encoded_item_key);
 
-	let key = primitives::blake2_256(total_key.as_ref());
+	let key = primitives::blake2_256(&total_key);
 	let hexkey = hex::encode(key.to_vec());
 	
 	return hexkey;
+}
+
+#[cfg(feature = "std")]
+fn get_map2hexkey(key: &[u8], item_key: &[u8], item2_key: &[u8]) -> String {
+	let hexkey = get_maphexkey(key, item_key);
+	
+	let encoded_item2_key = Encode::encode(item2_key);
+	let key2 = primitives::blake2_256(&encoded_item2_key);
+
+	let hexkey2 = hexkey + &hex::encode(key2.to_vec());
+	
+	return hexkey2;
 }
 
 #[cfg(feature = "std")]
@@ -88,7 +101,6 @@ fn get_value_from_storage(key: String, host: String) -> String {
 }
 
 #[cfg(feature = "std")]
-#[allow(dead_code)]
 fn extract_number(result:String) -> u64 {
 	if result == "null" || result == "error" {
 		return 0;
@@ -143,17 +155,36 @@ fn decode_transfer_data(data: String) -> Vec<XtzTransferData<AccountId, Hash>> {
 }
 
 #[cfg(feature = "std")]
+fn decode_host_data(data: String) -> Vec<HostData> {
+	let mut result: Vec<HostData> = Vec::new();
+	if data != "null" {
+		let data1 = hex::decode(&data[3..data.len()-1]).unwrap();
+    	result = Decode::decode(&mut &data1[..]).unwrap();
+	}
+
+	return result;
+}
+
+#[cfg(feature = "std")]
+fn decode_authorities_data(data: String) -> Vec<(AuthorityId, BabeAuthorityWeight)> {
+	let data1 = hex::decode(&data[3..data.len()-1]).unwrap();
+
+    let result: Vec<(AuthorityId, BabeAuthorityWeight)> = Decode::decode(&mut &data1[..]).unwrap();
+
+	return result;
+}
+
+#[cfg(feature = "std")]
 impl ProvideInherentData for InherentDataProvider {
 	fn inherent_identifier(&self) -> &'static InherentIdentifier {
 		&INHERENT_IDENTIFIER
 	}
 
-	fn provide_inherent_data(&self, inherent_data: &mut InherentData) -> Result<(), RuntimeString> {
+	fn provide_inherent_data(&self, inherent_data: &mut InherentData) -> Result<(), RuntimeString> {	
 		use std::time::SystemTime;
-			
+		let mut now_millis:u64 = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64;
 		let verify_in_batch = false;
 		if verify_in_batch {
-			let now_millis:u64 = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64;
 			let slot_number = now_millis / self.slot_duration;
 			if slot_number % (RPC_REQUEST_INTERVAL/self.slot_duration) != 0 {
 				sr_io::print_utf8(b"skip this slot");
@@ -161,8 +192,34 @@ impl ProvideInherentData for InherentDataProvider {
 			}
 		}
 
+		let babe_auth_key = get_hexkey(b"Babe Authorities");
+		let babe_auth_key_str = get_value_from_storage(babe_auth_key, self.node_rpc_host.clone());
+		//sr_io::print_utf8(&babe_auth_key_str.clone().into_bytes());
+		if babe_auth_key_str == "null" {
+			sr_io::print_utf8(b"babe_auth_key_str is null.");	
+			return Ok(());
+		}
+
+		let mut found_babe_id = false;
+		let babe_authorities = decode_authorities_data(babe_auth_key_str);
+		for auth in babe_authorities.clone() {
+			let bid = auth.0.to_string();
+			if bid == self.babe_id {
+				sr_io::print_utf8(b"the node is a validator");
+				found_babe_id = true;
+				break;
+			}
+		}
+
+		if !found_babe_id {
+			sr_io::print_utf8(b"the node isn't a validator");
+			return Ok(());
+		}
+
+		let babe_num = &babe_authorities.len();
+
 		let txhash_list_key = get_hexkey(b"XtzStaking TransferInitDataRecords");
-		let transfer_data_str = get_value_from_storage(txhash_list_key, self.host.clone());
+		let transfer_data_str = get_value_from_storage(txhash_list_key, self.node_rpc_host.clone());
 		if transfer_data_str == "null" {
 			sr_io::print_utf8(b"transfer_data is null.");
 			
@@ -170,6 +227,32 @@ impl ProvideInherentData for InherentDataProvider {
 		}
 
 		//sr_io::print_utf8(&transfer_data_str.clone().into_bytes());
+		
+		let blocks_confirmed_key = get_hexkey(b"TezosRpc BlocksConfirmed");
+		let blocks_confirmed_str = get_value_from_storage(blocks_confirmed_key, self.node_rpc_host.clone());
+		let mut blocks_confirmed = extract_number(blocks_confirmed_str) as u8;
+		if blocks_confirmed == 0 {
+			blocks_confirmed = TEZOS_BLOCK_CONFIRMED;
+		}
+		
+		let block_duration_key = get_hexkey(b"TezosRpc BlockDuration");
+		let block_duration_str = get_value_from_storage(block_duration_key, self.node_rpc_host.clone());
+		let mut block_duration = extract_number(block_duration_str);
+		if block_duration == 0 {
+			block_duration = TEZOS_BLOCK_DURATION;
+		}
+		
+		let tezos_rpc_host_key = get_hexkey(b"TezosRpc RpcHost");
+		let tezos_rpc_host_str = get_value_from_storage(tezos_rpc_host_key, self.node_rpc_host.clone());
+		let mut tezos_rpc_host_list = decode_host_data(tezos_rpc_host_str);
+		if tezos_rpc_host_list.len() == 0 {
+			tezos_rpc_host_list.push(HostData {
+				host: TEZOS_RPC_HOST.to_vec(),
+				weight: 1
+			});
+		} 
+		let tezos_rpc_host = String::from_utf8(tezos_rpc_host_list[(now_millis % tezos_rpc_host_list.len() as u64) as usize].host.clone()).unwrap();	
+		sr_io::print_utf8(&format!("current tezos rpc host is {}", tezos_rpc_host.clone()).into_bytes());
 
 		let mut verified_data_vec:Vec<VerifiedData> = Vec::new();
 
@@ -177,54 +260,74 @@ impl ProvideInherentData for InherentDataProvider {
 		for transfer_data in transfer_data_vec {
 			let txhash = String::from_utf8(transfer_data.tx_hash).unwrap();
 			let blockhash = String::from_utf8(transfer_data.block_hash).unwrap();
+			//if txhash.len() != TEZOS_TXHASH_LEN {
+			//	sr_io::print_utf8(b"bad tx hash.");
+			//	continue;
+			//}
 
 			let verified_key = get_maphexkey(b"TezosRpc Verified", &txhash.clone().into_bytes());
-			let result1 = get_value_from_storage(verified_key, self.host.clone());
+			let result1 = get_value_from_storage(verified_key, self.node_rpc_host.clone());
 			let (status, last_timestamp) = extract_status_and_timestamp(result1);
 			let enum_status = VerifyStatus::create(status);
 			if enum_status == VerifyStatus::Error {
 				sr_io::print_utf8(b"error in reading verificaiton status.");
 				continue;	
 			}
+			
+			let verified_vec_key = get_map2hexkey(b"TezosRpc NodeResponse", &txhash.clone().into_bytes(), &self.babe_id.clone().into_bytes());
+			let _result3 = get_value_from_storage(verified_vec_key, self.node_rpc_host.clone());
+			//sr_io::print_utf8(&result3.clone().into_bytes()); //TODO:
 
-			if enum_status == VerifyStatus::Confirmed {
-				sr_io::print_utf8(b"status is Confirmed.");
+			if enum_status == VerifyStatus::Confirmed || enum_status == VerifyStatus::NotFound || enum_status == VerifyStatus::Rollback || enum_status == VerifyStatus::BadRequest {
+				sr_io::print_utf8(&format!("{:}'s status is {:}.", txhash, enum_status as i8).into_bytes());
 				continue;
 			}
 
-			let mut now_millis:u64 = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64;
-			if enum_status == VerifyStatus::Verified && last_timestamp + self.blocks_confirmed * TEZOS_BLOCK_DURATION > now_millis {
+			now_millis = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64;
+			if enum_status == VerifyStatus::Verified && last_timestamp + blocks_confirmed as u64 * block_duration > now_millis {
 				sr_io::print_utf8(b"status is Verified and timestamp + 60000 > now_millis.");
 				continue;	
 			}
 
-			let mut level:u64 = 0;
-			let result2 = request_rpc2(self.url.clone(), blockhash, txhash.clone(), &mut level).unwrap_or_else(|_| false);
-			if result2 && level > 0 {
-				let mut new_status = VerifyStatus::Verified as i8;
-				let mut cur_level:u64 = 0;
-				let _ = request_rpc2(self.url.clone(), "head".to_string(), "".to_string(), &mut cur_level).unwrap_or_else(|_| false);
-				if cur_level > 0 && cur_level - level >= self.blocks_confirmed {
-					new_status = VerifyStatus::Confirmed as i8;
-				} 
-
-				now_millis = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64;
-				let verified_data = VerifiedData {
-					tx_hash: txhash.as_bytes().to_vec(),
-					timestamp: now_millis,
-					status: new_status,
-				};
-				sr_io::print_utf8(&format!("set new status: {}", new_status).into_bytes());
-
-				verified_data_vec.push(verified_data);
+			let mut new_status = VerifyStatus::Verified as i8;
+			let mut cur_level:i64 = 0;
+			let mut level:i64 = 0;
+			let result2 = request_rpc2(tezos_rpc_host.clone(), blockhash, txhash.clone(), &mut level).unwrap_or_else(|_| false);
+			if level < 0 {
+				sr_io::print_utf8(b"bad rpc request.");
+				new_status = VerifyStatus::BadRequest as i8;
+			} else {
+				let _ = request_rpc2(tezos_rpc_host.clone(), "head".to_string(), "".to_string(), &mut cur_level).unwrap_or_else(|_| false);
+				if result2 {
+					if cur_level > 0 && cur_level - level > 0 && (cur_level - level) as u8 >= blocks_confirmed {
+						new_status = VerifyStatus::Confirmed as i8;
+					} 
+				} else {
+					new_status = VerifyStatus::NotFound as i8;
+					if enum_status == VerifyStatus::Verified && cur_level > 0 && cur_level - level > 0 && (cur_level - level) as u8 >= blocks_confirmed  {
+						new_status = VerifyStatus::Rollback as i8;
+					} 	
+				}
 			}
+
+			now_millis = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64;
+			let verified_data = VerifiedData {
+				tx_hash: txhash.as_bytes().to_vec(),
+				timestamp: now_millis,
+				status: new_status,
+				babe_id: self.babe_id.as_bytes().to_vec(),
+				babe_num: *babe_num as u8,
+			};
+			sr_io::print_utf8(&format!("{} set tx {} new status: {}", self.babe_id, txhash, new_status).into_bytes());
+
+			verified_data_vec.push(verified_data);
 
 			if !verify_in_batch {break;}
 		}
 		
 		if verified_data_vec.len() > 0 {
 			let data = Encode::encode(&verified_data_vec);
-			sr_io::print_hex(&data.clone());
+			//sr_io::print_hex(&data.clone());
 			let _ = inherent_data.put_data(INHERENT_IDENTIFIER, &data);
 		}
 
@@ -237,26 +340,29 @@ impl ProvideInherentData for InherentDataProvider {
 }
 
 #[cfg(feature = "std")]
-fn request_rpc2(self_url: String, blockhash: String, txhash: String, level: &mut u64) -> Result<bool, RuntimeString> {
+fn request_rpc2(self_url: String, blockhash: String, txhash: String, level: &mut i64) -> Result<bool, RuntimeString> {
 	//for test
 	//return Ok(true);
 
 	let url = format!("{}chains/main/blocks/{}", self_url, blockhash);
 	reqwest::get(&url[..])
 	.map_err(|error| {
-			format!("{:?}", error).into()
+		*level = -1;
+		format!("{:?}", error).into()
 	}).and_then(|mut resp| {
 		resp.text()
 		.map_err(|_| {
+			*level = -2;
 			"Could not get response body".into()
 		}).and_then(|body| {
 			let v: Value = serde_json::from_str(&body).unwrap_or_else(|_| serde_json::json!({}));
 			let v_level: Value = v["header"]["level"].clone();
 			if v_level.is_null() || !v_level.is_u64() {
+				*level = -3;
 				return Ok(false);
 			}
 
-			*level = v_level.as_u64().unwrap();
+			*level = v_level.as_i64().unwrap();
 
 			if txhash == "" {
 				return Ok(true);
@@ -289,7 +395,7 @@ fn request_rpc2(self_url: String, blockhash: String, txhash: String, level: &mut
 							if kind == "\"transaction\"" {
 								let status:String = serde_json::to_string(&content["metadata"]["operation_result"]["status"]).unwrap();
 								if status == "\"applied\"" {
-									sr_io::print_utf8(b"found tx on chian");
+									sr_io::print_utf8(b"found tx on chain");
 									found = true;
 									break;
 								}
@@ -304,4 +410,40 @@ fn request_rpc2(self_url: String, blockhash: String, txhash: String, level: &mut
 			return Ok(found);
 		})
 	})	
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_get_hexkey() {
+		let result = get_hexkey(b"Sudo Key");
+		assert_eq!(result, "50a63a871aced22e88ee6466fe5aa5d9")
+	}
+
+	#[test]
+	fn test_get_maphexkey() {
+		let result = get_maphexkey(b"TezosRpc Verified", b"onv7i9LSacMXjhTdpgzmY4q6PxiZ18TZPq7KrRBRUVX7XJicSDi");
+		assert_eq!(result, "1c5f64057a95d792855eebea477b2c17887b4d3fa87413463cb500012f79b56d")
+	}
+
+	#[test]
+	fn test_request_rpc2() {
+		let tezos_url = String::from("https://rpc.tezrpc.me/");
+		let block_hash = String::from("BKsxzJMXPxxJWRZcsgWG8AAegXNp2uUuUmMr8gzQcoEiGnNeCA6");
+		let tx_hash = String::from("onv7i9LSacMXjhTdpgzmY4q6PxiZ18TZPq7KrRBRUVX7XJicSDi");
+		let mut level = 0;
+		let result = request_rpc2(tezos_url, block_hash, tx_hash, &mut level).unwrap_or_else(|_| false);
+		assert_eq!(result, true);
+		assert_eq!(level, 642208);
+
+		let tezos_url = String::from("https://rpc.tezrpc.me/");
+		let block_hash = String::from("ab12");
+		let tx_hash = String::from("cd34");
+		let mut level = 0;
+		let result = request_rpc2(tezos_url, block_hash, tx_hash, &mut level).unwrap_or_else(|_| false);
+		assert_eq!(result, false);
+		assert_eq!(level <= 0, true);
+	}
 }

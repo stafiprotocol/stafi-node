@@ -3981,6 +3981,7 @@ dependencies = [
  "stafi-runtime 0.1.0",
  "stafi-service 0.1.0",
  "structopt 0.2.18 (registry+https://github.com/rust-lang/crates.io-index)",
+ "substrate-application-crypto 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "substrate-authority-discovery 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "substrate-basic-authorship 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "substrate-cli 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
@@ -4055,6 +4056,7 @@ dependencies = [
  "srml-support 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "srml-system 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "stafi-primitives 0.1.0",
+ "substrate-consensus-babe-primitives 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "substrate-inherents 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "substrate-primitives 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
 ]
