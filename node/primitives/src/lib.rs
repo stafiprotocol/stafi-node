@@ -111,9 +111,16 @@ client::decl_runtime_apis! {
 			input_data: Vec<u8>,
 		) -> ContractExecResult;
 	}
+
+	pub trait MultisigAddrApi {
+		fn multisig_addr() -> Vec<MultisigAddr>;
+	}
 }
 
 pub mod constants;
 
 pub mod stafistaking;
 pub use stafistaking::{StakeTokenType};
+
+pub mod multisig;
+pub use multisig::{ChainType, MultisigAddr};

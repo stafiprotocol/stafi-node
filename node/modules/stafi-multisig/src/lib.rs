@@ -67,6 +67,8 @@ use system::ensure_signed;
 pub mod transaction;
 pub use transaction::{Transaction, TransactionType, TransferT};
 
+pub mod multisigaddr;
+
 pub trait MultiSigFor<AccountId: Sized, Hash: Sized> {
     /// generate multisig addr for a accountid
     fn multi_sig_addr_for(who: &AccountId) -> AccountId;

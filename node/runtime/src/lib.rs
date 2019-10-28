@@ -25,6 +25,7 @@ use stafi_staking::xtzstaking as xtzStaking;
 use tokenbalances;
 use stafi_externalrpc;
 use stafi_fund;
+use stafi_multisig::multisigaddr as multisigAddr;
 
 use rstd::prelude::*;
 use support::{
@@ -33,7 +34,7 @@ use support::{
 use substrate_primitives::u32_trait::{_1, _2, _3, _4};
 use stafi_primitives::{
 	AccountId, AccountIndex, Balance, BlockNumber, Hash, Index,
-	Moment, Signature, ContractExecResult,
+	Moment, Signature, ContractExecResult, MultisigAddr,
 };
 use babe_primitives::{AuthorityId as BabeId};
 use grandpa::fg_primitives;
@@ -464,6 +465,10 @@ impl stafi_multisig::Trait for Runtime {
 	type Event = Event;
 }
 
+impl multisigAddr::Trait for Runtime {
+	type Event = Event;
+}
+
 impl tokenbalances::Trait for Runtime {
 	const STAFI_SYMBOL: tokenbalances::SymbolString = b"FISH";
     const STAFI_TOKEN_DESC: tokenbalances::DescString = b"STAFI";
@@ -546,6 +551,7 @@ construct_runtime!(
 		Tokenbalances: tokenbalances::{Module, Call, Storage, Event<T>},
 		Stafifund: stafi_fund::{Module, Call, Storage, Event<T>},
 		MultiSig: stafi_multisig::{Module, Call, Storage, Event<T>},
+		MultisigAddrList: multisigAddr::{Module, Call, Storage, Event<T>},
 		StafiExternalRpc: stafi_externalrpc::{Module, Call, Storage, Inherent},
 	}
 );
@@ -690,6 +696,12 @@ impl_runtime_apis! {
 	impl stafi_primitives::AccountNonceApi<Block> for Runtime {
 		fn account_nonce(account: AccountId) -> Index {
 			System::account_nonce(account)
+		}
+	}
+
+	impl stafi_primitives::MultisigAddrApi<Block> for Runtime {
+		fn multisig_addr() -> Vec<MultisigAddr> {
+			MultisigAddrList::multisig_addr()
 		}
 	}
 
