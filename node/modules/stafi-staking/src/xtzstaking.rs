@@ -155,7 +155,7 @@ decl_event!(
 impl<T: Trait> Module<T> {
 
 	fn handle_init() {
-		let mut tmp_datas : Vec<XtzTransferData<T::AccountId, T::Hash>> = Vec::new();
+		let mut tmp_datas: Vec<XtzTransferData<T::AccountId, T::Hash>> = Vec::new();
 
         for (key, transfer_data) in <TransferInitDataMapRecords<T>>::enumerate() {
 			let account_id = &transfer_data.initiator;

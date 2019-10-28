@@ -127,7 +127,7 @@ impl<T: Trait> Module<T> {
 		ensure!(bond_token.status != BondTokenStatus::Locked, "The status of bond token has been locked");
 		ensure!(bond_token.balance >= number, "The balance of bond token is not enough");
 
-		bond_token.balance = bond_token.balance - number;
+		bond_token.balance -= number;
 		<FreeBondToken<T>>::insert(key.clone(), bond_token.clone());
 
 		return Self::add_bond_token(to.clone(), bond_token.symbol, number, bond_token.stake_hash);
@@ -155,7 +155,7 @@ impl<T: Trait> Module<T> {
 		ensure!(bond_token.balance >= number, "The balance of bond token is not enough");
 		ensure!(bond_token.status == BondTokenStatus::Locked, "The status of bond token must be locked");
 
-		bond_token.balance = bond_token.balance - number;
+		bond_token.balance -= number;
 		bond_token.status = BondTokenStatus::Normal;
 
 		<FreeBondToken<T>>::insert(key, bond_token);
@@ -171,9 +171,14 @@ impl<T: Trait> Module<T> {
 		let mut bond_token: BondToken<T::Moment, T::AccountId, T::Hash> = <FreeBondToken<T>>::get(key.clone());
 		ensure!(bond_token.status != BondTokenStatus::Locked, "The status of bond token has been locked");
 
-		bond_token.rewards_amount = bond_token.rewards_amount + rewards_amount;
+		match bond_token.rewards_amount.checked_add(rewards_amount) {
+			Some(value) => {
+				bond_token.rewards_amount = value;
+				<FreeBondToken<T>>::insert(key, bond_token);
+			},
+			None => return Err("Add rewards amount err"),
+		};
 
-		<FreeBondToken<T>>::insert(key, bond_token);
 		Ok(())
     }
 
