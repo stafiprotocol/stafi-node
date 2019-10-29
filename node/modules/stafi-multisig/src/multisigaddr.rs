@@ -11,8 +11,12 @@ pub trait Trait: system::Trait {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as MultiSigAddrsModule {
+	trait Store for Module<T: Trait> as MultisigAddress {
 		pub MultisigAddrList get(multisig_addr): Vec<MultisigAddr>;		
+	}
+	add_extra_genesis {
+		config(addrs): Vec<MultisigAddr>;
+		build(|config| { MultisigAddrList::put(config.addrs.clone()) })
 	}
 }
 
