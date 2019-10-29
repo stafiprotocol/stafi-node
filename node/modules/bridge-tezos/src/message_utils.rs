@@ -75,7 +75,8 @@ pub fn writeSignedInt(value: i64) -> String {
 
     let mut n: BigInt = BigInt::from(value);
     n = n.abs();
-    let l = format!("{}", n).len();
+    let binary_str = format!("{:b}", n);
+    let l = binary_str.len();
     let mut arr: Vec<i64> = vec![];
     let mut v = n;
     for i in (0..l).step_by(7) {
