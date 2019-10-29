@@ -122,4 +122,4 @@ pub mod externalrpc;
 pub use externalrpc::{VerifiedData, VerifyStatus, TxHashType, BabeIdType, HostData};
 
 pub mod tokenbalances;
-pub use tokenbalances::{BondTokenStatus, Symbol, CustomRedeemData};
+pub use tokenbalances::{BondTokenLockType, Symbol, CustomRedeemData};

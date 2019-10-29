@@ -9,13 +9,17 @@ use sr_std::{
 };
 use sr_primitives::traits::{Hash, CheckedAdd};
 use parity_codec::{Encode, Decode};
+
+#[cfg(feature = "std")]
+use serde::{Serialize, Deserialize};
+
 use stafi_primitives::{Balance, XtzTransferData, VerifyStatus, Symbol, constants::currency::*};
 use token_balances::bondtoken;
 use stafi_externalrpc::tezosrpc;
 use log::info;
 
 
-#[cfg_attr(feature = "std", derive(Debug))]
+#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq)]
 pub enum XtzStakeStage {
 	// Init - Transfer token to multi sig address
@@ -24,7 +28,7 @@ pub enum XtzStakeStage {
 	Completed,
 }
 
-#[cfg_attr(feature = "std", derive(Debug))]
+#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 #[derive(Encode, Decode, Clone, PartialEq)]
 pub struct XtzStakeData<AccountId, Hash> {
 	// identifier id

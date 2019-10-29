@@ -7,9 +7,13 @@ extern crate sr_primitives as runtime_primitives;
 
 use support::{decl_module, decl_storage, decl_event, ensure, dispatch::Result, dispatch::Vec};
 use system::ensure_signed;
+
+#[cfg(feature = "std")]
+use serde::{Serialize, Deserialize};
+
 use parity_codec::{Encode, Decode};
 use runtime_primitives::traits::Hash;
-use stafi_primitives::{Balance, BondTokenStatus, Symbol, CustomRedeemData}; 
+use stafi_primitives::{Balance, BondTokenLockType, Symbol, CustomRedeemData}; 
 use srml_timestamp as timestamp;
 
 
@@ -17,20 +21,8 @@ pub trait Trait: balances::Trait + timestamp::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
-// #[cfg_attr(feature = "std", derive(Debug))]
-// #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq)]
-// pub enum Symbol {
-// 	XtzBond,
-// 	AtomBond,
-// }
-// impl Default for Symbol {
-// 	fn default() -> Symbol {
-// 		Symbol::XtzBond
-// 	}
-// }
-
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
-#[cfg_attr(feature = "std", derive( Debug))]
+#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 pub struct BondToken<Moment, AccountId, Hash> {
 	id: Hash,
 	account_id: AccountId,
@@ -38,15 +30,25 @@ pub struct BondToken<Moment, AccountId, Hash> {
 	balance: Balance,
 	capital_amount: Balance,
 	rewards_amount: Balance,
-	lock_amount: Balance,
 	issue_time: Moment,
-	stake_hash: Hash,
-	status: BondTokenStatus,
+	stake_id: Hash,
+	lock_ids: Vec<Hash>,
+}
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
+#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
+pub struct LockBondData<Moment, Hash> {
+	id: Hash,
+	bond_id: Hash,
+	lock_type: BondTokenLockType,
+	lock_amount: Balance,
+	lock_time: Moment,
 }
 
 decl_storage! {
 	trait Store for Module<T: Trait> as BondToken {
 		pub FreeBondToken get(free_bond_token): map (T::AccountId, T::Hash) => BondToken<T::Moment, T::AccountId, T::Hash>;
+		pub LockBondToken get(get_lock_bond_token): map T::Hash => LockBondData<T::Moment, T::Hash>;
 		pub BondTokenHashList get(bond_token_hash_list): map (T::AccountId, Symbol) => Vec<T::Hash>;
 		pub RedeemRecords get(redeem_records): map (T::AccountId, T::Hash) => Option<CustomRedeemData<T::AccountId, T::Hash, Balance>>;
 	}
@@ -60,16 +62,24 @@ decl_module! {
 		pub fn custom_redeem(origin, bond_id: T::Hash, amount: Balance, original_account_id: Vec<u8>) -> Result {
 			let sender = ensure_signed(origin)?;
 
-			Self::lock_bond_token(sender.clone(), bond_id.clone(), amount).expect("Error locking bond token");
+			ensure!(amount > 0, "The amount to lock must be greater than 0");
 
-			<RedeemRecords<T>>::insert((sender.clone(), bond_id.clone()), CustomRedeemData {
+			let key = (sender.clone(), bond_id.clone());
+			ensure!(<FreeBondToken<T>>::exists(key.clone()), "This bond token does not exist");
+
+			let bond_token = <FreeBondToken<T>>::get(key.clone());
+			ensure!(bond_token.balance >= amount, "The balance of bond token is not enough");
+
+			let lock_id = Self::lock_bond_token(sender.clone(), bond_id.clone(), amount, BondTokenLockType::Redemption);
+
+			<RedeemRecords<T>>::insert((sender.clone(), lock_id.clone()), CustomRedeemData {
 				initiator: sender.clone(),
-				bond_id: bond_id,
+				lock_id: lock_id.clone(),
 				amount: amount,
 				original_account_id: original_account_id,
 			});
 
-			Self::deposit_event(RawEvent::RedeenBondToken(sender, bond_id));	
+			Self::deposit_event(RawEvent::RedeemBondToken(sender, lock_id));
 
 			Ok(())	
 		}
@@ -78,7 +88,7 @@ decl_module! {
 
 decl_event!(
 	pub enum Event<T> where AccountId = <T as system::Trait>::AccountId, Hash = <T as system::Trait>::Hash {
-		RedeenBondToken(AccountId, Hash),
+		RedeemBondToken(AccountId, Hash),
 	}
 );
 
@@ -99,7 +109,7 @@ impl<T: Trait> Module<T> {
 		return bond_token_hash_list.into_iter().map(|x| <FreeBondToken<T>>::get((sender.clone(), x))).collect();
     }
 
-	pub fn add_bond_token(sender: T::AccountId, symbol: Symbol, amount: Balance, stake_hash: T::Hash) -> Result {
+	pub fn add_bond_token(sender: T::AccountId, symbol: Symbol, amount: Balance, stake_id: T::Hash) -> Result {
 		ensure!(amount > 0, "The amount must be greater than 0");
 
 		/// TODO: Check symbol
@@ -115,11 +125,10 @@ impl<T: Trait> Module<T> {
 			balance: amount,
 			capital_amount: amount,
 			rewards_amount: 0,
-			lock_amount: 0,
 			account_id: sender.clone(),
 			issue_time: now,
-			stake_hash: stake_hash,
-			status: BondTokenStatus::Normal
+			stake_id: stake_id,
+			lock_ids: Vec::new(),
 		};
 
 		Self::add_bond_hash_list(sender.clone(), hash.clone(), symbol.clone());
@@ -134,43 +143,62 @@ impl<T: Trait> Module<T> {
 		let key = (sender.clone(), bond_id.clone());
 		ensure!(<FreeBondToken<T>>::exists(key.clone()), "This bond token does not exist");
 
-		let mut bond_token: BondToken<T::Moment, T::AccountId, T::Hash> = <FreeBondToken<T>>::get(key.clone());
+		let mut bond_token = <FreeBondToken<T>>::get(key.clone());
 		ensure!(bond_token.balance >= amount, "The balance of bond token is not enough");
 
 		bond_token.balance -= amount;
 		<FreeBondToken<T>>::insert(key.clone(), bond_token.clone());
 
-		return Self::add_bond_token(to.clone(), bond_token.symbol, amount, bond_token.stake_hash);
+		return Self::add_bond_token(to.clone(), bond_token.symbol, amount, bond_token.stake_id);
     }
 
-	pub fn lock_bond_token(sender: T::AccountId, bond_id: T::Hash, amount: Balance) -> Result {
-		ensure!(amount > 0, "The amount to lock must be greater than 0");
-
+	fn lock_bond_token(sender: T::AccountId, bond_id: T::Hash, amount: Balance, lock_type: BondTokenLockType) -> T::Hash {
 		let key = (sender.clone(), bond_id.clone());
-		ensure!(<FreeBondToken<T>>::exists(key.clone()), "This bond token does not exist");
+		let mut bond_token = <FreeBondToken<T>>::get(key.clone());	
 
-		let mut bond_token: BondToken<T::Moment, T::AccountId, T::Hash> = <FreeBondToken<T>>::get(key.clone());
-		ensure!(bond_token.status != BondTokenStatus::Locked, "The status of bond token has been locked");
-		ensure!(bond_token.balance >= amount, "The balance of bond token is not enough");
+		let lock_id = Self::add_lock_bond_token(sender.clone(), bond_id.clone(), amount, lock_type);
+
+		bond_token.lock_ids.push(lock_id.clone());
 		bond_token.balance -= amount;
-		bond_token.status = BondTokenStatus::Locked;
 
 		<FreeBondToken<T>>::insert(key, bond_token);
-		Ok(())
+		
+		lock_id
     }
 
-	pub fn redeem_bond_token(sender: T::AccountId, bond_id: T::Hash, amount: Balance) -> Result {
-		ensure!(amount > 0, "The amount to redeem must be greater than 0");
+	fn add_lock_bond_token(sender: T::AccountId, bond_id: T::Hash, amount: Balance, lock_type: BondTokenLockType) -> T::Hash {
+		let random_seed = <system::Module<T>>::random_seed();
+		let hash = (random_seed, &sender).using_encoded(<T as system::Trait>::Hashing::hash);
+		let now = <timestamp::Module<T>>::get();
+		let lock_bond_token = LockBondData {
+			id: hash.clone(),
+			bond_id: bond_id,
+			lock_type: lock_type,
+			lock_amount: amount,
+			lock_time: now,
+		};
 
-		let key = (sender.clone(), bond_id.clone());
+		<LockBondToken<T>>::insert(hash.clone(), lock_bond_token);
+
+		return hash;
+    }
+
+	pub fn complete_redeem_bond_token(sender: T::AccountId, lock_id: T::Hash) -> Result {
+		ensure!(<LockBondToken<T>>::exists(lock_id.clone()), "This lock bond token does not exist");
+		let lock_bond_data = <LockBondToken<T>>::get(lock_id.clone());
+
+		let key = (sender.clone(), lock_bond_data.bond_id.clone());
 		ensure!(<FreeBondToken<T>>::exists(key.clone()), "This bond token does not exist");
 
-		let mut bond_token: BondToken<T::Moment, T::AccountId, T::Hash> = <FreeBondToken<T>>::get(key.clone());
-		ensure!(bond_token.balance >= amount, "The balance of bond token is not enough");
-		ensure!(bond_token.status == BondTokenStatus::Locked, "The status of bond token must be locked");
+		let mut bond_token = <FreeBondToken<T>>::get(key.clone());
 
-		bond_token.lock_amount = 0;
-		bond_token.status = BondTokenStatus::Normal;
+		let mut lock_id_list: Vec<T::Hash> = Vec::new();
+		for t_lock_id in bond_token.lock_ids {
+			if t_lock_id != lock_id {
+				lock_id_list.push(t_lock_id);
+			}
+		}
+		bond_token.lock_ids = lock_id_list;
 
 		<FreeBondToken<T>>::insert(key, bond_token);
 		Ok(())
@@ -182,8 +210,7 @@ impl<T: Trait> Module<T> {
 		let key = (sender.clone(), bond_id.clone());
 		ensure!(<FreeBondToken<T>>::exists(key.clone()), "This bond token does not exist");
 
-		let mut bond_token: BondToken<T::Moment, T::AccountId, T::Hash> = <FreeBondToken<T>>::get(key.clone());
-		ensure!(bond_token.status != BondTokenStatus::Locked, "The status of bond token has been locked");
+		let mut bond_token = <FreeBondToken<T>>::get(key.clone());
 
 		match bond_token.balance.checked_add(rewards_amount) {
 			Some(balance_value) => {
@@ -209,4 +236,34 @@ impl<T: Trait> Module<T> {
 		hash_list.push(bond_id.clone());
 		<BondTokenHashList<T>>::insert(key.clone(), hash_list);
     }
+}
+
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use hex_literal::hex;
+	use primitives::{H256, Blake2Hasher};
+	use support::{impl_outer_origin, assert_ok, parameter_types};
+	use sr_primitives::{traits::{BlakeTwo256, IdentityLookup}, testing::Header};
+	use sr_primitives::weights::Weight;
+	use sr_primitives::Perbill;
+	use stafi_primitives::{Balance, constants::currency::*};
+
+
+	#[test]
+	fn test_add_bond_token() {
+		let sender =
+			hex!["63410a24555c6f0c5ba8f0d27f85740dca150d9a0d67e3fa8502d5d9e6a4fafe"]
+				.unchecked_into();
+		let random_seed = <system::Module<Test>>::random_seed();
+		let hash = (random_seed, &sender).using_encoded(<Test as system::Trait>::Hashing::hash);
+
+		let new_status = add_bond_token(sender, Symbol::XtzBond, 10,  hash.clone());
+
+		let key = (sender.clone(), hash.clone());
+		let mut bond_token = <FreeBondToken<Test>>::get(key.clone());
+
+		assert_eq!(hash, bond_token.lock_id);
+	}
 }

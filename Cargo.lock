@@ -4194,6 +4194,7 @@ version = "0.1.0"
 dependencies = [
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "sr-std 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "srml-balances 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
@@ -5234,10 +5235,9 @@ dependencies = [
 name = "tokenbalances"
 version = "0.1.0"
 dependencies = [
+ "hex-literal 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "safe-mix 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "sr-primitives 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "sr-std 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
@@ -5246,7 +5246,6 @@ dependencies = [
  "srml-system 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "srml-timestamp 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "stafi-primitives 0.1.0",
- "substrate-keyring 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "substrate-primitives 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
 ]
 

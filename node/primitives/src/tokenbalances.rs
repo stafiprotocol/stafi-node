@@ -1,8 +1,10 @@
 use parity_codec::{Encode, Decode};
 use rstd::prelude::*;
 
+#[cfg(feature = "std")]
+use serde::{Serialize, Deserialize};
 
-#[cfg_attr(feature = "std", derive(Debug))]
+#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq)]
 pub enum Symbol {
 	XtzBond,
@@ -14,29 +16,27 @@ impl Default for Symbol {
 	}
 }
 
-/// Bond token status.
-#[cfg_attr(feature = "std", derive(Debug))]
+/// Bond token lock type.
+#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq)]
-pub enum BondTokenStatus {
-	/// 
-	Normal,
-	/// 
-	Locked,
+pub enum BondTokenLockType {
+	/// Redemption
+	Redemption,
 }
 
-impl Default for BondTokenStatus {
-	fn default() -> BondTokenStatus {
-		BondTokenStatus::Normal
+impl Default for BondTokenLockType {
+	fn default() -> BondTokenLockType {
+		BondTokenLockType::Redemption
 	}
 }
 
-#[cfg_attr(feature = "std", derive(Debug))]
+#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 #[derive(Encode, Decode, Clone, PartialEq)]
 pub struct CustomRedeemData<AccountId, Hash, Balance> {
 	// creator of redeem
 	pub initiator: AccountId,
-	// bond token id
-	pub bond_id: Hash,
+	// lock bond token id
+	pub lock_id: Hash,
 	// redeem amount
 	pub amount: Balance,
 	// original chain account id

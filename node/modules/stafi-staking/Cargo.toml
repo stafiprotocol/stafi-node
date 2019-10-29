@@ -5,6 +5,7 @@ authors = ["Tore <technical@stafi.io>"]
 edition = "2018"
 
 [dependencies]
+serde = { version = "1.0", default_features = false }
 parity-codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 sr-std = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 sr-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
@@ -23,6 +24,7 @@ log = "0.4"
 [features]
 default = ["std"]
 std = [
+    "serde/std",
     "parity-codec/std",
     "sr-std/std",
     "sr-primitives/std",
