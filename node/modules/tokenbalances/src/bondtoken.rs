@@ -13,7 +13,7 @@ use serde::{Serialize, Deserialize};
 
 use parity_codec::{Encode, Decode};
 use runtime_primitives::traits::Hash;
-use stafi_primitives::{Balance, BondTokenLockType, Symbol, CustomRedeemData}; 
+use stafi_primitives::{Balance, BondTokenLockType, BondTokenLockStatus, Symbol, CustomRedeemData}; 
 use srml_timestamp as timestamp;
 
 
@@ -43,6 +43,7 @@ pub struct LockBondData<Moment, Hash> {
 	lock_type: BondTokenLockType,
 	lock_amount: Balance,
 	lock_time: Moment,
+	status: BondTokenLockStatus
 }
 
 decl_storage! {
@@ -50,7 +51,7 @@ decl_storage! {
 		pub FreeBondToken get(free_bond_token): map (T::AccountId, T::Hash) => BondToken<T::Moment, T::AccountId, T::Hash>;
 		pub LockBondToken get(get_lock_bond_token): map T::Hash => LockBondData<T::Moment, T::Hash>;
 		pub BondTokenHashList get(bond_token_hash_list): map (T::AccountId, Symbol) => Vec<T::Hash>;
-		pub RedeemRecords get(redeem_records): map (T::AccountId, T::Hash) => Option<CustomRedeemData<T::AccountId, T::Hash, Balance>>;
+		pub RedeemRecords get(redeem_records): map (T::AccountId, T::Hash) => Option<CustomRedeemData<T::AccountId, T::Hash>>;
 	}
 }
 
@@ -75,7 +76,6 @@ decl_module! {
 			<RedeemRecords<T>>::insert((sender.clone(), lock_id.clone()), CustomRedeemData {
 				initiator: sender.clone(),
 				lock_id: lock_id.clone(),
-				amount: amount,
 				original_account_id: original_account_id,
 			});
 
@@ -176,6 +176,7 @@ impl<T: Trait> Module<T> {
 			lock_type: lock_type,
 			lock_amount: amount,
 			lock_time: now,
+			status: BondTokenLockStatus::Locked
 		};
 
 		<LockBondToken<T>>::insert(hash.clone(), lock_bond_token);
@@ -185,7 +186,7 @@ impl<T: Trait> Module<T> {
 
 	pub fn complete_redeem_bond_token(sender: T::AccountId, lock_id: T::Hash) -> Result {
 		ensure!(<LockBondToken<T>>::exists(lock_id.clone()), "This lock bond token does not exist");
-		let lock_bond_data = <LockBondToken<T>>::get(lock_id.clone());
+		let mut lock_bond_data = <LockBondToken<T>>::get(lock_id.clone());
 
 		let key = (sender.clone(), lock_bond_data.bond_id.clone());
 		ensure!(<FreeBondToken<T>>::exists(key.clone()), "This bond token does not exist");
@@ -201,6 +202,10 @@ impl<T: Trait> Module<T> {
 		bond_token.lock_ids = lock_id_list;
 
 		<FreeBondToken<T>>::insert(key, bond_token);
+
+		lock_bond_data.status = BondTokenLockStatus::Completed;
+		<LockBondToken<T>>::insert(lock_id, lock_bond_data);
+
 		Ok(())
     }
 
