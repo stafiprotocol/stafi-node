@@ -17,4 +17,4 @@
 pub mod transfer;
 
 mod base128;
-mode message_utils;
+mod message_utils;

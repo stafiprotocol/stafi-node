@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
 
-extern crate stafi_crypto;
+// extern crate stafi_crypto;
 
-pub use stafi_crypto::SignatureData;
+// pub use stafi_crypto::SignatureData;
 
-pub fn pack_transfer_
+// pub fn pack_transfer_
