@@ -551,7 +551,7 @@ construct_runtime!(
 		Tokenbalances: tokenbalances::{Module, Call, Storage, Event<T>},
 		Stafifund: stafi_fund::{Module, Call, Storage, Event<T>},
 		MultiSig: stafi_multisig::{Module, Call, Storage, Event<T>},
-		MultisigAddrList: multisigAddr::{Module, Call, Storage, Event<T>},
+		MultisigAddrList: multisigAddr::{Module, Call, Storage, Event},
 		StafiExternalRpc: stafi_externalrpc::{Module, Call, Storage, Inherent},
 	}
 );
