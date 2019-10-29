@@ -145,7 +145,18 @@ fn get_new_status(txhash: TxHashType, response: Vec<((TxHashType, BabeIdType), V
 	return new_status;
 }
 
-impl<T: Trait> Module<T> {}
+impl<T: Trait> Module<T> {
+	pub fn remove_verified(txhash: TxHashType) {
+		if Verified::exists(&txhash) {
+			Verified::remove(&txhash);
+			for (k, _) in NodeResponse::enumerate() {
+				if k.0 == txhash {
+					NodeResponse::remove(k);
+				}
+			}
+		}
+	}	
+}
 
 fn extract_inherent_data(data: &InherentData) -> Result<InherentType, RuntimeString> {
 	//data.get_data::<InherentType>(&INHERENT_IDENTIFIER)
