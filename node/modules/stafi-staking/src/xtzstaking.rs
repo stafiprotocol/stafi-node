@@ -8,17 +8,14 @@ use sr_std::{
 	convert::{TryInto},
 };
 use sr_primitives::traits::{Hash, CheckedAdd};
-use parity_codec::{Encode, Decode};
-
-#[cfg(feature = "std")]
-use serde::{Serialize, Deserialize};
+use parity_codec::{Encode};
 
 use stafi_primitives::{Balance, XtzTransferData, VerifyStatus, XtzStakeStage, XtzStakeData, Symbol, constants::currency::*};
 use token_balances::bondtoken;
 use stafi_externalrpc::tezosrpc;
 use log::info;
 
-pub trait Trait: system::Trait + bondtoken::Trait + tezosrpc::Trait {
+pub trait Trait: system::Trait + balances::Trait + bondtoken::Trait + tezosrpc::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }

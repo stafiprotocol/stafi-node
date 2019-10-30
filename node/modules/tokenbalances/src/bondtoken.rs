@@ -17,7 +17,7 @@ use stafi_primitives::{Balance, BondTokenLockType, BondTokenLockStatus, Symbol, 
 use srml_timestamp as timestamp;
 
 
-pub trait Trait: balances::Trait + timestamp::Trait {
+pub trait Trait: timestamp::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
