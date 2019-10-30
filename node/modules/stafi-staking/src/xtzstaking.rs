@@ -13,35 +13,10 @@ use parity_codec::{Encode, Decode};
 #[cfg(feature = "std")]
 use serde::{Serialize, Deserialize};
 
-use stafi_primitives::{Balance, XtzTransferData, VerifyStatus, Symbol, constants::currency::*};
+use stafi_primitives::{Balance, XtzTransferData, VerifyStatus, XtzStakeStage, XtzStakeData, Symbol, constants::currency::*};
 use token_balances::bondtoken;
 use stafi_externalrpc::tezosrpc;
 use log::info;
-
-
-#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
-#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq)]
-pub enum XtzStakeStage {
-	// Init - Transfer token to multi sig address
-	Init,
-	// Successful transfer
-	Completed,
-}
-
-#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
-#[derive(Encode, Decode, Clone, PartialEq)]
-pub struct XtzStakeData<AccountId, Hash> {
-	// identifier id
-	pub id: Hash,
-	// creator of stake
-	pub initiator: AccountId,
-	// Stage of stake
-	pub stage: XtzStakeStage,
-	// multi sig address
-	pub multi_sig_address: Vec<u8>,
-	// Token data of stake
-	pub stake_amount: Balance,
-}
 
 pub trait Trait: system::Trait + bondtoken::Trait + tezosrpc::Trait {
 	/// The overarching event type.

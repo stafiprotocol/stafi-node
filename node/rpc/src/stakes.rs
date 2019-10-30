@@ -22,7 +22,7 @@ use client::blockchain::HeaderBackend;
 use jsonrpc_core::{Result, Error, ErrorCode};
 use jsonrpc_derive::rpc;
 use stafi_primitives::{
-	Block, BlockId, MultisigAddrApi, ChainType
+	Block, BlockId, AccountId, Hash, StakesApi, XtzStakeStage
 };
 use codec::{Encode, Decode};
 use sr_primitives::traits;
@@ -31,58 +31,76 @@ use hex;
 use serde::{Serialize, Deserialize};
 #[derive(Debug, Serialize, Deserialize)]
 #[derive(Encode, Decode, Clone, Eq, PartialEq)]
-pub struct RpcMultisigAddr {
-	pub chain_type: ChainType,
-	pub multisig_addr: String,
+pub struct RpcXtzStakeData<AccountId, Hash> {
+	pub id: Hash,
+	pub initiator: AccountId,
+	pub stage: XtzStakeStage,
+	pub multi_sig_address: String,
+	pub stake_amount: String,
 }
 
 #[rpc]
-pub trait MultisigsApi {
-	#[rpc(name = "multisig_getaddr")]
-	fn get_addr(&self) -> Result<Vec<RpcMultisigAddr>>;
+pub trait StakesRpcApi {
+	#[rpc(name = "stake_xtz_gethash")]
+	fn get_stake_hash(&self, account: AccountId) -> Result<Vec<Hash>>;
+	#[rpc(name = "stake_xtz_getdata")]
+	fn get_stake_data(&self, account: AccountId, hash: Hash) -> Result<Option<RpcXtzStakeData<AccountId, Hash>>>;
 }
 
-pub struct Multisigs<C> {
+pub struct Stakes<C> {
 	client: Arc<C>,
 }
 
-impl<C> Multisigs<C> {
+impl<C> Stakes<C> {
 	pub fn new(client: Arc<C>) -> Self {
-		Multisigs {
+		Stakes {
 			client
 		}
 	}
 }
 
-impl<C> MultisigsApi for Multisigs<C>
+impl<C> StakesRpcApi for Stakes<C>
 where
 	C: traits::ProvideRuntimeApi,
 	C: HeaderBackend<Block>,
 	C: Send + Sync + 'static,
-	C::Api: MultisigAddrApi<Block>,
+	C::Api: StakesApi<Block>,
 {
-	fn get_addr(&self) -> Result<Vec<RpcMultisigAddr>> {
+	fn get_stake_hash(&self, account: AccountId) -> Result<Vec<Hash>> {
 		let api = self.client.runtime_api();
 		let best = self.client.info().best_hash;
 		let at = BlockId::hash(best);
 
-		let addrs = api.multisig_addr(&at).map_err(|e| Error {
+		let hashes = api.get_stake_hash(&at, account).map_err(|e| Error {
 			code: ErrorCode::ServerError(crate::constants::RUNTIME_ERROR),
 			message: "Unable to query multisig address.".into(),
 			data: Some(format!("{:?}", e).into()),
 		})?;
 
-		let mut result:Vec<RpcMultisigAddr> = Vec::new();
-        for addr in addrs.clone() {
+		Ok(hashes)
+	}
 
-            let ret = RpcMultisigAddr {
-                chain_type: addr.chain_type,
-                multisig_addr: String::from("0x") + &hex::encode(addr.multisig_addr),
-            };
+	fn get_stake_data(&self, account: AccountId, hash: Hash) -> Result<Option<RpcXtzStakeData<AccountId, Hash>>> {
+		let api = self.client.runtime_api();
+		let best = self.client.info().best_hash;
+		let at = BlockId::hash(best);
 
-            result.push(ret);
-        }
+		let data = api.get_stake_data(&at, account, hash).map_err(|e| Error {
+			code: ErrorCode::ServerError(crate::constants::RUNTIME_ERROR),
+			message: "Unable to query multisig address.".into(),
+			data: Some(format!("{:?}", e).into()),
+		})?;
 
-		Ok(result)
+		if let Some(data) = data {
+			Ok(Some(RpcXtzStakeData {
+				id: data.id,
+				initiator: data.initiator,
+				stage: data.stage,
+				multi_sig_address: String::from("0x") + &hex::encode(data.multi_sig_address),
+				stake_amount: data.stake_amount.to_string(),
+			}))
+		} else {
+			Ok(None)
+		}
 	}
 }
