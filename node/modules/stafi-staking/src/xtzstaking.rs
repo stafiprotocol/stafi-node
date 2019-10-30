@@ -27,7 +27,7 @@ pub trait Trait: system::Trait + bondtoken::Trait + tezosrpc::Trait {
 decl_storage! {
 	trait Store for Module<T: Trait> as XtzStaking {
 		// Just a dummy storage item.
-		pub StakeRecords get(stake_records): map (T::AccountId, T::Hash) => Option<XtzStakeData<T::AccountId, T::Hash>>;
+		pub StakeRecords get(stake_records): map (T::AccountId, T::Hash) => Option<XtzStakeData<T::AccountId, T::Hash, Balance>>;
 		pub StakeDataHashRecords get(stake_data_hash_records): map T::AccountId => Vec<T::Hash>;
 		pub TransferInitDataRecords get(transfer_init_data_records): Vec<XtzTransferData<T::AccountId, T::Hash>>;
 		pub TransferInitCheckRecords get(transfer_init_check_records): map Vec<u8> => bool;

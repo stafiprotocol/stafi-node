@@ -720,7 +720,7 @@ impl_runtime_apis! {
 			XtzStaking::stake_data_hash_records(account)
 		}
 
-		fn get_stake_data(account: AccountId, hash: Hash) -> Option<XtzStakeData<AccountId, Hash>> {
+		fn get_stake_data(account: AccountId, hash: Hash) -> Option<XtzStakeData<AccountId, Hash, Balance>> {
 			XtzStaking::stake_records((account, hash))
 		}
 	}

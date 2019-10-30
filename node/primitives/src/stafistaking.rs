@@ -3,8 +3,6 @@ use rstd::prelude::*;
 #[cfg(feature = "std")]
 use serde::{Serialize, Deserialize};
 
-pub type Balance = u128;
-
 /// Stake token type.
 #[cfg_attr(feature = "std", derive(Debug))]
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq)]
@@ -47,7 +45,7 @@ pub enum XtzStakeStage {
 
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 #[derive(Encode, Decode, Clone, PartialEq)]
-pub struct XtzStakeData<AccountId, Hash> {
+pub struct XtzStakeData<AccountId, Hash, Balance> {
 	// identifier id
 	pub id: Hash,
 	// creator of stake

@@ -73,7 +73,7 @@ where
 
 		let hashes = api.get_stake_hash(&at, account).map_err(|e| Error {
 			code: ErrorCode::ServerError(crate::constants::RUNTIME_ERROR),
-			message: "Unable to query multisig address.".into(),
+			message: "Unable to query stake hash.".into(),
 			data: Some(format!("{:?}", e).into()),
 		})?;
 
@@ -87,7 +87,7 @@ where
 
 		let data = api.get_stake_data(&at, account, hash).map_err(|e| Error {
 			code: ErrorCode::ServerError(crate::constants::RUNTIME_ERROR),
-			message: "Unable to query multisig address.".into(),
+			message: "Unable to query stake data.".into(),
 			data: Some(format!("{:?}", e).into()),
 		})?;
 
