@@ -25,7 +25,7 @@ pub const RPC_REQUEST_INTERVAL: u64 = 60000; //1 minute
 pub const TEZOS_TXHASH_LEN: u8 = 51;
 pub const TEZOS_BLOCK_CONFIRMED: u8 = 3;
 pub const TEZOS_BLOCK_DURATION: u64 = 60000;
-pub const TEZOS_RPC_HOST: &'static [u8] = b"https://rpc.tezrpc.me/";
+pub const TEZOS_RPC_HOST: &'static [u8] = b"https://tezos-test-rpc.wetez.io";
 
 pub type InherentType = Vec<u8>;
 
@@ -341,10 +341,7 @@ impl ProvideInherentData for InherentDataProvider {
 
 #[cfg(feature = "std")]
 fn request_rpc2(self_url: String, blockhash: String, txhash: String, level: &mut i64) -> Result<bool, RuntimeString> {
-	//for test
-	//return Ok(true);
-
-	let url = format!("{}chains/main/blocks/{}", self_url, blockhash);
+	let url = format!("{}/chains/main/blocks/{}", self_url, blockhash);
 	reqwest::get(&url[..])
 	.map_err(|error| {
 		*level = -1;
