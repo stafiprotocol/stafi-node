@@ -27,16 +27,17 @@
 //! are part of it. Therefore all node-runtime-specific RPCs can
 //! be placed here.
 
-#![warn(missing_docs)]
+#![allow(missing_docs)]
 
 use std::sync::Arc;
 
-use stafi_primitives::{Block, AccountNonceApi, ContractsApi};
+use stafi_primitives::{Block, AccountNonceApi, ContractsApi, MultisigAddrApi};
 use sr_primitives::traits::ProvideRuntimeApi;
 use transaction_pool::txpool::{ChainApi, Pool};
 
 pub mod accounts;
 pub mod contracts;
+pub mod multisigs;
 
 mod constants {
 	/// A status code indicating an error happened while trying to call into the runtime.
@@ -50,13 +51,14 @@ pub fn create<C, P, M>(client: Arc<C>, pool: Arc<Pool<P>>) -> jsonrpc_core::IoHa
 	C: ProvideRuntimeApi,
 	C: client::blockchain::HeaderBackend<Block>,
 	C: Send + Sync + 'static,
-	C::Api: AccountNonceApi<Block> + ContractsApi<Block>,
+	C::Api: AccountNonceApi<Block> + ContractsApi<Block> + MultisigAddrApi<Block>,
 	P: ChainApi + Sync + Send + 'static,
 	M: jsonrpc_core::Metadata + Default,
 {
 	use self::{
 		accounts::{Accounts, AccountsApi},
 		contracts::{Contracts, ContractsApi},
+		multisigs::{Multisigs, MultisigsApi},
 	};
 
 	let mut io = jsonrpc_core::IoHandler::default();
@@ -64,7 +66,10 @@ pub fn create<C, P, M>(client: Arc<C>, pool: Arc<Pool<P>>) -> jsonrpc_core::IoHa
 		AccountsApi::to_delegate(Accounts::new(client.clone(), pool))
 	);
 	io.extend_with(
-		ContractsApi::to_delegate(Contracts::new(client))
+		ContractsApi::to_delegate(Contracts::new(client.clone()))
+	);
+	io.extend_with(
+		MultisigsApi::to_delegate(Multisigs::new(client))
 	);
 	io
 }

@@ -111,6 +111,10 @@ client::decl_runtime_apis! {
 			input_data: Vec<u8>,
 		) -> ContractExecResult;
 	}
+
+	pub trait MultisigAddrApi {
+		fn multisig_addr() -> Vec<MultisigAddr>;
+	}
 }
 
 pub mod constants;
@@ -123,3 +127,6 @@ pub use externalrpc::{VerifiedData, VerifyStatus, TxHashType, BabeIdType, HostDa
 
 pub mod tokenbalances;
 pub use tokenbalances::{BondTokenLockType, BondTokenLockStatus, Symbol, CustomRedeemData};
+
+pub mod multisig;
+pub use multisig::{ChainType, MultisigAddr};

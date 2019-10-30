@@ -15,6 +15,7 @@ log = "0.4"
 stafi-primitives = { path = "../primitives" }
 codec = { package = "parity-scale-codec", version = "1.0.0" }
 serde = { version = "1.0", features = ["derive"] }
+hex = { version = "0.4.0" }
 sr-primitives = { package = "sr-primitives", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 substrate-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 rpc-primitives = { package = "substrate-rpc-primitives", git = "https://github.com/stafiprotocol/stafi-blockchain" }

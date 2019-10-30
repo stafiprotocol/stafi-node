@@ -21,10 +21,11 @@ use stafi_runtime::{
 	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, ContractsConfig, CouncilConfig, DemocracyConfig,
 	ElectionsConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig,
 	SessionConfig,	SessionKeys, StakerStatus, StakingConfig, SudoConfig, SystemConfig,
-	TechnicalCommitteeConfig, WASM_BINARY,
+	TechnicalCommitteeConfig, MultisigAddressConfig, WASM_BINARY,
 };
 use stafi_runtime::Block;
 use stafi_primitives::constants::{time::*, currency::*};
+use stafi_primitives::multisig::{ChainType, MultisigAddr}; 
 use substrate_service;
 use substrate_telemetry::TelemetryEndpoints;
 use grandpa_primitives::{AuthorityId as GrandpaId};
@@ -206,6 +207,18 @@ pub fn testnet_genesis(
 		}),
 		grandpa: Some(GrandpaConfig {
 			authorities: vec![],
+		}),
+		multisigAddr: Some(MultisigAddressConfig {
+			addrs: [
+				MultisigAddr {
+					chain_type: ChainType::TEZOS,
+					multisig_addr: "345".as_bytes().to_vec()
+				},
+				MultisigAddr {
+					chain_type: ChainType::COSMOS,
+					multisig_addr: "567".as_bytes().to_vec()
+				},
+			].to_vec()
 		}),
 		membership_Instance1: Some(Default::default()),
     }
