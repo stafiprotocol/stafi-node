@@ -10,7 +10,7 @@ use sr_std::{
 use sr_primitives::traits::{Hash, CheckedAdd};
 use parity_codec::{Encode};
 
-use stafi_primitives::{Balance, XtzTransferData, VerifyStatus, XtzStakeStage, XtzStakeData, Symbol, constants::currency::*};
+use stafi_primitives::{Balance, VerifyStatus, XtzStakeStage, XtzStakeData, Symbol, constants::currency::*};
 use token_balances::bondtoken;
 use stafi_externalrpc::tezosrpc;
 use log::info;
@@ -26,9 +26,9 @@ decl_storage! {
 		// Just a dummy storage item.
 		pub StakeRecords get(stake_records): map (T::AccountId, T::Hash) => Option<XtzStakeData<T::AccountId, T::Hash, Balance>>;
 		pub StakeDataHashRecords get(stake_data_hash_records): map T::AccountId => Vec<T::Hash>;
-		pub TransferInitDataRecords get(transfer_init_data_records): Vec<XtzTransferData<T::AccountId, T::Hash>>;
+		pub TransferInitDataRecords get(transfer_init_data_records): Vec<XtzStakeData<T::AccountId, T::Hash, Balance>>;
 		pub TransferInitCheckRecords get(transfer_init_check_records): map Vec<u8> => bool;
-		pub TransferInitDataMapRecords get(transfer_init_data_map_records): linked_map Vec<u8> => Option<XtzTransferData<T::AccountId, T::Hash>>;
+		pub TransferInitDataMapRecords get(transfer_init_data_map_records): linked_map Vec<u8> => Option<XtzStakeData<T::AccountId, T::Hash, Balance>>;
 	}
 }
 
@@ -54,7 +54,7 @@ decl_module! {
 			let sender = ensure_signed(origin)?;
 
 			// Check that the tx_hash exists
-            ensure!(!<TransferInitDataMapRecords<T>>::exists(tx_hash.clone()), "This tx_hash exist");
+            ensure!(!<TransferInitCheckRecords>::exists(tx_hash.clone()), "This tx_hash exist");
 
 			// TODO: Check multi sig address
 			// ensure!(multi_sig_address > 0, "Multi sig address is illegal");
@@ -67,26 +67,23 @@ decl_module! {
 			let random_seed = <system::Module<T>>::random_seed();
             let hash = (random_seed, &sender).using_encoded(<T as system::Trait>::Hashing::hash);
 
-			<StakeRecords<T>>::insert((sender.clone(), hash.clone()), XtzStakeData {
+			let stake_data = XtzStakeData {
 				id: hash.clone(),
 				initiator: sender.clone(),
 				multi_sig_address: multi_sig_address,
 				stage: XtzStakeStage::Init,
 				stake_amount: stake_amount,
-			});
+				tx_hash: tx_hash.clone(),
+				block_hash: block_hash.clone(),
+			};
+
+			<StakeRecords<T>>::insert((sender.clone(), hash.clone()), stake_data.clone());
 
 			let mut hashs = <StakeDataHashRecords<T>>::get(sender.clone());
 			hashs.push(hash.clone());
 			<StakeDataHashRecords<T>>::insert(sender.clone(), hashs);
 
-			let transfer_data = XtzTransferData {
-				id: hash.clone(),
-				initiator: sender.clone(),
-				tx_hash: tx_hash.clone(),
-				block_hash: block_hash,
-			};
-
-			<TransferInitDataMapRecords<T>>::insert(tx_hash.clone(), transfer_data.clone());
+			<TransferInitDataMapRecords<T>>::insert(tx_hash.clone(), stake_data.clone());
 
 			<TransferInitCheckRecords>::insert(tx_hash, true);
 
@@ -106,39 +103,59 @@ decl_event!(
 impl<T: Trait> Module<T> {
 
 	fn handle_init() {
-		let mut tmp_datas: Vec<XtzTransferData<T::AccountId, T::Hash>> = Vec::new();
+		let mut tmp_datas: Vec<XtzStakeData<T::AccountId, T::Hash, Balance>> = Vec::new();
 
-        for (key, transfer_data) in <TransferInitDataMapRecords<T>>::enumerate() {
-			let account_id = &transfer_data.initiator;
-			let hash = &transfer_data.id;
+		let mut count = 0;
+        for (key, stake_data) in <TransferInitDataMapRecords<T>>::enumerate() {
+			count += 1;
+			if count >= 20 {
+				tmp_datas.push(stake_data);
+				continue;
+			}
+
+			let account_id = &stake_data.initiator;
+			let hash = &stake_data.id;
 
 			if let Some(mut xtz_stake_data) = Self::stake_records((account_id.clone(), hash.clone())) {
 
-				let (status, _) = <tezosrpc::Module<T>>::verified(&transfer_data.tx_hash);
-
+				let (status, _) = <tezosrpc::Module<T>>::verified(&stake_data.tx_hash);
 				let enum_status = VerifyStatus::create(status);
+				
+				if xtz_stake_data.stage == XtzStakeStage::Init {
+					if enum_status == VerifyStatus::Confirmed {
+						xtz_stake_data.stage = XtzStakeStage::Completed;
+						<StakeRecords<T>>::insert((account_id.clone(), hash.clone()), xtz_stake_data.clone());
 
-				if xtz_stake_data.stage == XtzStakeStage::Init && enum_status == VerifyStatus::Confirmed {
-					xtz_stake_data.stage = XtzStakeStage::Completed;
-					<StakeRecords<T>>::insert((account_id.clone(), hash.clone()), xtz_stake_data.clone());
+						bondtoken::Module::<T>::add_bond_token(
+							account_id.clone(),
+							Symbol::XtzBond,
+							xtz_stake_data.stake_amount,
+							xtz_stake_data.id
+						).expect("Error adding xtz bond token");
 
-					<TransferInitDataMapRecords<T>>::remove(key);
+						// TODO: Add restrictive conditions to issue FIS token
+						let free_balance = <balances::Module<T>>::free_balance(account_id.clone());
+						let add_value: Balance = 100 * DOLLARS;
+						if let Some(value) = add_value.try_into().ok() {
+							// check
+							match free_balance.checked_add(&value) {
+								Some(total_value) => {
+									balances::FreeBalance::<T>::insert(&account_id.clone(), total_value)
+								},
+								None => (),
+							};
+						}
 
-					let free_balance = <balances::Module<T>>::free_balance(account_id.clone());
-					let add_value: Balance = 100 * DOLLARS;
-					if let Some(value) = add_value.try_into().ok() {
-						// check
-						match free_balance.checked_add(&value) {
-							Some(b) => {
-								balances::FreeBalance::<T>::insert(&account_id.clone(), b)
-							},
-							None => (),
-						};
+						<TransferInitDataMapRecords<T>>::remove(key);
+					} else if enum_status == VerifyStatus::NotFound {
+						<TransferInitCheckRecords>::remove(key.clone());
+						<TransferInitDataMapRecords<T>>::remove(key.clone());
+						<tezosrpc::Module<T>>::remove_verified(key.clone());
+					} else if enum_status == VerifyStatus::Rollback {
+						<TransferInitDataMapRecords<T>>::remove(key.clone());
+					} else if status <= VerifyStatus::Verified as i8 {
+						tmp_datas.push(stake_data);
 					}
-
-					bondtoken::Module::<T>::add_bond_token(account_id.clone(), Symbol::XtzBond, xtz_stake_data.stake_amount, xtz_stake_data.id).expect("Error adding xtz bond token");
-				} else {
-					tmp_datas.push(transfer_data);
 				}
 			}
 		}

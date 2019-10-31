@@ -24,8 +24,8 @@ impl Default for StakeTokenType {
 #[cfg_attr(feature = "std", derive(Debug))]
 #[derive(Encode, Decode, Clone, PartialEq)]
 pub struct XtzTransferData<AccountId, Hash> {
-	// identifier id
-	pub id: Hash,
+	// stake identifier id
+	pub stake_id: Hash,
 	// creator of stake
 	pub initiator: AccountId,
 	// transaction hash
@@ -46,7 +46,7 @@ pub enum XtzStakeStage {
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 #[derive(Encode, Decode, Clone, PartialEq)]
 pub struct XtzStakeData<AccountId, Hash, Balance> {
-	// identifier id
+	// stake identifier id
 	pub id: Hash,
 	// creator of stake
 	pub initiator: AccountId,
@@ -56,4 +56,8 @@ pub struct XtzStakeData<AccountId, Hash, Balance> {
 	pub multi_sig_address: Vec<u8>,
 	// Token data of stake
 	pub stake_amount: Balance,
+	// transaction hash
+	pub tx_hash: Vec<u8>,
+	// block hash
+	pub block_hash: Vec<u8>,
 }
