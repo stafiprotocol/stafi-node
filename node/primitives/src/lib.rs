@@ -115,12 +115,17 @@ client::decl_runtime_apis! {
 	pub trait MultisigAddrApi {
 		fn multisig_addr() -> Vec<MultisigAddr>;
 	}
+
+	pub trait StakesApi {
+		fn get_stake_hash(account: AccountId) -> Vec<Hash>;
+		fn get_stake_data(account: AccountId, hash: Hash) -> Option<XtzStakeData<AccountId, Hash, Balance>>;
+	}
 }
 
 pub mod constants;
 
 pub mod stafistaking;
-pub use stafistaking::{StakeTokenType, XtzTransferData};
+pub use stafistaking::{StakeTokenType, XtzTransferData, XtzStakeData, XtzStakeStage};
 
 pub mod externalrpc;
 pub use externalrpc::{VerifiedData, VerifyStatus, TxHashType, BabeIdType, HostData};

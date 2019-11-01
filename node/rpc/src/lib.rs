@@ -31,13 +31,14 @@
 
 use std::sync::Arc;
 
-use stafi_primitives::{Block, AccountNonceApi, ContractsApi, MultisigAddrApi};
+use stafi_primitives::{Block, AccountNonceApi, ContractsApi, MultisigAddrApi, StakesApi};
 use sr_primitives::traits::ProvideRuntimeApi;
 use transaction_pool::txpool::{ChainApi, Pool};
 
 pub mod accounts;
 pub mod contracts;
 pub mod multisigs;
+pub mod stakes;
 
 mod constants {
 	/// A status code indicating an error happened while trying to call into the runtime.
@@ -51,7 +52,7 @@ pub fn create<C, P, M>(client: Arc<C>, pool: Arc<Pool<P>>) -> jsonrpc_core::IoHa
 	C: ProvideRuntimeApi,
 	C: client::blockchain::HeaderBackend<Block>,
 	C: Send + Sync + 'static,
-	C::Api: AccountNonceApi<Block> + ContractsApi<Block> + MultisigAddrApi<Block>,
+	C::Api: AccountNonceApi<Block> + ContractsApi<Block> + MultisigAddrApi<Block> + StakesApi<Block>,
 	P: ChainApi + Sync + Send + 'static,
 	M: jsonrpc_core::Metadata + Default,
 {
@@ -59,6 +60,7 @@ pub fn create<C, P, M>(client: Arc<C>, pool: Arc<Pool<P>>) -> jsonrpc_core::IoHa
 		accounts::{Accounts, AccountsApi},
 		contracts::{Contracts, ContractsApi},
 		multisigs::{Multisigs, MultisigsApi},
+		stakes::{Stakes, StakesRpcApi},
 	};
 
 	let mut io = jsonrpc_core::IoHandler::default();
@@ -69,7 +71,10 @@ pub fn create<C, P, M>(client: Arc<C>, pool: Arc<Pool<P>>) -> jsonrpc_core::IoHa
 		ContractsApi::to_delegate(Contracts::new(client.clone()))
 	);
 	io.extend_with(
-		MultisigsApi::to_delegate(Multisigs::new(client))
+		MultisigsApi::to_delegate(Multisigs::new(client.clone()))
+	);
+	io.extend_with(
+		StakesRpcApi::to_delegate(Stakes::new(client))
 	);
 	io
 }

@@ -75,12 +75,9 @@ where
 		let mut result:Vec<RpcMultisigAddr> = Vec::new();
         for addr in addrs.clone() {
 
-            let r:String = hex::encode(addr.multisig_addr);
-            println!("{:}", r);
-
             let ret = RpcMultisigAddr {
                 chain_type: addr.chain_type,
-                multisig_addr: String::from("0x") + &r[..],
+                multisig_addr: String::from("0x") + &hex::encode(addr.multisig_addr),
             };
 
             result.push(ret);
