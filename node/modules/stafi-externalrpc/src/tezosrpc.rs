@@ -6,10 +6,10 @@ extern crate srml_system as system;
 
 use support::{decl_module, decl_storage};
 use rstd::prelude::*;
-use system::{ensure_none, ensure_root};
+use system::{ensure_signed, ensure_none, ensure_root};
 use inherents::{RuntimeString, InherentIdentifier, ProvideInherent, MakeFatalError, InherentData};
 
-use stafi_primitives::{VerifiedData, VerifyStatus, TxHashType, BabeIdType, HostData};
+use stafi_primitives::{VerifiedData, VerifyStatus, TxHashType, BabeIdType, HostData, XtzStakeData, Balance};
 use codec::Decode;
 
 pub mod tezos;
@@ -29,11 +29,21 @@ decl_storage! {
 		RpcHost get(rpc_host): Vec<HostData>;
 		BlocksConfirmed: u8;
 		BlockDuration: u64;
+		//for test
+		StakeData get(stake_data): Vec<XtzStakeData<T::AccountId, T::Hash, Balance>>;
 	}
 }
 
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+		fn set_stake_data(origin, sd: XtzStakeData<T::AccountId, T::Hash, Balance>) {
+			let _who = ensure_signed(origin)?;	
+
+			let mut data: Vec<XtzStakeData<T::AccountId, T::Hash, Balance>> = Vec::new();
+			data.push(sd);
+			<StakeData<T>>::put(data);
+		}
+
 		fn set_node_response(origin, txhash: TxHashType, babe_id: BabeIdType, v_data: VerifiedData) {
 			let _who = ensure_none(origin)?;
 			
@@ -108,6 +118,7 @@ fn get_new_status(vd: Vec<VerifiedData>, timestamp: &mut u64) -> VerifyStatus {
 	let mut rollback_counter = 0;
 	let mut notfoundblock_counter = 0;
 	let mut notresponse_counter = 0;
+	let mut txnotmatch_counter = 0;
 
 	let mut babe_num = 0;
 	for v in vd {
@@ -121,6 +132,7 @@ fn get_new_status(vd: Vec<VerifiedData>, timestamp: &mut u64) -> VerifyStatus {
 			VerifyStatus::Rollback => rollback_counter = rollback_counter + 1,
 			VerifyStatus::NotFoundBlock => notfoundblock_counter = notfoundblock_counter + 1,
 			VerifyStatus::NotResponse => notresponse_counter = notresponse_counter + 1,
+			VerifyStatus::TxNotMatch => txnotmatch_counter = txnotmatch_counter + 1,
 			_ => (),
 		}
 	}
@@ -139,6 +151,8 @@ fn get_new_status(vd: Vec<VerifiedData>, timestamp: &mut u64) -> VerifyStatus {
 		new_status = VerifyStatus::NotFoundBlock;
 	} else if notresponse_counter >= (babe_num + 2)/2 {
 		new_status = VerifyStatus::NotResponse;
+	} else if txnotmatch_counter >= (babe_num + 2)/2 {
+		new_status = VerifyStatus::TxNotMatch;
 	} 
 
 	return new_status;

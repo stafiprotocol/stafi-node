@@ -35,6 +35,7 @@ pub enum VerifyStatus {
 	//BadRequest = 5,
 	NotFoundBlock = 5,
 	NotResponse = 6,
+	TxNotMatch = 7,
 	Error = 99,
 }
 
@@ -48,6 +49,7 @@ impl VerifyStatus {
 			4 => VerifyStatus::NotFoundTx,
 			5 => VerifyStatus::NotFoundBlock,
 			6 => VerifyStatus::NotResponse,
+			7 => VerifyStatus::TxNotMatch,
 			99=> VerifyStatus::Error,
 			_ => VerifyStatus::Error,
 		}

@@ -75,6 +75,7 @@ decl_module! {
 				stake_amount: stake_amount,
 				tx_hash: tx_hash.clone(),
 				block_hash: block_hash.clone(),
+				stake_account: tx_hash.clone(),
 			};
 
 			<StakeRecords<T>>::insert((sender.clone(), hash.clone()), stake_data.clone());
@@ -147,7 +148,7 @@ impl<T: Trait> Module<T> {
 						}
 
 						<TransferInitDataMapRecords<T>>::remove(key);
-					} else if enum_status == VerifyStatus::NotFound {
+					} else if enum_status == VerifyStatus::NotFoundTx {
 						<TransferInitCheckRecords>::remove(key.clone());
 						<TransferInitDataMapRecords<T>>::remove(key.clone());
 						<tezosrpc::Module<T>>::remove_verified(key.clone());
