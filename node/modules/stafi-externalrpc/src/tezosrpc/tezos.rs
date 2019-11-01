@@ -16,7 +16,7 @@ use codec::{Encode, Decode};
 
 use rstd::prelude::*;
 
-use stafi_primitives::{AccountId, Hash, XtzTransferData, VerifiedData, VerifyStatus, HostData};
+use stafi_primitives::{AccountId, Hash, Balance, XtzStakeData, VerifiedData, VerifyStatus, HostData};
 
 use babe_primitives::{AuthorityId, BabeAuthorityWeight};
 
@@ -25,7 +25,7 @@ pub const RPC_REQUEST_INTERVAL: u64 = 60000; //1 minute
 pub const TEZOS_TXHASH_LEN: u8 = 51;
 pub const TEZOS_BLOCK_CONFIRMED: u8 = 3;
 pub const TEZOS_BLOCK_DURATION: u64 = 60000;
-pub const TEZOS_RPC_HOST: &'static [u8] = b"https://tezos-test-rpc.wetez.io";
+pub const TEZOS_RPC_HOST: &'static [u8] = b"https://rpc.tezrpc.me";
 
 pub type InherentType = Vec<u8>;
 
@@ -146,10 +146,19 @@ fn extract_status_and_timestamp(result:String) -> (i8, u64) {
 } 
 
 #[cfg(feature = "std")]
-fn decode_transfer_data(data: String) -> Vec<XtzTransferData<AccountId, Hash>> {
+fn decode_stake_data(data: String) -> Vec<XtzStakeData<AccountId, Hash, Balance>> {
 	let data1 = hex::decode(&data[3..data.len()-1]).unwrap();
 
-    let result: Vec<XtzTransferData<AccountId, Hash>> = Decode::decode(&mut &data1[..]).unwrap();
+    let result: Vec<XtzStakeData<AccountId, Hash, Balance>> = Decode::decode(&mut &data1[..]).unwrap();
+
+	return result;
+}
+
+#[cfg(feature = "std")]
+fn decode_node_response_data(data: String) -> Vec<VerifiedData> {
+	let data1 = hex::decode(&data[3..data.len()-1]).unwrap();
+
+    let result: Vec<VerifiedData> = Decode::decode(&mut &data1[..]).unwrap();
 
 	return result;
 }
@@ -218,10 +227,10 @@ impl ProvideInherentData for InherentDataProvider {
 
 		let babe_num = &babe_authorities.len();
 
-		let txhash_list_key = get_hexkey(b"XtzStaking TransferInitDataRecords");
-		let transfer_data_str = get_value_from_storage(txhash_list_key, self.node_rpc_host.clone());
-		if transfer_data_str == "null" {
-			sr_io::print_utf8(b"transfer_data is null.");
+		let stake_data_key = get_hexkey(b"TezosRpc StakeData");
+		let stake_data_str = get_value_from_storage(stake_data_key, self.node_rpc_host.clone());
+		if stake_data_str == "null" {
+			sr_io::print_utf8(b"stake_data is null.");
 			
 			return Ok(());	
 		}
@@ -256,10 +265,10 @@ impl ProvideInherentData for InherentDataProvider {
 
 		let mut verified_data_vec:Vec<VerifiedData> = Vec::new();
 
-		let transfer_data_vec = decode_transfer_data(transfer_data_str);
-		for transfer_data in transfer_data_vec {
-			let txhash = String::from_utf8(transfer_data.tx_hash).unwrap();
-			let blockhash = String::from_utf8(transfer_data.block_hash).unwrap();
+		let stake_data_vec = decode_stake_data(stake_data_str);
+		for stake_data in stake_data_vec {
+			let txhash = String::from_utf8(stake_data.tx_hash).unwrap();
+			let blockhash = String::from_utf8(stake_data.block_hash).unwrap();
 			//if txhash.len() != TEZOS_TXHASH_LEN {
 			//	sr_io::print_utf8(b"bad tx hash.");
 			//	continue;
@@ -274,11 +283,7 @@ impl ProvideInherentData for InherentDataProvider {
 				continue;	
 			}
 			
-			let verified_vec_key = get_map2hexkey(b"TezosRpc NodeResponse", &txhash.clone().into_bytes(), &self.babe_id.clone().into_bytes());
-			let _result3 = get_value_from_storage(verified_vec_key, self.node_rpc_host.clone());
-			//sr_io::print_utf8(&result3.clone().into_bytes()); //TODO:
-
-			if enum_status == VerifyStatus::Confirmed || enum_status == VerifyStatus::NotFound || enum_status == VerifyStatus::Rollback || enum_status == VerifyStatus::BadRequest {
+			if enum_status == VerifyStatus::Confirmed || enum_status == VerifyStatus::NotFoundTx || enum_status == VerifyStatus::Rollback || enum_status == VerifyStatus::NotFoundBlock || enum_status == VerifyStatus::TxNotMatch {
 				sr_io::print_utf8(&format!("{:}'s status is {:}.", txhash, enum_status as i8).into_bytes());
 				continue;
 			}
@@ -288,22 +293,52 @@ impl ProvideInherentData for InherentDataProvider {
 				sr_io::print_utf8(b"status is Verified and timestamp + 60000 > now_millis.");
 				continue;	
 			}
+			
+			let node_response_key = get_maphexkey(b"TezosRpc NodeResponse", &txhash.clone().into_bytes());
+			let node_response_str = get_value_from_storage(node_response_key, self.node_rpc_host.clone());
+			if node_response_str != "null" {
+				let node_response_data = decode_node_response_data(node_response_str);
+				let mut node_status_set = false;
+				for vd in node_response_data {
+					if vd.babe_id == self.babe_id.as_bytes().to_vec() {
+						let node_status = VerifyStatus::create(vd.status);
+						if node_status != VerifyStatus::UnVerified {
+							sr_io::print_utf8(&format!("{:} {:}'s status is {:}.", self.babe_id, txhash, node_status as i8).into_bytes());
+							node_status_set = true;
+						}
+						break;
+					}
+				}
+				if node_status_set {
+					continue;
+				}
+			}
 
+			let from = String::from_utf8(stake_data.stake_account).unwrap();
+			let to = String::from_utf8(stake_data.multi_sig_address).unwrap();
+			let amount = stake_data.stake_amount as u128;
+			
 			let mut new_status = VerifyStatus::Verified as i8;
 			let mut cur_level:i64 = 0;
 			let mut level:i64 = 0;
-			let result2 = request_rpc2(tezos_rpc_host.clone(), blockhash, txhash.clone(), &mut level).unwrap_or_else(|_| false);
+			let result2 = request_rpc2(tezos_rpc_host.clone(), blockhash, txhash.clone(), from, to, amount, &mut level).unwrap_or_else(|_| false);
 			if level < 0 {
-				sr_io::print_utf8(b"bad rpc request.");
-				new_status = VerifyStatus::BadRequest as i8;
+				sr_io::print_utf8(&format!("rpc request failed({}).", level).into_bytes());
+				if level == -4 {
+					new_status = VerifyStatus::TxNotMatch as i8;
+				} else if level == -3 {
+					new_status = VerifyStatus::NotFoundBlock as i8;
+				} else {
+					new_status = VerifyStatus::NotResponse as i8;
+				}
 			} else {
-				let _ = request_rpc2(tezos_rpc_host.clone(), "head".to_string(), "".to_string(), &mut cur_level).unwrap_or_else(|_| false);
+				let _ = request_rpc2(tezos_rpc_host.clone(), "head".to_string(), "".to_string(), "".to_string(), "".to_string(), 0, &mut cur_level).unwrap_or_else(|_| false);
 				if result2 {
 					if cur_level > 0 && cur_level - level > 0 && (cur_level - level) as u8 >= blocks_confirmed {
 						new_status = VerifyStatus::Confirmed as i8;
 					} 
 				} else {
-					new_status = VerifyStatus::NotFound as i8;
+					new_status = VerifyStatus::NotFoundTx as i8;
 					if enum_status == VerifyStatus::Verified && cur_level > 0 && cur_level - level > 0 && (cur_level - level) as u8 >= blocks_confirmed  {
 						new_status = VerifyStatus::Rollback as i8;
 					} 	
@@ -340,7 +375,7 @@ impl ProvideInherentData for InherentDataProvider {
 }
 
 #[cfg(feature = "std")]
-fn request_rpc2(self_url: String, blockhash: String, txhash: String, level: &mut i64) -> Result<bool, RuntimeString> {
+fn request_rpc2(self_url: String, blockhash: String, txhash: String, from: String, to: String, stake_amount: u128, level: &mut i64) -> Result<bool, RuntimeString> {
 	let url = format!("{}/chains/main/blocks/{}", self_url, blockhash);
 	reqwest::get(&url[..])
 	.map_err(|error| {
@@ -382,21 +417,30 @@ fn request_rpc2(self_url: String, blockhash: String, txhash: String, level: &mut
 
 			let mut found = false;
 			for item in last_operation.as_array().unwrap() {
-				let hash = serde_json::to_string(&item["hash"]).unwrap();
+				let hash = serde_json::to_string(&item["hash"]).unwrap_or_else(|_|String::from("\"\""));
 				//sr_io::print_utf8(&hash.clone().into_bytes());	
 				if hash[1..hash.len()-1] == txhash {
 					let contents: Value = item["contents"].clone();
 					if !contents.is_null() && contents.is_array() {
 						for content in contents.as_array().unwrap() {
-							let kind: String = serde_json::to_string(&content["kind"]).unwrap();
-							if kind == "\"transaction\"" {
-								let status:String = serde_json::to_string(&content["metadata"]["operation_result"]["status"]).unwrap();
-								if status == "\"applied\"" {
-									sr_io::print_utf8(b"found tx on chain");
-									found = true;
-									break;
-								}
+							let kind: String = serde_json::to_string(&content["kind"]).unwrap_or_else(|_|String::from("\"\""));
+							let source: String = serde_json::to_string(&content["source"]).unwrap_or_else(|_|String::from("\"\""));
+							let destination: String = serde_json::to_string(&content["destination"]).unwrap_or_else(|_|String::from("\"\""));
+							let amount_str: String = serde_json::to_string(&content["amount"]).unwrap_or_else(|_|String::from("\"0\""));
+							let amount: u128 = amount_str[1..amount_str.len()-1].parse().unwrap_or_else(|_|0);
+							if kind != "\"transaction\"" || &source[1..source.len()-1] != from || &destination[1..destination.len()-1] != to || amount != stake_amount {
+								*level = -4;
+								break;
 							}
+							
+							let status:String = serde_json::to_string(&content["metadata"]["operation_result"]["status"]).unwrap_or_else(|_|String::from(""));
+							if status == "\"applied\"" {
+								sr_io::print_utf8(b"found tx on chain");
+								found = true;
+
+								break;
+							}
+							
 						}
 					}
 				}

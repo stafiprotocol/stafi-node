@@ -6,10 +6,10 @@ extern crate srml_system as system;
 
 use support::{decl_module, decl_storage};
 use rstd::prelude::*;
-use system::{ensure_none, ensure_signed, ensure_root};
+use system::{ensure_signed, ensure_none, ensure_root};
 use inherents::{RuntimeString, InherentIdentifier, ProvideInherent, MakeFatalError, InherentData};
 
-use stafi_primitives::{XtzTransferData, VerifiedData, VerifyStatus, TxHashType, BabeIdType, HostData};
+use stafi_primitives::{VerifiedData, VerifyStatus, TxHashType, BabeIdType, HostData, XtzStakeData, Balance};
 use codec::Decode;
 
 pub mod tezos;
@@ -23,28 +23,33 @@ pub trait Trait: system::Trait { }
 
 decl_storage! {
 	trait Store for Module<T: Trait> as TezosRpc {
-		XtzTransferDataVec get(xtz_transfter_data_vec): Vec<XtzTransferData<T::AccountId, T::Hash>>;
 		pub Verified get(verified): map TxHashType => (i8, u64);
-		pub NodeResponse get(node_response): linked_map (TxHashType, BabeIdType) => Option<VerifiedData>;
+		VerifiedBak get(verified_bak): Vec<(TxHashType, i8, u64)>;
+		pub NodeResponse get(node_response): linked_map TxHashType => Vec<VerifiedData>;
 		RpcHost get(rpc_host): Vec<HostData>;
 		BlocksConfirmed: u8;
 		BlockDuration: u64;
+		//for test
+		StakeData get(stake_data): Vec<XtzStakeData<T::AccountId, T::Hash, Balance>>;
 	}
 }
 
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-		fn set_xtz_transfer_data(origin, xtd: XtzTransferData<T::AccountId, T::Hash>) {
-			let _who = ensure_signed(origin)?;
-			let mut v:Vec<XtzTransferData<T::AccountId, T::Hash>> = Vec::new();
-			v.push(xtd); 
-			<XtzTransferDataVec<T>>::put(v);	
+		fn set_stake_data(origin, sd: XtzStakeData<T::AccountId, T::Hash, Balance>) {
+			let _who = ensure_signed(origin)?;	
+
+			let mut data: Vec<XtzStakeData<T::AccountId, T::Hash, Balance>> = Vec::new();
+			data.push(sd);
+			<StakeData<T>>::put(data);
 		}
 
-		fn set_node_response(origin, txhash: TxHashType, babe_key: BabeIdType, v_data: VerifiedData) {
+		fn set_node_response(origin, txhash: TxHashType, babe_id: BabeIdType, v_data: VerifiedData) {
 			let _who = ensure_none(origin)?;
 			
-			NodeResponse::insert((txhash, babe_key), v_data);
+			let mut vd: Vec<VerifiedData> = NodeResponse::get(&txhash).into_iter().filter(|x| x.babe_id != babe_id).collect();
+			vd.push(v_data);
+			NodeResponse::insert(txhash, vd);
 		}
 
 		fn add_rpc_host(origin, host:Vec<u8>) {
@@ -80,50 +85,54 @@ decl_module! {
 		}
 
 		fn on_finalize() {
-			let mut txhash_list: Vec<TxHashType> = Vec::new();
-			let mut response_list: Vec<((TxHashType, BabeIdType), VerifiedData)> = Vec::new();
+			let mut response_list: Vec<(TxHashType, Vec<VerifiedData>)> = Vec::new();
 			for (k, v) in NodeResponse::enumerate() {
-				let status = VerifyStatus::create(Verified::get(&k.0).0);
-				if status != VerifyStatus::Confirmed && status != VerifyStatus::NotFound && status != VerifyStatus::Rollback && status != VerifyStatus::BadRequest {
-					txhash_list.push(k.0.clone());
-					response_list.push((k, v));
+				let txhash = k;
+				let status = VerifyStatus::create(Verified::get(txhash.clone()).0);
+				if status != VerifyStatus::Confirmed && status != VerifyStatus::NotFoundTx && status != VerifyStatus::Rollback && status != VerifyStatus::NotFoundBlock {
+					response_list.push((txhash, v));
 				}
 			}
 
-			for txhash in txhash_list {
+			for (k, v) in response_list {
 				let mut timestamp = 0;
+				let txhash = k;
 
-				let new_status = get_new_status(txhash.clone(), response_list.clone(), &mut timestamp);
+				let new_status = get_new_status(v.clone(), &mut timestamp);
 				if new_status != VerifyStatus::UnVerified {
-					Verified::insert(txhash, (new_status as i8, timestamp));
+					let status = new_status as i8;
+					Verified::insert(txhash.clone(), (status, timestamp));
+					let mut vb = VerifiedBak::get();
+					vb.push((txhash, status, timestamp));
+					VerifiedBak::put(vb);
 				}
 			}
 		}
 	}
 }
 
-fn get_new_status(txhash: TxHashType, response: Vec<((TxHashType, BabeIdType), VerifiedData)>, timestamp: &mut u64) -> VerifyStatus {
+fn get_new_status(vd: Vec<VerifiedData>, timestamp: &mut u64) -> VerifyStatus {
 	let mut verified_counter = 0;
 	let mut confirmed_counter = 0;
-	let mut notfound_counter = 0;
+	let mut notfoundtx_counter = 0;
 	let mut rollback_counter = 0;
-	let mut badreq_counter = 0;
+	let mut notfoundblock_counter = 0;
+	let mut notresponse_counter = 0;
+	let mut txnotmatch_counter = 0;
 
 	let mut babe_num = 0;
-	for (k, v) in response {
-		if txhash != k.0 {
-			continue;
-		}
-
+	for v in vd {
 		*timestamp = v.timestamp;
 		babe_num = v.babe_num;
 
 		match VerifyStatus::create(v.status) {
 			VerifyStatus::Verified => verified_counter = verified_counter + 1,
 			VerifyStatus::Confirmed => confirmed_counter = confirmed_counter + 1,
-			VerifyStatus::NotFound => notfound_counter = notfound_counter + 1,
+			VerifyStatus::NotFoundTx => notfoundtx_counter = notfoundtx_counter + 1,
 			VerifyStatus::Rollback => rollback_counter = rollback_counter + 1,
-			VerifyStatus::BadRequest => badreq_counter = badreq_counter + 1,
+			VerifyStatus::NotFoundBlock => notfoundblock_counter = notfoundblock_counter + 1,
+			VerifyStatus::NotResponse => notresponse_counter = notresponse_counter + 1,
+			VerifyStatus::TxNotMatch => txnotmatch_counter = txnotmatch_counter + 1,
 			_ => (),
 		}
 	}
@@ -134,12 +143,16 @@ fn get_new_status(txhash: TxHashType, response: Vec<((TxHashType, BabeIdType), V
 		new_status = VerifyStatus::Verified;
 	} else if confirmed_counter >= (babe_num + 2)/2 {
 		new_status = VerifyStatus::Confirmed;
-	} else if notfound_counter >= (babe_num + 2)/2 {
-		new_status = VerifyStatus::NotFound;
+	} else if notfoundtx_counter >= (babe_num + 2)/2 {
+		new_status = VerifyStatus::NotFoundTx;
 	} else if rollback_counter >= (babe_num + 2)/2 {
 		new_status = VerifyStatus::Rollback;
-	} else if badreq_counter >= (babe_num + 2)/2 {
-		new_status = VerifyStatus::BadRequest;
+	} else if notfoundblock_counter >= (babe_num + 2)/2 {
+		new_status = VerifyStatus::NotFoundBlock;
+	} else if notresponse_counter >= (babe_num + 2)/2 {
+		new_status = VerifyStatus::NotResponse;
+	} else if txnotmatch_counter >= (babe_num + 2)/2 {
+		new_status = VerifyStatus::TxNotMatch;
 	} 
 
 	return new_status;
@@ -149,11 +162,7 @@ impl<T: Trait> Module<T> {
 	pub fn remove_verified(txhash: TxHashType) {
 		if Verified::exists(&txhash) {
 			Verified::remove(&txhash);
-			for (k, _) in NodeResponse::enumerate() {
-				if k.0 == txhash {
-					NodeResponse::remove(k);
-				}
-			}
+			NodeResponse::remove(&txhash);
 		}
 	}	
 }
@@ -213,35 +222,35 @@ mod tests {
 		
 		let babe_id_list = [b"babe1".to_vec(), b"babe2".to_vec(), b"babe3".to_vec()];
 
-		let mut response: Vec<((TxHashType, BabeIdType), VerifiedData)> = Vec::new();
+		let mut response: Vec<VerifiedData> = Vec::new();
 
-		response.push(((txhash.clone(), babe_id_list[0].clone()), VerifiedData{
+		response.push(VerifiedData {
 			tx_hash: txhash.clone(),
 			timestamp: now_millis,
 			status: VerifyStatus::Confirmed as i8,
 			babe_id: babe_id_list[0].clone(),
 			babe_num: babe_id_list.len() as u8,
-		}));
+		});
 
-		response.push(((txhash.clone(), babe_id_list[1].clone()), VerifiedData{
+		response.push(VerifiedData {
 			tx_hash: txhash.clone(),
 			timestamp: now_millis,
-			status: VerifyStatus::NotFound as i8,
+			status: VerifyStatus::NotFoundTx as i8,
 			babe_id: babe_id_list[1].clone(),
 			babe_num: babe_id_list.len() as u8,
-		}));
+		});
 
-		response.push(((txhash.clone(), babe_id_list[2].clone()), VerifiedData{
+		response.push(VerifiedData {
 			tx_hash: txhash.clone(),
 			timestamp: now_millis,
 			status: VerifyStatus::Confirmed as i8,
 			babe_id: babe_id_list[2].clone(),
 			babe_num: babe_id_list.len() as u8,
-		}));
+		});
 
 		let mut timestamp = 0;
 
-		let new_status = get_new_status(txhash, response.clone(), &mut timestamp);
+		let new_status = get_new_status(response.clone(), &mut timestamp);
 
 		assert_eq!(new_status, VerifyStatus::Confirmed);
 		assert_eq!(timestamp, now_millis);

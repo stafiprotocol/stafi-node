@@ -155,7 +155,7 @@ impl<T: Trait> Module<T> {
 						}
 
 						<TransferInitDataMapRecords<T>>::remove(key);
-					} else if enum_status == VerifyStatus::NotFound {
+					} else if enum_status == VerifyStatus::NotFoundTx {
 						<TransferInitCheckRecords>::remove(key.clone());
 						<TransferInitDataMapRecords<T>>::remove(key.clone());
 						<tezosrpc::Module<T>>::remove_verified(key.clone());
