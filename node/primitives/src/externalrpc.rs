@@ -31,8 +31,10 @@ pub enum VerifyStatus {
 	Verified = 1,
 	Confirmed = 2,
 	Rollback = 3,
-	NotFound = 4,
-	BadRequest = 5,
+	NotFoundTx = 4,
+	//BadRequest = 5,
+	NotFoundBlock = 5,
+	NotResponse = 6,
 	Error = 99,
 }
 
@@ -43,8 +45,9 @@ impl VerifyStatus {
 			1 => VerifyStatus::Verified,
 			2 => VerifyStatus::Confirmed,
 			3 => VerifyStatus::Rollback,
-			4 => VerifyStatus::NotFound,
-			5 => VerifyStatus::BadRequest,
+			4 => VerifyStatus::NotFoundTx,
+			5 => VerifyStatus::NotFoundBlock,
+			6 => VerifyStatus::NotResponse,
 			99=> VerifyStatus::Error,
 			_ => VerifyStatus::Error,
 		}

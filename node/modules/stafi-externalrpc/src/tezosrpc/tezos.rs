@@ -25,7 +25,7 @@ pub const RPC_REQUEST_INTERVAL: u64 = 60000; //1 minute
 pub const TEZOS_TXHASH_LEN: u8 = 51;
 pub const TEZOS_BLOCK_CONFIRMED: u8 = 3;
 pub const TEZOS_BLOCK_DURATION: u64 = 60000;
-pub const TEZOS_RPC_HOST: &'static [u8] = b"https://tezos-test-rpc.wetez.io";
+pub const TEZOS_RPC_HOST: &'static [u8] = b"https://rpc.tezrpc.me";
 
 pub type InherentType = Vec<u8>;
 
@@ -155,6 +155,15 @@ fn decode_transfer_data(data: String) -> Vec<XtzTransferData<AccountId, Hash>> {
 }
 
 #[cfg(feature = "std")]
+fn decode_node_response_data(data: String) -> Vec<VerifiedData> {
+	let data1 = hex::decode(&data[3..data.len()-1]).unwrap();
+
+    let result: Vec<VerifiedData> = Decode::decode(&mut &data1[..]).unwrap();
+
+	return result;
+}
+
+#[cfg(feature = "std")]
 fn decode_host_data(data: String) -> Vec<HostData> {
 	let mut result: Vec<HostData> = Vec::new();
 	if data != "null" {
@@ -274,11 +283,7 @@ impl ProvideInherentData for InherentDataProvider {
 				continue;	
 			}
 			
-			let verified_vec_key = get_map2hexkey(b"TezosRpc NodeResponse", &txhash.clone().into_bytes(), &self.babe_id.clone().into_bytes());
-			let _result3 = get_value_from_storage(verified_vec_key, self.node_rpc_host.clone());
-			//sr_io::print_utf8(&result3.clone().into_bytes()); //TODO:
-
-			if enum_status == VerifyStatus::Confirmed || enum_status == VerifyStatus::NotFound || enum_status == VerifyStatus::Rollback || enum_status == VerifyStatus::BadRequest {
+			if enum_status == VerifyStatus::Confirmed || enum_status == VerifyStatus::NotFoundTx || enum_status == VerifyStatus::Rollback || enum_status == VerifyStatus::NotFoundBlock {
 				sr_io::print_utf8(&format!("{:}'s status is {:}.", txhash, enum_status as i8).into_bytes());
 				continue;
 			}
@@ -288,14 +293,36 @@ impl ProvideInherentData for InherentDataProvider {
 				sr_io::print_utf8(b"status is Verified and timestamp + 60000 > now_millis.");
 				continue;	
 			}
+			
+			let node_response_key = get_maphexkey(b"TezosRpc NodeResponse", &txhash.clone().into_bytes());
+			let node_response_str = get_value_from_storage(node_response_key, self.node_rpc_host.clone());
+			let node_response_data = decode_node_response_data(node_response_str);
+			let mut node_status_set = false;
+			for vd in node_response_data {
+				if vd.babe_id == self.babe_id.as_bytes().to_vec() {
+					let node_status = VerifyStatus::create(vd.status);
+					if node_status != VerifyStatus::UnVerified {
+						sr_io::print_utf8(&format!("{:} {:}'s status is {:}.", self.babe_id, txhash, node_status as i8).into_bytes());
+						node_status_set = true;
+					}
+					break;
+				}
+			}
+			if node_status_set {
+				continue;
+			}
 
 			let mut new_status = VerifyStatus::Verified as i8;
 			let mut cur_level:i64 = 0;
 			let mut level:i64 = 0;
 			let result2 = request_rpc2(tezos_rpc_host.clone(), blockhash, txhash.clone(), &mut level).unwrap_or_else(|_| false);
 			if level < 0 {
-				sr_io::print_utf8(b"bad rpc request.");
-				new_status = VerifyStatus::BadRequest as i8;
+				sr_io::print_utf8(&format!("bad rpc request({}).", level).into_bytes());
+				if level == -3 {
+					new_status = VerifyStatus::NotFoundBlock as i8;
+				} else {
+					new_status = VerifyStatus::NotResponse as i8;
+				}
 			} else {
 				let _ = request_rpc2(tezos_rpc_host.clone(), "head".to_string(), "".to_string(), &mut cur_level).unwrap_or_else(|_| false);
 				if result2 {
@@ -303,7 +330,7 @@ impl ProvideInherentData for InherentDataProvider {
 						new_status = VerifyStatus::Confirmed as i8;
 					} 
 				} else {
-					new_status = VerifyStatus::NotFound as i8;
+					new_status = VerifyStatus::NotFoundTx as i8;
 					if enum_status == VerifyStatus::Verified && cur_level > 0 && cur_level - level > 0 && (cur_level - level) as u8 >= blocks_confirmed  {
 						new_status = VerifyStatus::Rollback as i8;
 					} 	
