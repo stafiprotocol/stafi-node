@@ -60,4 +60,8 @@ pub struct XtzStakeData<AccountId, Hash, Balance> {
 	pub tx_hash: Vec<u8>,
 	// block hash
 	pub block_hash: Vec<u8>,
+	// xtz account
+	pub stake_account: Vec<u8>,
+	// xtz sig
+	pub sig: Vec<u8>,
 }

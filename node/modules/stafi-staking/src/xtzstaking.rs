@@ -50,11 +50,12 @@ decl_module! {
 		}
 
 		// Custom stake xtz
-		pub fn custom_stake(origin, multi_sig_address: Vec<u8>, stake_amount: Balance, tx_hash: Vec<u8>, block_hash: Vec<u8>) -> Result {
+		pub fn custom_stake(origin, multi_sig_address: Vec<u8>, stake_amount: Balance, tx_hash: Vec<u8>, block_hash: Vec<u8>, pub_key: Vec<u8>, sig: Vec<u8>) -> Result {
 			let sender = ensure_signed(origin)?;
-
 			// Check that the tx_hash exists
             ensure!(!<TransferInitCheckRecords>::exists(tx_hash.clone()), "This tx_hash exist");
+
+			// stafi_crypto::tez::sign::sign(pub_key, "abc");
 
 			// TODO: Check multi sig address
 			// ensure!(multi_sig_address > 0, "Multi sig address is illegal");
@@ -63,6 +64,11 @@ decl_module! {
 			// ensure!(tx_hash, "Stake amount must be greater than 0");
 			// TODO: Check block hash
 			// ensure!(block_hash, "Stake amount must be greater than 0");
+
+			// TODO: pub_key verify sig
+
+			// TODO: pub_key generate from
+			let from: Vec<u8> = Vec::new();
 			
 			let random_seed = <system::Module<T>>::random_seed();
             let hash = (random_seed, &sender).using_encoded(<T as system::Trait>::Hashing::hash);
@@ -75,6 +81,8 @@ decl_module! {
 				stake_amount: stake_amount,
 				tx_hash: tx_hash.clone(),
 				block_hash: block_hash.clone(),
+				stake_account: from,
+				sig: sig
 			};
 
 			<StakeRecords<T>>::insert((sender.clone(), hash.clone()), stake_data.clone());
