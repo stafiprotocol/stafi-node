@@ -68,6 +68,7 @@ fn get_maphexkey(key: &[u8], item_key: &[u8]) -> String {
 }
 
 #[cfg(feature = "std")]
+#[allow(dead_code)]
 fn get_map2hexkey(key: &[u8], item_key: &[u8], item2_key: &[u8]) -> String {
 	let hexkey = get_maphexkey(key, item_key);
 	
@@ -474,8 +475,11 @@ mod tests {
 		let tezos_url = String::from("https://rpc.tezrpc.me/");
 		let block_hash = String::from("BKsxzJMXPxxJWRZcsgWG8AAegXNp2uUuUmMr8gzQcoEiGnNeCA6");
 		let tx_hash = String::from("onv7i9LSacMXjhTdpgzmY4q6PxiZ18TZPq7KrRBRUVX7XJicSDi");
+		let from = String::from("tz1SYq214SCBy9naR6cvycQsYcUGpBqQAE8d");
+		let to = String::from("tz1S4MTpEV356QcuzkjQUdyZdAy36gPwPWXa");
+		let amount = 710391;
 		let mut level = 0;
-		let result = request_rpc2(tezos_url, block_hash, tx_hash, &mut level).unwrap_or_else(|_| false);
+		let result = request_rpc2(tezos_url, block_hash, tx_hash, from, to, amount, &mut level).unwrap_or_else(|_| false);
 		assert_eq!(result, true);
 		assert_eq!(level, 642208);
 
@@ -483,7 +487,7 @@ mod tests {
 		let block_hash = String::from("ab12");
 		let tx_hash = String::from("cd34");
 		let mut level = 0;
-		let result = request_rpc2(tezos_url, block_hash, tx_hash, &mut level).unwrap_or_else(|_| false);
+		let result = request_rpc2(tezos_url, block_hash, tx_hash, String::from(""), String::from(""), 0, &mut level).unwrap_or_else(|_| false);
 		assert_eq!(result, false);
 		assert_eq!(level <= 0, true);
 	}
