@@ -294,6 +294,7 @@ name = "bridge-tezos"
 version = "0.1.0"
 dependencies = [
  "base_custom 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bitcoin 0.20.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-bigint 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",

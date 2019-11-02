@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 libsodium-sys = "0.2.4"
-bitcoin = "0.20.0"
+bitcoin = "^0.20"
 tiny-bip39 = "0.6.2"
 
 [dev-dependencies]

@@ -13,17 +13,3 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
-
-extern crate base_custom;
-use base_custom::BaseCustom;
-
-pub fn encode(src: u64) -> String {
-    let base_vec: Vec<String> = (0..128).map(|x| format!("{:02x}", x)).collect();
-    let delim = " ";
-    let salt = base_vec.join(delim);
-    let base_music = BaseCustom::<String>::new(salt, Some(' '));
-
-    let out_str = base_music.gen(src);
-    out_str.replace(" ", "")
-}
-
