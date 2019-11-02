@@ -19,7 +19,7 @@ extern crate libsodium_sys as sodium;
 
 use bip39::{Mnemonic, MnemonicType, Language, Seed};
 use bitcoin::util::base58;
-use std::mem;
+use core::mem;
 use sodium::*;
 
 pub struct KeyPair {
@@ -67,6 +67,11 @@ fn keypair_from_raw_keypair(raw_sk: &[u8], raw_pk: &[u8]) -> (String, String, St
     let sk_string = base58::check_encode_slice(&sk);
 
     // pkh
+    let pkh_string = pkh_from_rawpk(raw_pk);
+    (sk_string, pk_string, pkh_string)
+}
+
+pub fn pkh_from_rawpk(raw_pk: &[u8]) -> String {
     let mut pkh = vec![6, 161, 159]; // "tz1"
     let message_len = 20;
     let mut message: Vec<u8> = Vec::with_capacity(message_len);
@@ -88,7 +93,7 @@ fn keypair_from_raw_keypair(raw_sk: &[u8], raw_pk: &[u8]) -> (String, String, St
     }
     pkh.extend(message);
     let pkh_string = base58::check_encode_slice(&pkh);
-    (sk_string, pk_string, pkh_string)
+    pkh_string
 }
 
 pub fn generate_keypair_from_seed(seed: &[u8]) -> (String, String, String) {

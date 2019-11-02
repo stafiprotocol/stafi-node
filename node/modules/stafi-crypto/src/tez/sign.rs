@@ -19,7 +19,7 @@ extern crate libsodium_sys as sodium;
 
 use bitcoin::util::base58;
 use sodium::*;
-use std::mem;
+use core::mem;
 
 pub struct SignatureData {
     pub sig: Vec<u8>,
