@@ -228,7 +228,7 @@ impl ProvideInherentData for InherentDataProvider {
 
 		let babe_num = &babe_authorities.len();
 
-		let stake_data_key = get_hexkey(b"TezosRpc StakeData");
+		let stake_data_key = get_hexkey(b"XtzStaking TransferInitDataRecords");
 		let stake_data_str = get_value_from_storage(stake_data_key, self.node_rpc_host.clone());
 		if stake_data_str == "null" {
 			sr_io::print_utf8(b"stake_data is null.");
