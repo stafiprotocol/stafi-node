@@ -22,7 +22,7 @@
 
 use rstd::prelude::*;
 use runtime_primitives::{
-	generic, traits::{Verify, BlakeTwo256}, OpaqueExtrinsic, AnySignature
+	generic, traits::{Verify, BlakeTwo256, Block as BlockT}, OpaqueExtrinsic, AnySignature, ApplyResult
 };
 
 #[cfg(feature = "std")]
@@ -119,6 +119,10 @@ client::decl_runtime_apis! {
 	pub trait StakesApi {
 		fn get_stake_hash(account: AccountId) -> Vec<Hash>;
 		fn get_stake_data(account: AccountId, hash: Hash) -> Option<XtzStakeData<AccountId, Hash, Balance>>;
+	}
+
+	pub trait BroadcastsApi {
+		fn apply_extrinsic(extrinsic: <Block as BlockT>::Extrinsic) -> ApplyResult;
 	}
 }
 

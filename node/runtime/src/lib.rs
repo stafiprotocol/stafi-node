@@ -725,6 +725,12 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl stafi_primitives::BroadcastsApi<Block> for Runtime {
+		fn apply_extrinsic(extrinsic: <Block as BlockT>::Extrinsic) -> ApplyResult {
+			Executive::apply_extrinsic(extrinsic)
+		}
+	}
+
 	impl stafi_primitives::ContractsApi<Block> for Runtime {
 		fn call(
 			origin: AccountId,

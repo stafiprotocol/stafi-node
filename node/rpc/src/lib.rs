@@ -31,7 +31,7 @@
 
 use std::sync::Arc;
 
-use stafi_primitives::{Block, AccountNonceApi, ContractsApi, MultisigAddrApi, StakesApi};
+use stafi_primitives::{Block, AccountNonceApi, ContractsApi, MultisigAddrApi, StakesApi, BroadcastsApi};
 use sr_primitives::traits::ProvideRuntimeApi;
 use transaction_pool::txpool::{ChainApi, Pool};
 
@@ -39,6 +39,7 @@ pub mod accounts;
 pub mod contracts;
 pub mod multisigs;
 pub mod stakes;
+pub mod broadcasts;
 
 mod constants {
 	/// A status code indicating an error happened while trying to call into the runtime.
@@ -52,7 +53,7 @@ pub fn create<C, P, M>(client: Arc<C>, pool: Arc<Pool<P>>) -> jsonrpc_core::IoHa
 	C: ProvideRuntimeApi,
 	C: client::blockchain::HeaderBackend<Block>,
 	C: Send + Sync + 'static,
-	C::Api: AccountNonceApi<Block> + ContractsApi<Block> + MultisigAddrApi<Block> + StakesApi<Block>,
+	C::Api: AccountNonceApi<Block> + ContractsApi<Block> + MultisigAddrApi<Block> + StakesApi<Block> + BroadcastsApi<Block>,
 	P: ChainApi + Sync + Send + 'static,
 	M: jsonrpc_core::Metadata + Default,
 {
@@ -61,6 +62,7 @@ pub fn create<C, P, M>(client: Arc<C>, pool: Arc<Pool<P>>) -> jsonrpc_core::IoHa
 		contracts::{Contracts, ContractsApi},
 		multisigs::{Multisigs, MultisigsApi},
 		stakes::{Stakes, StakesRpcApi},
+		broadcasts::{Broadcasts, BroadcastsRpcApi},
 	};
 
 	let mut io = jsonrpc_core::IoHandler::default();
@@ -74,7 +76,10 @@ pub fn create<C, P, M>(client: Arc<C>, pool: Arc<Pool<P>>) -> jsonrpc_core::IoHa
 		MultisigsApi::to_delegate(Multisigs::new(client.clone()))
 	);
 	io.extend_with(
-		StakesRpcApi::to_delegate(Stakes::new(client))
+		StakesRpcApi::to_delegate(Stakes::new(client.clone()))
+	);
+	io.extend_with(
+		BroadcastsRpcApi::to_delegate(Broadcasts::new(client))
 	);
 	io
 }
