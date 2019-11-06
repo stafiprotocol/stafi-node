@@ -27,11 +27,27 @@ pub struct SignatureData {
     pub sbytes: Vec<u8>,
 }
 
+struct SkWrapper<'a> {
+    sk_str: &'a str
+}
+
+impl<'a> Into<SkWrapper<'a>> for &'a str {
+    fn into(self) -> SkWrapper<'a> {
+        SkWrapper { sk_str: self }
+    }
+}
+
+impl Into<Vec<u8>> for SkWrapper<'_> {
+    fn into(self) -> Vec<u8> {
+        base58::from_check(self.sk_str).unwrap()
+    }
+}
+
 pub fn sign(data: Vec<u8>, sk_str: &str) -> SignatureData {
     sign_with_sk(data, base58::from_check(sk_str).unwrap())
 }
 
-pub fn sign_with_sk(data: Vec<u8>, sk: Vec<u8>) -> SignatureData {
+pub fn preprocess(data: Vec<u8>) -> (Vec<u8>, usize) {
     let watermark_generics: Vec<u8> = [3].to_vec();
     let mut tmp_data = vec![];
     tmp_data.extend(watermark_generics);
@@ -55,6 +71,11 @@ pub fn sign_with_sk(data: Vec<u8>, sk: Vec<u8>) -> SignatureData {
         );
         message = Vec::from_raw_parts(message_ptr, message_len, message_len)
     }
+    (message, message_len)
+}
+
+pub fn sign_with_sk(data: Vec<u8>, sk: Vec<u8>) -> SignatureData {
+    let (message, message_len) = preprocess(data.clone());
 
     // Signature
     let sig_len = 64;

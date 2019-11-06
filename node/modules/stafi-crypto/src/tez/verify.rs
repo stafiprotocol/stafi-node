@@ -18,11 +18,14 @@ extern crate libsodium_sys as sodium;
 
 use sodium::*;
 
-pub fn verify(data: &[u8], sig: &[u8], pk: &[u8]]) -> bool {
+pub fn verify(data: &[u8], sig: &[u8], pk: &[u8]) -> bool {
     let sig_ptr = sig.as_ptr();
     let data_ptr = data.as_ptr();
     let data_len = data.len();
     let pk_ptr = pk.as_ptr();
-    let resut = crypto_sign_verify_detached(sig_ptr, data_ptr, data_len, pk_ptr); 
-    return resut == 1;
+    let result;
+    unsafe {
+        result = crypto_sign_verify_detached(sig_ptr, data_ptr, data_len as u64, pk_ptr); 
+    }
+    return result == 0;
 }

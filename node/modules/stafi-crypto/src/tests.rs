@@ -45,4 +45,25 @@ mod tests {
         assert_eq!(pk, keypair.pk);
         assert_eq!(pkh, keypair.pkh);
     }
+
+    use bitcoin::util::base58;
+    #[test]
+    fn test_pkh() {
+        let pk = "edpkvQQhHzGoFf2zSESp1Kh57sFhbhtA16XAGXqjAYse75BC9RdoXW";
+        let except_pkh = "tz1MNu6ytbdEYrHyyQwctJ7rZVFcLrHWjKoN";
+        let raw_pk_with_prefix = base58::from_check(pk).unwrap();
+        let pkh = pkh_from_rawpk(&raw_pk_with_prefix[4..]);
+        assert_eq!(except_pkh, pkh);
+    }
+
+    use super::super::tez::verify::*;
+    #[test]
+    fn test_tez_verify() {
+        let test_data = "TEST".as_bytes();
+        let sk = "edskS2SDFgtTqWbEoKyW5CkXuwfki2NLzcGz6YDLQ5Pexp5iEuJgb8Wj6rG3D9pVrWRo9EJ4iihnqdvHx4cgSCGuTMjpSSSF7f";
+        let pk = base58::from_check("edpkuw9X1bauTMKiAadWJJioLujYxADYrf4Q3dGRJbSmLbgGn3TC1j").ok().unwrap();
+        let signature_data = sign(test_data.to_vec(), sk);
+        let (message, _) = preprocess(test_data.to_vec());
+        assert!(verify(&message, &signature_data.sig, &pk[4..]));
+    }
 }
