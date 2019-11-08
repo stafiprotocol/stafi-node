@@ -91,6 +91,9 @@ decl_module! {
 				let status = VerifyStatus::create(Verified::get(txhash.clone()).0);
 				if status != VerifyStatus::Confirmed && status != VerifyStatus::NotFoundTx && status != VerifyStatus::Rollback && status != VerifyStatus::NotFoundBlock {
 					response_list.push((txhash, v));
+					if response_list.len() > 100 {
+						break
+					}
 				}
 			}
 
