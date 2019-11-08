@@ -42,15 +42,15 @@ decl_module! {
 
 		fn on_finalize(n: T::BlockNumber) {
 			if let Some(value) = n.try_into().ok() {
-				info!("ddd {}.", value);
 				if value % 3 == 0 {
+					info!("ddd {}.", value);
 					Self::handle_init();
 				}
 			}
 		}
 
 		// Custom stake xtz
-		pub fn custom_stake(origin, multi_sig_address: Vec<u8>, stake_amount: Balance, tx_hash: Vec<u8>, block_hash: Vec<u8>, pub_key: Vec<u8>, sig: Vec<u8>) -> Result {
+		pub fn custom_stake(origin, multi_sig_address: Vec<u8>, stake_amount: u128, tx_hash: Vec<u8>, block_hash: Vec<u8>, pub_key: Vec<u8>, sig: Vec<u8>) -> Result {
 			let sender = ensure_signed(origin)?;
 			// Check that the tx_hash exists
             ensure!(!<TransferInitCheckRecords>::exists(tx_hash.clone()), "This tx_hash exist");
@@ -68,7 +68,7 @@ decl_module! {
 			// TODO: pub_key verify sig
 
 			// TODO: pub_key generate from
-			let from: Vec<u8> = Vec::new();
+			let _from: Vec<u8> = Vec::new();
 			
 			let random_seed = <system::Module<T>>::random_seed();
             let hash = (random_seed, &sender).using_encoded(<T as system::Trait>::Hashing::hash);
@@ -81,7 +81,7 @@ decl_module! {
 				stake_amount: stake_amount,
 				tx_hash: tx_hash.clone(),
 				block_hash: block_hash.clone(),
-				stake_account: from,
+				stake_account: pub_key,
 				sig: sig
 			};
 
@@ -128,17 +128,22 @@ impl<T: Trait> Module<T> {
 
 				let (status, _) = <tezosrpc::Module<T>>::verified(&stake_data.tx_hash);
 				let enum_status = VerifyStatus::create(status);
+
+				if xtz_stake_data.stage != XtzStakeStage::Init {
+					continue;
+				}
 				
-				if xtz_stake_data.stage == XtzStakeStage::Init {
-					if enum_status == VerifyStatus::Confirmed {
+				match enum_status {
+					VerifyStatus::Confirmed => {
 						xtz_stake_data.stage = XtzStakeStage::Completed;
 						<StakeRecords<T>>::insert((account_id.clone(), hash.clone()), xtz_stake_data.clone());
 
-						bondtoken::Module::<T>::add_bond_token(
+						bondtoken::Module::<T>::create_bond_token(
 							account_id.clone(),
 							Symbol::XtzBond,
 							xtz_stake_data.stake_amount,
-							xtz_stake_data.id
+							xtz_stake_data.id,
+							xtz_stake_data.multi_sig_address
 						).expect("Error adding xtz bond token");
 
 						// TODO: Add restrictive conditions to issue FIS token
@@ -154,17 +159,21 @@ impl<T: Trait> Module<T> {
 							};
 						}
 
-						<TransferInitDataMapRecords<T>>::remove(key);
-					} else if enum_status == VerifyStatus::NotFoundTx {
+						<TransferInitDataMapRecords<T>>::remove(key.clone());
+						<tezosrpc::Module<T>>::remove_verified(key.clone());
+					}
+					VerifyStatus::NotFoundBlock | VerifyStatus::TxNotMatch => {
 						<TransferInitCheckRecords>::remove(key.clone());
 						<TransferInitDataMapRecords<T>>::remove(key.clone());
 						<tezosrpc::Module<T>>::remove_verified(key.clone());
-					} else if enum_status == VerifyStatus::Rollback {
-						<TransferInitDataMapRecords<T>>::remove(key.clone());
-					} else if status <= VerifyStatus::Verified as i8 {
-						tmp_datas.push(stake_data);
 					}
+					VerifyStatus::Rollback | VerifyStatus::NotFoundTx => {
+						<TransferInitDataMapRecords<T>>::remove(key.clone());
+						<tezosrpc::Module<T>>::remove_verified(key.clone());
+					}
+					_ => tmp_datas.push(stake_data),
 				}
+
 			}
 		}
 

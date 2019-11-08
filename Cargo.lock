@@ -4219,7 +4219,6 @@ dependencies = [
  "srml-session 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "srml-support 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "srml-system 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
- "stafi-crypto 0.1.0",
  "stafi-externalrpc 0.1.0",
  "stafi-primitives 0.1.0",
  "tokenbalances 0.1.0",
@@ -5254,6 +5253,7 @@ name = "tokenbalances"
 version = "0.1.0"
 dependencies = [
  "hex-literal 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num-traits 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",

@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 hex-literal = "0.2"
+num-traits = { version = "0.2", default-features = false }
 serde = { version = "1.0", default-features = false, optional = true }
 parity-codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 sr-std = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
@@ -25,6 +26,7 @@ stafi-primitives = { path = "../../primitives", default-features = false }
 default = ["std"]
 std = [
     "serde/std",
+    "num-traits/std",
     "parity-codec/std",
     "sr-std/std",
     "sr-io/std",
