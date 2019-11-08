@@ -91,6 +91,9 @@ decl_module! {
 				let status = VerifyStatus::create(Verified::get(txhash.clone()).0);
 				if status != VerifyStatus::Confirmed && status != VerifyStatus::NotFoundTx && status != VerifyStatus::Rollback && status != VerifyStatus::NotFoundBlock {
 					response_list.push((txhash, v));
+					if response_list.len() > 100 {
+						break
+					}
 				}
 			}
 
@@ -101,10 +104,13 @@ decl_module! {
 				let new_status = get_new_status(v.clone(), &mut timestamp);
 				if new_status != VerifyStatus::UnVerified {
 					let status = new_status as i8;
-					Verified::insert(txhash.clone(), (status, timestamp));
-					let mut vb = VerifiedBak::get();
-					vb.push((txhash, status, timestamp));
-					VerifiedBak::put(vb);
+					let (s, t) = Verified::get(txhash.clone());
+					if s != status && t != timestamp {
+						Verified::insert(txhash.clone(), (status, timestamp));
+						let mut vb = VerifiedBak::get();
+						vb.push((txhash, status, timestamp));
+						VerifiedBak::put(vb);
+					}
 				}
 			}
 		}
