@@ -15,7 +15,6 @@
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
 
 extern crate base_custom;
-extern crate hex;
 use base_custom::BaseCustom;
 
 pub fn encode(src: u64) -> String {

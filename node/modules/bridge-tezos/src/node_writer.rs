@@ -14,8 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
 
-#![cfg_attr(not(feature = "std"), no_std)]
 
-pub mod tez;
-
-mod tests;
+pub fn write_transacion() {
+    
+}
