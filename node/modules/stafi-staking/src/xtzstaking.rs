@@ -31,7 +31,6 @@ decl_storage! {
 
 		pub OwnedStakeRecordsArray get(stake_of_owner_by_index): map (T::AccountId, u64) => T::Hash;
         pub OwnedStakeRecordsCount get(owned_stake_count): map T::AccountId => u64;
-        pub OwnedStakeRecordsIndex: map T::Hash => u64;
 
 		pub TransferInitDataRecords get(transfer_init_data_records): Vec<XtzStakeData<T::AccountId, T::Hash, Balance>>;
 		pub TransferInitCheckRecords get(transfer_init_check_records): map Vec<u8> => bool;
@@ -61,20 +60,22 @@ decl_module! {
 		// Custom stake xtz
 		pub fn custom_stake(origin, multi_sig_address: Vec<u8>, stake_amount: u128, tx_hash: Vec<u8>, block_hash: Vec<u8>, pub_key: Vec<u8>, sig: Vec<u8>) -> Result {
 			let sender = ensure_signed(origin)?;
+
+			ensure!(stake_amount > 0, "Stake amount must be greater than 0");
+
 			// Check that the tx_hash exists
             ensure!(!<TransferInitCheckRecords>::exists(tx_hash.clone()), "This tx_hash exist");
 
-			// stafi_crypto::tez::sign::sign(pub_key, "abc");
-
 			// TODO: Check multi sig address
 			// ensure!(multi_sig_address > 0, "Multi sig address is illegal");
-			ensure!(stake_amount > 0, "Stake amount must be greater than 0");
+			
 			// TODO: Check tx hash
 			// ensure!(tx_hash, "Stake amount must be greater than 0");
 			// TODO: Check block hash
 			// ensure!(block_hash, "Stake amount must be greater than 0");
 
 			// TODO: pub_key verify sig
+			// stafi_crypto::tez::sign::sign(pub_key, "abc");
 
 			let owned_stake_count = Self::owned_stake_count(&sender);
         	let new_owned_stake_count = owned_stake_count.checked_add(1).ok_or("Overflow adding a new owned stake")?;
@@ -105,7 +106,6 @@ decl_module! {
 
 			<OwnedStakeRecordsArray<T>>::insert((sender.clone(), owned_stake_count), hash);
 			<OwnedStakeRecordsCount<T>>::insert(&sender, new_owned_stake_count);
-			<OwnedStakeRecordsIndex<T>>::insert(hash, owned_stake_count);
 
 			<AllStakeRecordsArray<T>>::insert(all_stake_count, hash);
 			<AllStakeRecordsCount>::put(new_all_stake_count);

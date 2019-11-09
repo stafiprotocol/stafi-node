@@ -4,18 +4,6 @@ use rstd::prelude::*;
 #[cfg(feature = "std")]
 use serde::{Serialize, Deserialize};
 
-#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
-#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq)]
-pub enum Symbol {
-	XtzBond,
-	AtomBond,
-}
-impl Default for Symbol {
-	fn default() -> Symbol {
-		Symbol::XtzBond
-	}
-}
-
 /// Bond token lock type.
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq)]

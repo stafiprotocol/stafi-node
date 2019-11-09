@@ -61,11 +61,9 @@ decl_storage! {
 
 		pub SymbolBondTokensArray get(symbol_bond_by_index): map (Symbol, u64) => T::Hash;
         pub SymbolBondTokensCount get(symbol_bond_count): map Symbol => u64;
-        pub SymbolBondTokensIndex: map T::Hash => u64;
 
 		pub OwnedBondTokensArray get(bond_of_owner_by_index): map (T::AccountId, u64) => T::Hash;
         pub OwnedBondTokensCount get(owned_bond_count): map T::AccountId => u64;
-        pub OwnedBondTokensIndex: map T::Hash => u64;
 
 		pub LockBondToken get(get_lock_bond_token): map T::Hash => LockBondData<T::Moment, T::Hash>;
 		pub RedeemRecords get(redeem_records): map (T::AccountId, T::Hash) => Option<CustomRedeemData<T::AccountId, T::Hash>>;
@@ -85,11 +83,11 @@ decl_module! {
 					let total_rewards: Balance = 14321;
 					if total_rewards > 0 {
 						let symbol = Symbol::XtzBond;
-						let total_balance = Self::total_bond_token_balance(symbol.clone());
+						let total_balance = Self::total_bond_token_balance(symbol);
 
-						let count = Self::symbol_bond_count(symbol.clone());
+						let count = Self::symbol_bond_count(symbol);
 						for i in 0..count {
-							let bond_id = <SymbolBondTokensArray<T>>::get((symbol.clone(), i));
+							let bond_id = <SymbolBondTokensArray<T>>::get((symbol, i));
 							let bond_token = <BondTokens<T>>::get(bond_id.clone());
 							if bond_token.balance == 0 {
 								continue;
@@ -231,11 +229,9 @@ impl<T: Trait> Module<T> {
 
 		<OwnedBondTokensArray<T>>::insert((sender.clone(), owned_bond_count), &bond_id);
         <OwnedBondTokensCount<T>>::insert(&sender, new_owned_bond_count);
-        <OwnedBondTokensIndex<T>>::insert(&bond_id, owned_bond_count);
 
 		<SymbolBondTokensArray<T>>::insert((symbol, symbol_bond_count), &bond_id);
         <SymbolBondTokensCount>::insert(&symbol, new_symbol_bond_count);
-        <SymbolBondTokensIndex<T>>::insert(&bond_id, symbol_bond_count);
 
 		<CreateNonce>::mutate(|n| *n += 1);
 

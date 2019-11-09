@@ -125,13 +125,16 @@ client::decl_runtime_apis! {
 pub mod constants;
 
 pub mod stafistaking;
-pub use stafistaking::{StakeTokenType, XtzStakeData, XtzStakeStage};
+pub use stafistaking::{XtzStakeData, XtzStakeStage};
 
 pub mod externalrpc;
 pub use externalrpc::{VerifiedData, VerifyStatus, TxHashType, BabeIdType, HostData};
 
 pub mod tokenbalances;
-pub use tokenbalances::{BondTokenLockType, BondTokenLockStatus, Symbol, CustomRedeemData};
+pub use tokenbalances::{BondTokenLockType, BondTokenLockStatus, CustomRedeemData};
 
 pub mod multisig;
-pub use multisig::{ChainType, MultisigAddr};
+pub use multisig::{MultisigAddr};
+
+pub mod chain;
+pub use chain::{ChainType, StakeTokenType, Symbol};

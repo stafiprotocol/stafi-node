@@ -3,24 +3,6 @@ use rstd::prelude::*;
 #[cfg(feature = "std")]
 use serde::{Serialize, Deserialize};
 
-/// Stake token type.
-#[cfg_attr(feature = "std", derive(Debug))]
-#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq)]
-pub enum StakeTokenType {
-	/// stafi token
-	FIS,
-	/// tezos token
-	XTZ,
-	/// cosmos token
-	ATOM
-}
-
-impl Default for StakeTokenType {
-	fn default() -> StakeTokenType {
-		StakeTokenType::FIS
-	}
-}
-
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq)]
 pub enum XtzStakeStage {

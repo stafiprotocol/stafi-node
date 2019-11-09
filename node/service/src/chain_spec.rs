@@ -25,7 +25,7 @@ use stafi_runtime::{
 };
 use stafi_runtime::Block;
 use stafi_primitives::constants::{time::*, currency::*};
-use stafi_primitives::multisig::{ChainType, MultisigAddr}; 
+use stafi_primitives::{ChainType, MultisigAddr}; 
 use substrate_service;
 use substrate_telemetry::TelemetryEndpoints;
 use grandpa_primitives::{AuthorityId as GrandpaId};
