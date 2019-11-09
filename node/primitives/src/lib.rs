@@ -118,7 +118,7 @@ client::decl_runtime_apis! {
 
 	pub trait StakesApi {
 		fn get_stake_hash(account: AccountId) -> Vec<Hash>;
-		fn get_stake_data(account: AccountId, hash: Hash) -> Option<XtzStakeData<AccountId, Hash, Balance>>;
+		fn get_stake_data(hash: Hash) -> Option<XtzStakeData<AccountId, Hash, Balance>>;
 	}
 }
 

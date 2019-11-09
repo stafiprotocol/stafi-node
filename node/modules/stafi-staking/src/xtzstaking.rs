@@ -24,11 +24,20 @@ pub trait Trait: system::Trait + balances::Trait + bondtoken::Trait + tezosrpc::
 decl_storage! {
 	trait Store for Module<T: Trait> as XtzStaking {
 		// Just a dummy storage item.
-		pub StakeRecords get(stake_records): map (T::AccountId, T::Hash) => Option<XtzStakeData<T::AccountId, T::Hash, Balance>>;
-		pub StakeDataHashRecords get(stake_data_hash_records): map T::AccountId => Vec<T::Hash>;
+		pub StakeRecords get(stake_records): map T::Hash => Option<XtzStakeData<T::AccountId, T::Hash, Balance>>;
+
+		pub AllStakeRecordsArray get(stake_by_index): map u64 => T::Hash;
+        pub AllStakeRecordsCount get(all_stake_count): u64;
+
+		pub OwnedStakeRecordsArray get(stake_of_owner_by_index): map (T::AccountId, u64) => T::Hash;
+        pub OwnedStakeRecordsCount get(owned_stake_count): map T::AccountId => u64;
+        pub OwnedStakeRecordsIndex: map T::Hash => u64;
+
 		pub TransferInitDataRecords get(transfer_init_data_records): Vec<XtzStakeData<T::AccountId, T::Hash, Balance>>;
 		pub TransferInitCheckRecords get(transfer_init_check_records): map Vec<u8> => bool;
-		pub TransferInitDataMapRecords get(transfer_init_data_map_records): linked_map Vec<u8> => Option<XtzStakeData<T::AccountId, T::Hash, Balance>>;
+		pub TransferInitDataMapRecords get(transfer_init_data_map_records): linked_map u64 => T::Hash;
+
+		Nonce: u64;
 	}
 }
 
@@ -67,14 +76,21 @@ decl_module! {
 
 			// TODO: pub_key verify sig
 
+			let owned_stake_count = Self::owned_stake_count(&sender);
+        	let new_owned_stake_count = owned_stake_count.checked_add(1).ok_or("Overflow adding a new owned stake")?;
+
+			let all_stake_count = Self::all_stake_count();
+        	let new_all_stake_count = all_stake_count.checked_add(1).ok_or("Overflow adding a new stake")?;
+
 			// TODO: pub_key generate from
 			let _from: Vec<u8> = Vec::new();
 			
+			let nonce = <Nonce>::get();
 			let random_seed = <system::Module<T>>::random_seed();
-            let hash = (random_seed, &sender).using_encoded(<T as system::Trait>::Hashing::hash);
+            let hash = (random_seed, &sender, nonce).using_encoded(<T as system::Trait>::Hashing::hash);
 
 			let stake_data = XtzStakeData {
-				id: hash.clone(),
+				id: hash,
 				initiator: sender.clone(),
 				multi_sig_address: multi_sig_address,
 				stage: XtzStakeStage::Init,
@@ -85,15 +101,20 @@ decl_module! {
 				sig: sig
 			};
 
-			<StakeRecords<T>>::insert((sender.clone(), hash.clone()), stake_data.clone());
+			<StakeRecords<T>>::insert(hash, stake_data.clone());
 
-			let mut hashs = <StakeDataHashRecords<T>>::get(sender.clone());
-			hashs.push(hash.clone());
-			<StakeDataHashRecords<T>>::insert(sender.clone(), hashs);
+			<OwnedStakeRecordsArray<T>>::insert((sender.clone(), owned_stake_count), hash);
+			<OwnedStakeRecordsCount<T>>::insert(&sender, new_owned_stake_count);
+			<OwnedStakeRecordsIndex<T>>::insert(hash, owned_stake_count);
 
-			<TransferInitDataMapRecords<T>>::insert(tx_hash.clone(), stake_data.clone());
+			<AllStakeRecordsArray<T>>::insert(all_stake_count, hash);
+			<AllStakeRecordsCount>::put(new_all_stake_count);
+
+			<TransferInitDataMapRecords<T>>::insert(all_stake_count, hash);
 
 			<TransferInitCheckRecords>::insert(tx_hash, true);
+
+			<Nonce>::mutate(|n| *n += 1);
 
 			// here we are raising the event
 			Self::deposit_event(RawEvent::StakeInit(sender, hash));
@@ -113,30 +134,28 @@ impl<T: Trait> Module<T> {
 	fn handle_init() {
 		let mut tmp_datas: Vec<XtzStakeData<T::AccountId, T::Hash, Balance>> = Vec::new();
 
-		let mut count = 0;
-        for (key, stake_data) in <TransferInitDataMapRecords<T>>::enumerate() {
-			count += 1;
-			if count >= 20 {
-				tmp_datas.push(stake_data);
-				continue;
+        for (key, hash) in <TransferInitDataMapRecords<T>>::enumerate() {
+			if tmp_datas.len() >= 50 {
+				break;
 			}
 
-			let account_id = &stake_data.initiator;
-			let hash = &stake_data.id;
+			if let Some(mut xtz_stake_data) = Self::stake_records(hash) {
 
-			if let Some(mut xtz_stake_data) = Self::stake_records((account_id.clone(), hash.clone())) {
-
-				let (status, _) = <tezosrpc::Module<T>>::verified(&stake_data.tx_hash);
+				let (status, _) = <tezosrpc::Module<T>>::verified(&xtz_stake_data.tx_hash);
 				let enum_status = VerifyStatus::create(status);
 
-				if xtz_stake_data.stage != XtzStakeStage::Init {
+				if xtz_stake_data.stage == XtzStakeStage::Completed {
+					<TransferInitDataMapRecords<T>>::remove(key);
+					<tezosrpc::Module<T>>::remove_verified(xtz_stake_data.tx_hash);
 					continue;
 				}
 				
 				match enum_status {
 					VerifyStatus::Confirmed => {
+						let account_id = &xtz_stake_data.initiator;
+
 						xtz_stake_data.stage = XtzStakeStage::Completed;
-						<StakeRecords<T>>::insert((account_id.clone(), hash.clone()), xtz_stake_data.clone());
+						<StakeRecords<T>>::insert(hash, xtz_stake_data.clone());
 
 						bondtoken::Module::<T>::create_bond_token(
 							account_id.clone(),
@@ -159,19 +178,19 @@ impl<T: Trait> Module<T> {
 							};
 						}
 
-						<TransferInitDataMapRecords<T>>::remove(key.clone());
-						<tezosrpc::Module<T>>::remove_verified(key.clone());
+						<TransferInitDataMapRecords<T>>::remove(key);
+						<tezosrpc::Module<T>>::remove_verified(xtz_stake_data.tx_hash);
 					}
 					VerifyStatus::NotFoundBlock | VerifyStatus::TxNotMatch => {
-						<TransferInitCheckRecords>::remove(key.clone());
-						<TransferInitDataMapRecords<T>>::remove(key.clone());
-						<tezosrpc::Module<T>>::remove_verified(key.clone());
+						<TransferInitCheckRecords>::remove(&xtz_stake_data.tx_hash);
+						<TransferInitDataMapRecords<T>>::remove(key);
+						<tezosrpc::Module<T>>::remove_verified(xtz_stake_data.tx_hash);
 					}
 					VerifyStatus::Rollback | VerifyStatus::NotFoundTx => {
-						<TransferInitDataMapRecords<T>>::remove(key.clone());
-						<tezosrpc::Module<T>>::remove_verified(key.clone());
+						<TransferInitDataMapRecords<T>>::remove(key);
+						<tezosrpc::Module<T>>::remove_verified(xtz_stake_data.tx_hash);
 					}
-					_ => tmp_datas.push(stake_data),
+					_ => tmp_datas.push(xtz_stake_data),
 				}
 
 			}

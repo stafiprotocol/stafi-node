@@ -716,12 +716,14 @@ impl_runtime_apis! {
 	}
 
 	impl stafi_primitives::StakesApi<Block> for Runtime {
-		fn get_stake_hash(account: AccountId) -> Vec<Hash> {
-			XtzStaking::stake_data_hash_records(account)
+		fn get_stake_hash(_account: AccountId) -> Vec<Hash> {
+			// XtzStaking::stake_data_hash_records(account)
+
+			Vec::new()
 		}
 
-		fn get_stake_data(account: AccountId, hash: Hash) -> Option<XtzStakeData<AccountId, Hash, Balance>> {
-			XtzStaking::stake_records((account, hash))
+		fn get_stake_data(hash: Hash) -> Option<XtzStakeData<AccountId, Hash, Balance>> {
+			XtzStaking::stake_records(hash)
 		}
 	}
 

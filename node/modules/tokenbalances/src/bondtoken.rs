@@ -70,7 +70,8 @@ decl_storage! {
 		pub LockBondToken get(get_lock_bond_token): map T::Hash => LockBondData<T::Moment, T::Hash>;
 		pub RedeemRecords get(redeem_records): map (T::AccountId, T::Hash) => Option<CustomRedeemData<T::AccountId, T::Hash>>;
 
-		Nonce: u64;
+		CreateNonce: u64;
+		LockNonce: u64;
 	}
 }
 
@@ -207,7 +208,7 @@ impl<T: Trait> Module<T> {
 		let symbol_bond_count = Self::symbol_bond_count(symbol);
         let new_symbol_bond_count = symbol_bond_count.checked_add(1).ok_or("Overflow adding a new symbol bond token")?;
 
-		let nonce = <Nonce>::get();
+		let nonce = <CreateNonce>::get();
 		let random_seed = <system::Module<T>>::random_seed();
 		let bond_id = (random_seed, &sender, nonce).using_encoded(<T as system::Trait>::Hashing::hash);
 
@@ -236,14 +237,15 @@ impl<T: Trait> Module<T> {
         <SymbolBondTokensCount>::insert(&symbol, new_symbol_bond_count);
         <SymbolBondTokensIndex<T>>::insert(&bond_id, symbol_bond_count);
 
-		<Nonce>::mutate(|n| *n += 1);
+		<CreateNonce>::mutate(|n| *n += 1);
 
 		Ok(())
     }
 
 	fn lock_bond_token(sender: T::AccountId, bond_id: T::Hash, amount: Balance, lock_type: BondTokenLockType) -> T::Hash {
+		let nonce = <LockNonce>::get();
 		let random_seed = <system::Module<T>>::random_seed();
-		let lock_id = (random_seed, &sender).using_encoded(<T as system::Trait>::Hashing::hash);
+		let lock_id = (random_seed, &sender, nonce).using_encoded(<T as system::Trait>::Hashing::hash);
 		let now = <timestamp::Module<T>>::get();
 		let lock_bond_token = LockBondData {
 			id: lock_id,
@@ -260,6 +262,8 @@ impl<T: Trait> Module<T> {
 		bond_token.balance -= amount;
 
 		<BondTokens<T>>::insert(bond_id, bond_token);
+
+		<LockNonce>::mutate(|n| *n += 1);
 		
 		lock_id
     }
