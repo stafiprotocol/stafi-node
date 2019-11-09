@@ -13,11 +13,11 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
-
+#[cfg(feature = "std")]
 extern crate libsodium_sys as sodium;
-
+#[cfg(feature = "std")]
 use sodium::*;
-
+#[cfg(feature = "std")]
 pub fn verify(data: &[u8], sig: &[u8], pk: &[u8]) -> bool {
     let sig_ptr = sig.as_ptr();
     let data_ptr = data.as_ptr();
