@@ -14,9 +14,27 @@
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
 #[cfg(feature = "std")]
+extern crate rstd;
+#[cfg(feature = "std")]
+extern crate bitcoin;
+#[cfg(feature = "std")]
 extern crate libsodium_sys as sodium;
 #[cfg(feature = "std")]
+use bitcoin::util::base58;
+#[cfg(feature = "std")]
 use sodium::*;
+#[cfg(feature = "std")]
+use rstd::str;
+
+#[cfg(feature = "std")]
+pub fn verify_with_ed(data: &[u8], edsig: &[u8], edpk: &[u8]) -> bool {
+    let edsig_str = str::from_utf8(edsig).unwrap();
+    let edsig_bytes = base58::from_check(&edsig_str).unwrap();
+    let edpk_str = str::from_utf8(edpk).unwrap();
+    let pk = base58::from_check(&edpk_str).unwrap();
+    verify(data, &edsig_bytes[5..], &pk[4..])
+}
+
 #[cfg(feature = "std")]
 pub fn verify(data: &[u8], sig: &[u8], pk: &[u8]) -> bool {
     let sig_ptr = sig.as_ptr();
@@ -25,7 +43,7 @@ pub fn verify(data: &[u8], sig: &[u8], pk: &[u8]) -> bool {
     let pk_ptr = pk.as_ptr();
     let result;
     unsafe {
-        result = crypto_sign_verify_detached(sig_ptr, data_ptr, data_len as u64, pk_ptr); 
+        result = crypto_sign_verify_detached(sig_ptr, data_ptr, data_len as u64, pk_ptr);
     }
     return result == 0;
 }
