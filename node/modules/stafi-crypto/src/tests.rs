@@ -29,7 +29,7 @@ mod tests {
         let sk_with_prefix = "edskRiwkRKDGnXwxYgSNFx68vhLQ23RqVhYpVxjRmoUyKMjtEfeoREieDdGBk9meBPSMnYt5UnhxsgEyGd9EFm3mojgdVMkMBq";
         let sk = sk_with_prefix;
         let signature_data = sign(data.to_vec(), sk);
-        assert_eq!(signature_data.edsig, except_edsig);
+        assert_eq!(signature_data.edsig, except_edsig.as_bytes());
         assert_eq!(signature_data.sbytes, except_sbytes.to_vec());
     }
 
@@ -41,9 +41,9 @@ mod tests {
         let pk = "edpkuw9X1bauTMKiAadWJJioLujYxADYrf4Q3dGRJbSmLbgGn3TC1j";
         let pkh = "tz1iJY251ptCJXWMdzhrkLNM72p2UZ48vuZb";
         let keypair = generate_keypair_from_mnemonic_str(mnemonic_str, "mWcziEO9fE8kzGsV");
-        assert_eq!(sk, keypair.sk);
-        assert_eq!(pk, keypair.pk);
-        assert_eq!(pkh, keypair.pkh);
+        assert_eq!(sk.as_bytes(), keypair.sk.as_slice());
+        assert_eq!(pk.as_bytes(), keypair.pk.as_slice());
+        assert_eq!(pkh.as_bytes(), keypair.pkh.as_slice());
     }
 
     use bitcoin::util::base58;
