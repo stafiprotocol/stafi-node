@@ -4221,7 +4221,6 @@ dependencies = [
  "srml-session 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "srml-support 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "srml-system 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
- "stafi-crypto 0.1.0",
  "stafi-externalrpc 0.1.0",
  "stafi-primitives 0.1.0",
  "tokenbalances 0.1.0",
