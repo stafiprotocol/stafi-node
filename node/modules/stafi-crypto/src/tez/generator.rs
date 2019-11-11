@@ -27,6 +27,11 @@ extern crate libsodium_sys as sodium;
 use bip39::{Mnemonic, MnemonicType, Language, Seed};
 #[cfg(feature = "std")]
 extern crate rstd;
+extern crate ed25519_dalek;
+extern crate blake2_rfc;
+extern crate crypto;
+
+use crypto::{ed25519};
 
 #[cfg(feature = "std")]
 use bitcoin::util::base58;
@@ -36,6 +41,8 @@ use sodium::*;
 
 use rstd::vec::Vec;
 use rstd::str;
+use ed25519_dalek::Keypair;
+use blake2_rfc::blake2b;
 
 pub struct KeyPair {
     pub mnemonic: Vec<u8>,
@@ -98,24 +105,9 @@ fn keypair_from_raw_keypair(raw_sk: &[u8], raw_pk: &[u8]) -> (String, String, St
 pub fn pkh_from_rawpk(raw_pk: &[u8]) -> String {
     let mut pkh = vec![6, 161, 159]; // "tz1"
     let message_len = 20;
-    let mut message: Vec<u8> = Vec::with_capacity(message_len);
     let tmp_data = raw_pk.clone();
-    let tmp_data_ptr = tmp_data.as_ptr();
-    let tmp_len: u64 = tmp_data.len() as u64;
-    unsafe {
-        let message_ptr = message.as_mut_ptr();
-        mem::forget(message);
-        crypto_generichash(
-            message_ptr,
-            message_len,
-            tmp_data_ptr,
-            tmp_len,
-            vec![].as_ptr(),
-            0,
-        );
-        message = Vec::from_raw_parts(message_ptr, message_len, message_len)
-    }
-    pkh.extend(message);
+    let new_hash = blake2b::blake2b(message_len, &[], tmp_data);
+    pkh.extend(new_hash.as_bytes());
     let pkh_string = base58::check_encode_slice(&pkh);
     pkh_string
 }
@@ -136,6 +128,11 @@ pub fn generate_keypair_from_seed(seed: &[u8]) -> (String, String, String) {
         pub_buffer = Vec::from_raw_parts(pub_ptr, pub_len, pub_len);
         private_buffer = Vec::from_raw_parts(private_ptr, private_len, private_len);
     }
+    let mut pk: [u8;32] = [0; 32];
+    pk.copy_from_slice(&pub_buffer);
+    let mut sk: [u8;64] = [0; 64];
+    sk.copy_from_slice(&private_buffer);
+    let keypair = ed25519::keypair(seed);
 
-    keypair_from_raw_keypair(&private_buffer, &pub_buffer)
+    keypair_from_raw_keypair(&keypair.0, &keypair.1)
 }
