@@ -82,7 +82,7 @@ decl_module! {
 				if value % 30 == 0 {
 					let total_rewards: Balance = 14321;
 					if total_rewards > 0 {
-						let symbol = Symbol::XtzBond;
+						let symbol = Symbol::XTZ;
 						let total_balance = Self::total_bond_token_balance(symbol);
 
 						let count = Self::symbol_bond_count(symbol);

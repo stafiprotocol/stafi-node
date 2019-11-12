@@ -711,7 +711,9 @@ impl_runtime_apis! {
 
 	impl stafi_primitives::MultisigAddrApi<Block> for Runtime {
 		fn multisig_addr() -> Vec<MultisigAddr> {
-			MultisigAddress::multisig_addr()
+			// MultisigAddress::multisig_addr()
+			
+			Vec::new()
 		}
 	}
 

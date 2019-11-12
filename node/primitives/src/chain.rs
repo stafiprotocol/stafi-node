@@ -9,19 +9,20 @@ use serde::{Serialize, Deserialize};
 pub enum ChainType {
 	TEZOS,
 	COSMOS,
+	STAFI
 }
 
 
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq)]
 pub enum Symbol {
-	FisBond,
-	XtzBond,
-	AtomBond,
+	XTZ,
+	ATOM,
+	FIS,
 }
 impl Default for Symbol {
 	fn default() -> Symbol {
-		Symbol::FisBond
+		Symbol::FIS
 	}
 }
 
