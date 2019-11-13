@@ -125,7 +125,7 @@ client::decl_runtime_apis! {
 pub mod constants;
 
 pub mod stafistaking;
-pub use stafistaking::{XtzStakeData, XtzStakeStage};
+pub use stafistaking::{XtzStakeData, XtzStakeStage, AtomStakeData, AtomStakeStage};
 
 pub mod externalrpc;
 pub use externalrpc::{VerifiedData, VerifyStatus, TxHashType, BabeIdType, HostData};

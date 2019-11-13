@@ -201,7 +201,7 @@ impl authorship::Trait for Runtime {
 	type EventHandler = Staking;
 }
 
-type SessionHandlers = (Grandpa, Babe, ImOnline, AuthorityDiscovery, Stafifund, AtomStaking);
+type SessionHandlers = (Grandpa, Babe, ImOnline, AuthorityDiscovery, Stafifund);
 
 
 impl_opaque_keys! {
