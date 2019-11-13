@@ -12,7 +12,6 @@ bitcoin = { version = "^0.20", optional = true}
 tiny-bip39 = { version = "0.6.2", optional = true}
 rstd = { package = "sr-std", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 blake2-rfc = "0.2.18"
-ed25519-dalek = "1.0.0-pre.2"
 rust-crypto = "^0.2"
 
 [dev-dependencies]

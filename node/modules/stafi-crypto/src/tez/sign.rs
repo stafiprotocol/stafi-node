@@ -19,15 +19,12 @@ extern crate bitcoin;
 extern crate libsodium_sys as sodium;
 #[cfg(feature = "std")]
 extern crate rstd;
+extern crate crypto;
+
+use crypto::{ed25519, blake2b, digest::*};
 
 #[cfg(feature = "std")]
 use bitcoin::util::base58;
-
-#[cfg(feature = "std")]
-use sodium::*;
-
-#[cfg(feature = "std")]
-use rstd::mem;
 
 use rstd::vec::Vec;
 use rstd::str;
@@ -69,54 +66,24 @@ pub fn preprocess(data: Vec<u8>) -> (Vec<u8>, usize) {
 
     // Get hash of data with generic
     let message_len = 32;
-    let mut message: Vec<u8> = Vec::with_capacity(message_len);
-    let tmp_data_ptr = tmp_data.as_ptr();
-    let tmp_len: u64 = tmp_data.len() as u64;
-    unsafe {
-        let message_ptr = message.as_mut_ptr();
-        mem::forget(message);
-        crypto_generichash(
-            message_ptr,
-            message_len,
-            tmp_data_ptr,
-            tmp_len,
-            vec![].as_ptr(),
-            0,
-        );
-        message = Vec::from_raw_parts(message_ptr, message_len, message_len)
-    }
-    (message, message_len)
+
+    let mut hasher = blake2b::Blake2b::new(message_len);
+    hasher.input(&tmp_data);
+    let mut out = [0;32];
+    hasher.result(&mut out);
+
+    (out.to_vec(), message_len)
 }
 
 #[cfg(feature = "std")]
 pub fn sign_with_sk(data: Vec<u8>, sk: Vec<u8>) -> SignatureData {
-    let (message, message_len) = preprocess(data.clone());
-
-    // Signature
-    let sig_len = 64;
-    let mut sig_bytes: Vec<u8> = Vec::with_capacity(sig_len);
+    let (message, _) = preprocess(data.clone());
 
     // Sk to sign
     // The sk has prefix "edsk", which need to be removed
     let sk_data: Vec<u8> = sk[4..].to_vec();
-    unsafe {
-        let sig_bytes_ptr = sig_bytes.as_mut_ptr();
-        mem::forget(sig_bytes);
 
-        let mut siglen: u64 = 0;
-        let siglen_ptr: *mut u64 = &mut siglen;
-        let message_ptr = message.as_ptr();
-        let sk_ptr = sk_data.as_ptr();
-        crypto_sign_detached(
-            sig_bytes_ptr,
-            siglen_ptr,
-            message_ptr,
-            message_len as u64,
-            sk_ptr,
-        );
-        let siglen_usize: usize = siglen as usize;
-        sig_bytes = Vec::from_raw_parts(sig_bytes_ptr, siglen_usize, siglen_usize);
-    }
+    let sig_bytes = ed25519::signature(&message, &sk_data).to_vec();
 
     // EDSIG
     // The edsig has prefix "edsig" = vec![9, 245, 205, 134, 18]

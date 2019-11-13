@@ -18,13 +18,13 @@ extern crate rstd;
 #[cfg(feature = "std")]
 extern crate bitcoin;
 #[cfg(feature = "std")]
-extern crate libsodium_sys as sodium;
-#[cfg(feature = "std")]
 use bitcoin::util::base58;
 #[cfg(feature = "std")]
-use sodium::*;
-#[cfg(feature = "std")]
 use rstd::str;
+
+extern crate crypto;
+
+use crypto::{ed25519};
 
 #[cfg(feature = "std")]
 pub fn verify_with_ed(data: &[u8], edsig: &[u8], edpk: &[u8]) -> bool {
@@ -37,13 +37,5 @@ pub fn verify_with_ed(data: &[u8], edsig: &[u8], edpk: &[u8]) -> bool {
 
 #[cfg(feature = "std")]
 pub fn verify(data: &[u8], sig: &[u8], pk: &[u8]) -> bool {
-    let sig_ptr = sig.as_ptr();
-    let data_ptr = data.as_ptr();
-    let data_len = data.len();
-    let pk_ptr = pk.as_ptr();
-    let result;
-    unsafe {
-        result = crypto_sign_verify_detached(sig_ptr, data_ptr, data_len as u64, pk_ptr);
-    }
-    return result == 0;
+     ed25519::verify(data, pk, sig)
 }
