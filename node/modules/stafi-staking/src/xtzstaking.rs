@@ -154,14 +154,14 @@ impl<T: Trait> Module<T> {
 
 			if let Some(mut xtz_stake_data) = Self::stake_records(hash) {
 
-				let (status, _) = <tezosrpc::Module<T>>::verified(&xtz_stake_data.tx_hash);
-				let enum_status = VerifyStatus::create(status);
-
 				if xtz_stake_data.stage == XtzStakeStage::Completed {
 					<TransferInitDataMapRecords<T>>::remove(key);
 					<tezosrpc::Module<T>>::remove_verified(xtz_stake_data.tx_hash);
 					continue;
 				}
+
+				let (status, _) = <tezosrpc::Module<T>>::verified(&xtz_stake_data.tx_hash);
+				let enum_status = VerifyStatus::create(status);
 				
 				match enum_status {
 					VerifyStatus::Confirmed => {

@@ -2,6 +2,7 @@ use parity_codec::{Encode, Decode};
 use rstd::prelude::*;
 #[cfg(feature = "std")]
 use serde::{Serialize, Deserialize};
+use crate::chain::StakeTokenType;
 
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq)]
@@ -69,4 +70,15 @@ pub struct AtomStakeData<AccountId, Hash, Balance> {
 	pub stake_account: Vec<u8>,
 	// atom sig
 	pub sig: Vec<u8>,
+}
+
+
+#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(Encode, Decode, Clone, PartialEq)]
+pub struct StakeDropAct<BlockNumber, Balance> {
+	pub begin: BlockNumber,
+	pub end: BlockNumber,
+	pub current_cycle: u32,
+	pub token_type: StakeTokenType,
+	pub issue_amount: Balance,
 }

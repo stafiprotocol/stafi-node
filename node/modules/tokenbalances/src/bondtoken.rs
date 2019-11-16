@@ -186,9 +186,6 @@ impl<T: Trait> Module<T> {
 	pub fn create_bond_token(sender: T::AccountId, symbol: Symbol, amount: Balance, stake_id: T::Hash, stake_address: Vec<u8>) -> Result {
 		ensure!(amount > 0, "The amount must be greater than 0");
 
-		/// TODO: Check symbol
-		// ensure!(symbol, "The amount must be greater than 0");
-
 		let total_balance = Self::total_bond_token_balance(symbol);
 		let new_total_balance = total_balance.checked_add(amount).ok_or("Overflow adding total balance")?;
 		

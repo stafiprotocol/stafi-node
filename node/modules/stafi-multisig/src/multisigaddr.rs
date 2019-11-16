@@ -66,12 +66,6 @@ impl<T: Trait> Module<T> {
 
 	pub fn check_multisig_address(chain_type: ChainType, multisig_address: Vec<u8>) -> bool {
 		let list = Self::multisig_addr_list(chain_type);
-		for addr in list {
-			if multisig_address == addr.multisig_addr {
-				return true;
-			}
-		}
-
-		false
+		list.into_iter().find(|addr| multisig_address == addr.multisig_addr).is_some()
     }
 }

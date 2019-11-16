@@ -34,9 +34,13 @@ decl_storage! {
 		pub OwnedStakeRecordsArray get(stake_of_owner_by_index): map (T::AccountId, u64) => T::Hash;
         pub OwnedStakeRecordsCount get(owned_stake_count): map T::AccountId => u64;
 
-		pub TransferInitDataRecords get(transfer_init_data_records): Vec<CustomStakeData<T::AccountId, T::Hash, Balance>>;
 		pub TransferInitCheckRecords get(transfer_init_check_records): map Vec<u8> => bool;
+
+		pub TransferInitDataRecords get(transfer_init_data_records): Vec<CustomStakeData<T::AccountId, T::Hash, Balance>>;
 		pub TransferInitDataMapRecords get(transfer_init_data_map_records): linked_map u64 => T::Hash;
+
+		pub TransferSuccessDataRecords get(transfer_success_data_records): Vec<CustomStakeData<T::AccountId, T::Hash, Balance>>;
+		pub TransferSuccessDataMapRecords get(transfer_success_data_map_records): linked_map u64 => T::Hash;
 
 		Nonce: u64;
 	}
@@ -140,42 +144,26 @@ impl<T: Trait> Module<T> {
 
 			if let Some(mut stake_data) = Self::stake_records(hash) {
 
-				let (status, _) = <tezosrpc::Module<T>>::verified(&stake_data.tx_hash);
-				let enum_status = VerifyStatus::create(status);
-
 				if stake_data.stage == AtomStakeStage::Completed {
 					<TransferInitDataMapRecords<T>>::remove(key);
 					<tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
 					continue;
 				}
+
+				let (status, _) = <tezosrpc::Module<T>>::verified(&stake_data.tx_hash);
+				let enum_status = VerifyStatus::create(status);
 				
 				match enum_status {
 					VerifyStatus::Confirmed => {
 						let account_id = &stake_data.initiator;
 
-						stake_data.stage = AtomStakeStage::Completed;
+						stake_data.stage = AtomStakeStage::TransferSuccess;
 						<StakeRecords<T>>::insert(hash, stake_data.clone());
 
-						bondtoken::Module::<T>::create_bond_token(
-							account_id.clone(),
-							Symbol::XTZ,
-							stake_data.stake_amount,
-							stake_data.id,
-							stake_data.multi_sig_address
-						).expect("Error adding xtz bond token");
-
-						// TODO: Add restrictive conditions to issue FIS token
-						let free_balance = <balances::Module<T>>::free_balance(account_id.clone());
-						let add_value: Balance = 100 * DOLLARS;
-						if let Some(value) = add_value.try_into().ok() {
-							// check
-							match free_balance.checked_add(&value) {
-								Some(total_value) => {
-									balances::FreeBalance::<T>::insert(&account_id.clone(), total_value)
-								},
-								None => (),
-							};
-						}
+						<TransferSuccessDataMapRecords<T>>::insert(key, hash.clone());
+						let mut success_list = Self::transfer_success_data_records();
+						success_list.push(stake_data.clone());
+						<TransferSuccessDataRecords<T>>::put(success_list);
 
 						<TransferInitDataMapRecords<T>>::remove(key);
 						<tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
@@ -188,6 +176,71 @@ impl<T: Trait> Module<T> {
 					VerifyStatus::Rollback | VerifyStatus::NotFoundTx => {
 						<TransferInitDataMapRecords<T>>::remove(key);
 						<tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
+					}
+					_ => tmp_datas.push(stake_data),
+				}
+
+			}
+		}
+
+		<TransferInitDataRecords<T>>::put(tmp_datas);
+    }
+
+
+	fn handle_transfer_success() {
+		let mut tmp_datas: Vec<CustomStakeData<T::AccountId, T::Hash, Balance>> = Vec::new();
+
+        for (key, hash) in <TransferSuccessDataMapRecords<T>>::enumerate() {
+			if tmp_datas.len() >= 50 {
+				break;
+			}
+
+			if let Some(mut stake_data) = Self::stake_records(hash) {
+
+				if stake_data.stage == AtomStakeStage::Completed {
+					<TransferSuccessDataMapRecords<T>>::remove(key);
+					// <tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
+					continue;
+				}
+
+				let (status, _) = <tezosrpc::Module<T>>::verified(&stake_data.tx_hash);
+				let enum_status = VerifyStatus::create(status);
+				
+				match enum_status {
+					VerifyStatus::Confirmed => {
+						let account_id = &stake_data.initiator;
+
+						stake_data.stage = AtomStakeStage::Completed;
+						<StakeRecords<T>>::insert(hash, stake_data.clone());
+
+						bondtoken::Module::<T>::create_bond_token(
+							account_id.clone(),
+							Symbol::ATOM,
+							stake_data.stake_amount,
+							stake_data.id,
+							stake_data.multi_sig_address
+						).expect("Error adding xtz bond token");
+
+						// // TODO: Add restrictive conditions to issue FIS token
+						// let free_balance = <balances::Module<T>>::free_balance(account_id.clone());
+						// let add_value: Balance = 100 * DOLLARS;
+						// if let Some(value) = add_value.try_into().ok() {
+						// 	// check
+						// 	match free_balance.checked_add(&value) {
+						// 		Some(total_value) => {
+						// 			balances::FreeBalance::<T>::insert(&account_id.clone(), total_value)
+						// 		},
+						// 		None => (),
+						// 	};
+						// }
+
+						<TransferSuccessDataMapRecords<T>>::remove(key);
+						// <tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
+					}
+					VerifyStatus::NotFoundBlock | VerifyStatus::TxNotMatch => {
+						// <TransferInitCheckRecords>::remove(&stake_data.tx_hash);
+						// <TransferInitDataMapRecords<T>>::remove(key);
+						// <tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
 					}
 					_ => tmp_datas.push(stake_data),
 				}
