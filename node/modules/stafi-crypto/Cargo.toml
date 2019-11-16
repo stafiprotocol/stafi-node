@@ -7,19 +7,13 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-libsodium-sys = { version = "0.2.4", optional = true}
-bitcoin = { version = "^0.20", optional = true}
-tiny-bip39 = { version = "0.6.2", optional = true}
-rstd = { package = "sr-std", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+tiny-bip39 = { version = "^0.6" }
+rust-crypto = { version = "^0.2", git = "https://github.com/BurningSea/rust-crypto" }
+bitcoin_hashes = "^0.7"
+byteorder = "^1.3"
 
 [dev-dependencies]
-hex-literal = "0.2"
+hex-literal = "^0.2"
+hex = "^0.4"
 
 [features]
-default = ["std"]
-std = [
-    "libsodium-sys",
-    "bitcoin",
-    "tiny-bip39", 
-    "rstd/std"
-]

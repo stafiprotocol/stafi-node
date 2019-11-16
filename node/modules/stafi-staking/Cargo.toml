@@ -18,8 +18,8 @@ im-online = { package = "srml-im-online", git = "https://github.com/stafiprotoco
 stafi-primitives = { path = "../../primitives", default-features = false }
 token-balances = { package = "tokenbalances", path = "../tokenbalances", default-features = false }
 stafi-externalrpc = { path = "../stafi-externalrpc", default-features = false }
-stafi-crypto = { path = "../stafi-crypto", version = "0.1.0", default-features = false }
-stafi-multisig = { path = "../stafi-multisig", version = "0.1.0", default-features = false }
+stafi-crypto = { path = "../stafi-crypto", default-features = false }
+stafi-multisig = { path = "../stafi-multisig", default-features = false }
 
 log = "0.4"
 
@@ -27,7 +27,6 @@ log = "0.4"
 default = ["std"]
 std = [
     "serde/std",
-    "stafi-crypto/std",
     "parity-codec/std",
     "sr-std/std",
     "sr-primitives/std",

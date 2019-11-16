@@ -74,7 +74,7 @@ decl_module! {
 			// ensure!(block_hash, "Stake amount must be greater than 0");
 
 			// TODO: pub_key verify sig
-			// Self::check_sig(tx_hash.clone(), pub_key.clone(), sig.clone())?;
+			Self::check_sig(tx_hash.clone(), pub_key.clone(), sig.clone())?;
 			
 			let owned_stake_count = Self::owned_stake_count(&sender);
         	let new_owned_stake_count = owned_stake_count.checked_add(1).ok_or("Overflow adding a new owned stake")?;
@@ -130,14 +130,13 @@ decl_event!(
 
 impl<T: Trait> Module<T> {
 
-	// #[cfg(feature = "std")]
-	// fn check_sig(tx_hash: Vec<u8>, pub_key: Vec<u8>, sig: Vec<u8>) -> Result {
-	// 	if !stafi_crypto::tez::verify::verify_with_ed(&tx_hash, &sig, &pub_key) {
-	// 		return Err("");
-	// 	}
+	fn check_sig(tx_hash: Vec<u8>, pub_key: Vec<u8>, sig: Vec<u8>) -> Result {
+		// if !stafi_crypto::tez::verify::verify_with_ed(&tx_hash, &sig, &pub_key) {
+		// 	return Err("");
+		// }
 
-	// 	Ok(())
-	// }
+		Ok(())
+	}
 
 	// #[cfg(not(feature = "std"))]
 	// fn check_sig(tx_hash: Vec<u8>, pub_key: Vec<u8>, sig: Vec<u8>) -> Result {

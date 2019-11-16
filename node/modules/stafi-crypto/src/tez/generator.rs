@@ -13,29 +13,17 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
-
-#[cfg(feature = "std")]
 extern crate bip39;
+extern crate crypto;
+extern crate alloc;
 
-#[cfg(feature = "std")]
-extern crate bitcoin;
-
-#[cfg(feature = "std")]
-extern crate libsodium_sys as sodium;
-
-#[cfg(feature = "std")]
 use bip39::{Mnemonic, MnemonicType, Language, Seed};
-#[cfg(feature = "std")]
-extern crate rstd;
+use super::base58;
 
-#[cfg(feature = "std")]
-use bitcoin::util::base58;
-use rstd::mem;
-#[cfg(feature = "std")]
-use sodium::*;
-
-use rstd::vec::Vec;
-use rstd::str;
+use alloc::vec::Vec;
+use core::str;
+use crypto::{blake2b, digest::*};
+use crypto::{ed25519};
 
 pub struct KeyPair {
     pub mnemonic: Vec<u8>,
@@ -44,25 +32,23 @@ pub struct KeyPair {
     pub pkh: Vec<u8>
 }
 
-#[cfg(feature = "std")]
 pub fn generate_keypair() -> KeyPair {
     generate_keypair_with_password("mWcziEO9fE8kzGsV")
 }
 
-#[cfg(feature = "std")]
+
 pub fn generate_keypair_with_password(password: &str) -> KeyPair {
     // create a new randomly generated mnemonic phrase
     let mnemonic = Mnemonic::new(MnemonicType::Words15, Language::English);
     generate_keypair_from_mnemonic(&mnemonic, password)
 }
 
-#[cfg(feature = "std")]
+
 pub fn generate_keypair_from_mnemonic_str(mnemonic_str: &str,  password: &str) -> KeyPair  {
     let mnemonic = Mnemonic::from_phrase(mnemonic_str,  Language::English).map_err(|_| "Unexpected mnemonic").unwrap();
     generate_keypair_from_mnemonic(&mnemonic, password)
 }
 
-#[cfg(feature = "std")]
 pub fn generate_keypair_from_mnemonic(mnemonic: &Mnemonic,  password: &str) -> KeyPair  {
     let seed = Seed::new(&mnemonic, password);
 
@@ -77,7 +63,7 @@ pub fn generate_keypair_from_mnemonic(mnemonic: &Mnemonic,  password: &str) -> K
      pkh: keypair.2.as_bytes().to_vec() }
 }
 
-#[cfg(feature = "std")]
+
 fn keypair_from_raw_keypair(raw_sk: &[u8], raw_pk: &[u8]) -> (String, String, String) {
      // PubKey
     let mut pk = vec![13, 15, 37, 217]; // edpk
@@ -94,48 +80,23 @@ fn keypair_from_raw_keypair(raw_sk: &[u8], raw_pk: &[u8]) -> (String, String, St
     (sk_string, pk_string, pkh_string)
 }
 
-#[cfg(feature = "std")]
+
 pub fn pkh_from_rawpk(raw_pk: &[u8]) -> String {
     let mut pkh = vec![6, 161, 159]; // "tz1"
     let message_len = 20;
-    let mut message: Vec<u8> = Vec::with_capacity(message_len);
     let tmp_data = raw_pk.clone();
-    let tmp_data_ptr = tmp_data.as_ptr();
-    let tmp_len: u64 = tmp_data.len() as u64;
-    unsafe {
-        let message_ptr = message.as_mut_ptr();
-        mem::forget(message);
-        crypto_generichash(
-            message_ptr,
-            message_len,
-            tmp_data_ptr,
-            tmp_len,
-            vec![].as_ptr(),
-            0,
-        );
-        message = Vec::from_raw_parts(message_ptr, message_len, message_len)
-    }
-    pkh.extend(message);
+    let mut hasher = blake2b::Blake2b::new(message_len);
+    hasher.input(&tmp_data);
+    let mut hash = [0;20];
+    hasher.result(&mut hash);
+    pkh.extend(&hash);
     let pkh_string = base58::check_encode_slice(&pkh);
     pkh_string
 }
 
-#[cfg(feature = "std")]
+
 pub fn generate_keypair_from_seed(seed: &[u8]) -> (String, String, String) {
-    let pub_len = 32;
-    let private_len = 64;
-    let mut pub_buffer:Vec<u8> = Vec::with_capacity(32);
-    let mut private_buffer:Vec<u8> = Vec::with_capacity(64);
-    unsafe {
-        let pub_ptr = pub_buffer.as_mut_ptr();
-        let private_ptr = private_buffer.as_mut_ptr();
-        mem::forget(pub_buffer);
-        mem::forget(private_buffer);
+    let (sk, pk) = ed25519::keypair(&seed[..32]);
 
-        crypto_sign_seed_keypair(pub_ptr, private_ptr, seed.as_ptr());
-        pub_buffer = Vec::from_raw_parts(pub_ptr, pub_len, pub_len);
-        private_buffer = Vec::from_raw_parts(private_ptr, private_len, private_len);
-    }
-
-    keypair_from_raw_keypair(&private_buffer, &pub_buffer)
+    keypair_from_raw_keypair(&sk, &pk)
 }

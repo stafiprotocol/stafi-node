@@ -22,6 +22,7 @@ use bitcoin::util::base58;
 use super::base128;
 use num_bigint::*;
 use num_traits::*;
+use core::str;
 
 // fn parseInt(hex: &str, radix: u32) -> Result<i32, ParseIntError> {
 //     i32::from_str_radix(hex, radix)
