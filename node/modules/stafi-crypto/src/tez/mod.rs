@@ -17,3 +17,4 @@
 pub mod sign;
 pub mod generator;
 pub mod verify;
+mod base58;

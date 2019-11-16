@@ -14,11 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
 extern crate regex;
-// extern crate rstd;
-use std as rstd;
+extern crate alloc;
 
 use regex::Regex;
-use rstd::borrow::Cow::*;
+use alloc::borrow::Cow::*;
+use core::str;
+use alloc::string;
 
 // trait RegexReplacement {
 //     fn replace_with_regex(&self, pattern: &str, replacement: &str) -> &str;

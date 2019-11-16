@@ -14,10 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
 
-extern crate bitcoin;
 extern crate crypto;
 
-use bitcoin::util::base58;
+use super::base58;
 use core::str;
 
 use crypto::{ed25519};

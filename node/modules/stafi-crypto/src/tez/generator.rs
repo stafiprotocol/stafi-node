@@ -14,12 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
 extern crate bip39;
-extern crate bitcoin;
 extern crate crypto;
 extern crate alloc;
 
 use bip39::{Mnemonic, MnemonicType, Language, Seed};
-use bitcoin::util::base58;
+use super::base58;
 
 use alloc::vec::Vec;
 use core::str;

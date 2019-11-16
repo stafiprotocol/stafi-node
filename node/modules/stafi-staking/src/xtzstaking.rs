@@ -1,5 +1,6 @@
 extern crate srml_system as system;
 extern crate srml_balances as balances;
+extern crate stafi_crypto as crypto;
 
 use srml_support::{decl_module, decl_storage, decl_event, ensure, dispatch::Result};
 use system::ensure_signed;
@@ -14,6 +15,7 @@ use stafi_primitives::{Balance, VerifyStatus, XtzStakeStage, XtzStakeData, Symbo
 use token_balances::bondtoken;
 use stafi_externalrpc::tezosrpc;
 use log::info;
+use crypto::tez::verify;
 
 pub trait Trait: system::Trait + balances::Trait + bondtoken::Trait + tezosrpc::Trait {
 	/// The overarching event type.
