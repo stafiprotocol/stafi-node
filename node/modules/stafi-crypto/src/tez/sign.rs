@@ -13,21 +13,14 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
-#[cfg(feature = "std")]
 extern crate bitcoin;
-#[cfg(feature = "std")]
-extern crate libsodium_sys as sodium;
-#[cfg(feature = "std")]
-extern crate rstd;
+extern crate alloc;
 extern crate crypto;
 
 use crypto::{ed25519, blake2b, digest::*};
-
-#[cfg(feature = "std")]
 use bitcoin::util::base58;
-
-use rstd::vec::Vec;
-use rstd::str;
+use alloc::vec::Vec;
+use core::str;
 
 pub struct SignatureData {
     pub sig: Vec<u8>,
@@ -45,19 +38,19 @@ impl<'a> Into<SkWrapper<'a>> for &'a str {
     }
 }
 
-#[cfg(feature = "std")]
+
 impl Into<Vec<u8>> for SkWrapper<'_> {
     fn into(self) -> Vec<u8> {
         base58::from_check(self.sk_str).unwrap()
     }
 }
 
-#[cfg(feature = "std")]
+
 pub fn sign(data: Vec<u8>, sk_str: &str) -> SignatureData {
     sign_with_sk(data, base58::from_check(sk_str).unwrap())
 }
 
-#[cfg(feature = "std")]
+
 pub fn preprocess(data: Vec<u8>) -> (Vec<u8>, usize) {
     let watermark_generics: Vec<u8> = [3].to_vec();
     let mut tmp_data = vec![];
@@ -75,7 +68,7 @@ pub fn preprocess(data: Vec<u8>) -> (Vec<u8>, usize) {
     (out.to_vec(), message_len)
 }
 
-#[cfg(feature = "std")]
+
 pub fn sign_with_sk(data: Vec<u8>, sk: Vec<u8>) -> SignatureData {
     let (message, _) = preprocess(data.clone());
 
