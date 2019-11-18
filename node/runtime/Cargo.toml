@@ -45,6 +45,8 @@ substrate-keyring = { git = "https://github.com/stafiprotocol/stafi-blockchain",
 substrate-session = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 authority-discovery-primitives = { package = "substrate-authority-discovery-primitives", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 authority-discovery = { package = "srml-authority-discovery", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+app-crypto = { git = "https://github.com/stafiprotocol/stafi-blockchain", package = "substrate-application-crypto", default-features = false }
+sr-io = { git = "https://github.com/stafiprotocol/stafi-blockchain", package = "sr-io", default-features = false }
 
 stafi-staking = { path = "../modules/stafi-staking", default-features = false }
 tokenbalances = { path = "../modules/tokenbalances", default-features = false }
@@ -52,6 +54,7 @@ stafi-multisig = { path = "../modules/stafi-multisig", default-features = false 
 stafi-fund = { path = "../modules/stafi-fund", default-features = false }
 stafi-primitives = { path = "../primitives", default-features = false }
 stafi-externalrpc = { path = "../modules/stafi-externalrpc", default-features = false }
+stafi-offchain-worker = { path = "../modules/stafi-offchain-worker", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { package = "substrate-wasm-builder-runner", version = "1.0.2", git = "https://github.com/stafiprotocol/stafi-blockchain" }
@@ -101,4 +104,7 @@ std = [
 	"stafi-fund/std",
 	"stafi-primitives/std",
 	"stafi-externalrpc/std",
+	"stafi-offchain-worker/std",
+	"app-crypto/std",
+	"sr-io/std"
 ]

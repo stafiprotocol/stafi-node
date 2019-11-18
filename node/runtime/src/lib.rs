@@ -25,6 +25,7 @@ use stafi_staking::xtzstaking as xtzStaking;
 use tokenbalances;
 use tokenbalances::bondtoken as bondToken;
 use stafi_externalrpc::{irisnetrpc, tezosrpc};
+use stafi_offchain_worker::{tezosworker};
 use stafi_fund;
 use stafi_multisig::multisigaddr as multisigAddr;
 
@@ -480,7 +481,7 @@ impl tokenbalances::Trait for Runtime {
 impl stafi_fund::Trait for Runtime {
 	type Event = Event;
 }
-
+/*
 impl system::offchain::CreateTransaction<Runtime, UncheckedExtrinsic> for Runtime {
 	type Signature = Signature;
 
@@ -507,7 +508,7 @@ impl system::offchain::CreateTransaction<Runtime, UncheckedExtrinsic> for Runtim
 		let (call, extra, _) = raw_payload.deconstruct();
 		Some((call, (address, signature, extra)))
 	}
-}
+}*/
 
 impl atomStaking::Trait for Runtime {
 	type Event = Event;
@@ -525,6 +526,65 @@ impl irisnetrpc::Trait for Runtime {
 }
 
 impl tezosrpc::Trait for Runtime {	
+}
+
+pub mod offchaincb_crypto {
+	pub use crate::tezosworker::KEY_TYPE;
+	use substrate_primitives::sr25519;
+	app_crypto::app_crypto!(sr25519, KEY_TYPE);
+
+	impl From<Signature> for super::Signature {
+		fn from(a: Signature) -> Self {
+			sr_io::print_utf8(b"in from");
+			sr25519::Signature::from(a).into()
+		}
+	}
+}
+/// We need to define the Transaction signer for that using the Key definition
+type OffchainCbAccount = offchaincb_crypto::Public;
+type SubmitTransactionOc = TransactionSubmitter<OffchainCbAccount, Runtime, UncheckedExtrinsic>;
+
+impl tezosworker::Trait for Runtime {
+	type Call = Call;
+	type Event = Event;
+	//type AuthorityId = OracleId;
+	type SubmitTransaction = SubmitTransactionOc;
+	type KeyType = OffchainCbAccount;
+}
+
+/// Lastly we also need to implement the CreateTransaction signer for the runtime
+/// only use in submitSignedTransaction
+impl system::offchain::CreateTransaction<Runtime, UncheckedExtrinsic> for Runtime {
+	type Signature = Signature;
+
+	fn create_transaction<F: system::offchain::Signer<AccountId, Self::Signature>>(
+		call: Call,
+		account: AccountId,
+		index: Index,
+	) -> Option<(
+		Call,
+		<UncheckedExtrinsic as runtime_primitives::traits::Extrinsic>::SignaturePayload,
+	)> {
+		sr_io::print_utf8(b"in create_transaction");
+		let period = 1 << 8;
+		let current_block = System::block_number().saturated_into::<u64>();
+		let tip = 0;
+		let extra: SignedExtra = (
+			system::CheckVersion::<Runtime>::new(),
+			system::CheckGenesis::<Runtime>::new(),
+			system::CheckEra::<Runtime>::from(generic::Era::mortal(period, current_block)),
+			system::CheckNonce::<Runtime>::from(index),
+			system::CheckWeight::<Runtime>::new(),
+			balances::TakeFees::<Runtime>::from(tip),
+			Default::default(),
+		);
+		let raw_payload = SignedPayload::new(call, extra).ok()?;
+		let signature = F::sign(account.clone(), &raw_payload)?;
+		let address = Indices::unlookup(account);
+		let (call, extra, _) = raw_payload.deconstruct();
+		sr_io::print_utf8(b"in create_transaction4");
+		Some((call, (address, signature, extra)))
+	}
 }
 
 construct_runtime!(
@@ -563,6 +623,7 @@ construct_runtime!(
 		StafiIrisnetRpc: irisnetrpc::{Module, Call, Storage, Inherent},
 		StafiTezosRpc: tezosrpc::{Module, Call, Storage, Inherent},
 		MultisigAddress: multisigAddr::{Module, Call, Storage, Event, Config},
+		StafiTezosWorker: tezosworker::{Module, Call, Storage, Event<T>},
 	}
 );
 
