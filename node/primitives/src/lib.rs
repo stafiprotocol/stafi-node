@@ -19,6 +19,8 @@
 // #![warn(missing_docs)]
 
 #![cfg_attr(not(feature = "std"), no_std)]
+// rjson
+#![feature(core_intrinsics)]
 
 use rstd::prelude::*;
 use runtime_primitives::{
@@ -135,3 +137,6 @@ pub use tokenbalances::{BondTokenLockType, BondTokenLockStatus, Symbol, CustomRe
 
 pub mod multisig;
 pub use multisig::{ChainType, MultisigAddr};
+
+pub mod rjson;
+

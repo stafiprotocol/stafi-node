@@ -12,6 +12,9 @@ use codec::Decode;
 
 use app_crypto::{KeyTypeId, RuntimeAppPublic};
 use system::offchain::SubmitSignedTransaction;
+
+pub mod tezos;
+
 /// only for debug
 fn debug(msg: &str) {
 	// let msg = format!("\x1b[34m{}", msg);
@@ -19,8 +22,6 @@ fn debug(msg: &str) {
 }
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"orin");
-pub const BUFFER_LEN: usize = 40960;
-pub const BUF_LEN: usize = 2048;
 
 pub mod sr25519 {
 	mod app_sr25519 {
@@ -62,86 +63,6 @@ decl_storage! {
 		RpcHost get(rpc_host): Vec<HostData>;
 		BlocksConfirmed: u8;
 		BlockDuration: u64;
-	}
-}
-
-decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-		fn set_xtz_transfer_data(origin, xtd: XtzTransferData<T::AccountId, T::Hash>) {
-			let _who = ensure_signed(origin)?;
-			let mut v:Vec<XtzTransferData<T::AccountId, T::Hash>> = Vec::new();
-			v.push(xtd); 
-			<XtzTransferDataVec<T>>::put(v);	
-		}
-
-		fn set_node_response(origin, txhash: TxHashType, babe_key: BabeIdType, v_data: VerifiedData) {
-			let _who = ensure_none(origin)?;
-			
-			NodeResponse::insert((txhash, babe_key), v_data);
-		}
-
-		fn add_rpc_host(origin, host:Vec<u8>) {
-			let _who = ensure_signed(origin)?;
-			
-			let host_data = HostData {
-				host: host,
-				weight: 1,
-			};
-
-			let mut v: Vec<HostData> = RpcHost::get();
-			v.push(host_data);
-			RpcHost::put(v);
-		}
-
-		fn remove_rpc_host(origin, host:Vec<u8>) {
-			let _who = ensure_root(origin)?;
-
-			let v: Vec<HostData> = RpcHost::get().into_iter().filter(|x| x.host != host).collect();
-			RpcHost::put(v);
-		}
-
-		fn set_blocks_confirmed(origin, blocks:u8) {
-			let _who = ensure_root(origin)?;
-			
-			BlocksConfirmed::put(blocks);
-		}
-
-		fn set_block_duration(origin, duration:u64) {
-			let _who = ensure_root(origin)?;
-			
-			BlockDuration::put(duration);
-		}
-
-		fn on_finalize() {
-			let mut txhash_list: Vec<TxHashType> = Vec::new();
-			let mut response_list: Vec<((TxHashType, BabeIdType), VerifiedData)> = Vec::new();
-			for (k, v) in NodeResponse::enumerate() {
-				let status = VerifyStatus::create(Verified::get(&k.0).0);
-				if status != VerifyStatus::Confirmed && status != VerifyStatus::NotFound && status != VerifyStatus::Rollback && status != VerifyStatus::BadRequest {
-					txhash_list.push(k.0.clone());
-					response_list.push((k, v));
-				}
-			}
-
-			for txhash in txhash_list {
-				let mut timestamp = 0;
-
-				let new_status = get_new_status(txhash.clone(), response_list.clone(), &mut timestamp);
-				if new_status != VerifyStatus::UnVerified {
-					Verified::insert(txhash, (new_status as i8, timestamp));
-				}
-			}
-		}
-
-		fn offchain_worker(now: T::BlockNumber) {
-			debug("in offchain worker");
-			if let Some(key) = Self::authority_id() {
-                debug("sign...");
-
-                let call = Call::add_rpc_host([0x33,0x34].to_vec());
-		        let _ = T::SubmitTransaction::sign_and_submit(call, key.clone().into());
-            }
-		}
 	}
 }
 
@@ -188,7 +109,94 @@ fn get_new_status(txhash: TxHashType, response: Vec<((TxHashType, BabeIdType), V
 	return new_status;
 }
 
+decl_module! {
+	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+		fn set_xtz_transfer_data(origin, xtd: XtzTransferData<T::AccountId, T::Hash>) {
+			let _who = ensure_signed(origin)?;
+			let mut v:Vec<XtzTransferData<T::AccountId, T::Hash>> = Vec::new();
+			v.push(xtd);
+			<XtzTransferDataVec<T>>::put(v);
+		}
+
+		fn set_node_response(origin, txhash: TxHashType, babe_key: BabeIdType, v_data: VerifiedData) {
+			let _who = ensure_none(origin)?;
+
+			NodeResponse::insert((txhash, babe_key), v_data);
+		}
+
+		fn add_rpc_host(origin, host:Vec<u8>) {
+			let _who = ensure_signed(origin)?;
+
+			let host_data = HostData {
+				host: host,
+				weight: 1,
+			};
+
+			let mut v: Vec<HostData> = RpcHost::get();
+			v.push(host_data);
+			RpcHost::put(v);
+		}
+
+		fn remove_rpc_host(origin, host:Vec<u8>) {
+			let _who = ensure_root(origin)?;
+
+			let v: Vec<HostData> = RpcHost::get().into_iter().filter(|x| x.host != host).collect();
+			RpcHost::put(v);
+		}
+
+		fn set_blocks_confirmed(origin, blocks:u8) {
+			let _who = ensure_root(origin)?;
+
+			BlocksConfirmed::put(blocks);
+		}
+
+		fn set_block_duration(origin, duration:u64) {
+			let _who = ensure_root(origin)?;
+
+			BlockDuration::put(duration);
+		}
+
+		fn on_finalize() {
+			let mut txhash_list: Vec<TxHashType> = Vec::new();
+			let mut response_list: Vec<((TxHashType, BabeIdType), VerifiedData)> = Vec::new();
+			for (k, v) in NodeResponse::enumerate() {
+				let status = VerifyStatus::create(Verified::get(&k.0).0);
+				if status != VerifyStatus::Confirmed && status != VerifyStatus::NotFound && status != VerifyStatus::Rollback && status != VerifyStatus::BadRequest {
+					txhash_list.push(k.0.clone());
+					response_list.push((k, v));
+				}
+			}
+
+			for txhash in txhash_list {
+				let mut timestamp = 0;
+
+				let new_status = get_new_status(txhash.clone(), response_list.clone(), &mut timestamp);
+				if new_status != VerifyStatus::UnVerified {
+					Verified::insert(txhash, (new_status as i8, timestamp));
+				}
+			}
+		}
+
+		fn offchain_worker(now: T::BlockNumber) {
+			debug("in offchain worker");
+			Self::offchain(now);
+
+//			if let Some(key) = Self::authority_id() {
+//                debug("sign...");
+//
+//                let call = Call::add_rpc_host([0x33,0x34].to_vec());
+//		        let _ = T::SubmitTransaction::sign_and_submit(call, key.clone().into());
+//            }
+
+		}
+	}
+}
+
 impl<T: Trait> Module<T> {
+	fn offchain(now: T::BlockNumber) {
+		tezos::request_tezos();
+	}
+
 	pub fn remove_verified(txhash: TxHashType) {
 		if Verified::exists(&txhash) {
 			Verified::remove(&txhash);
