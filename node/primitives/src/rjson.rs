@@ -330,7 +330,8 @@ pub enum JsonValue {
     Bool(bool),
     String(String),
     Array(Vec<JsonValue>),
-    Object(BTreeMap<String, JsonValue>)
+    Object(BTreeMap<String, JsonValue>),
+    None
 }
 
 pub struct JsonArray(Vec<JsonValue>);
@@ -448,6 +449,14 @@ pub fn is_number(o:&JsonValue) -> bool {
 
 pub fn is_string(o:&JsonValue) -> bool {
     if let JsonValue::String(_) = o {
+        return true;
+    }
+
+    return false;
+}
+
+pub fn is_none(o:&JsonValue) -> bool {
+    if let JsonValue::None = o {
         return true;
     }
 

@@ -7,9 +7,13 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-libsodium-sys = "0.2.4"
-bitcoin = "0.20.0"
-tiny-bip39 = "0.6.2"
+tiny-bip39 = { version = "^0.6" }
+rust-crypto = { version = "^0.2", git = "https://github.com/BurningSea/rust-crypto" }
+bitcoin_hashes = "^0.7"
+byteorder = "^1.3"
 
 [dev-dependencies]
-hex-literal = "0.2"
+hex-literal = "^0.2"
+hex = "^0.4"
+
+[features]

@@ -12,11 +12,11 @@ pub trait Trait: system::Trait {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as MultisigAddress {
-		pub MultisigAddrList get(multisig_addr): Vec<MultisigAddr>;		
+		pub MultisigAddrList get(multisig_addr_list): map ChainType => Vec<MultisigAddr>;		
 	}
 	add_extra_genesis {
 		config(addrs): Vec<MultisigAddr>;
-		build(|config| { MultisigAddrList::put(config.addrs.clone()) })
+		build(|config| Module::<T>::initialize_multisig_addrs(config.addrs.clone()))
 	}
 }
 
@@ -31,16 +31,16 @@ decl_module! {
 			
 			ensure_root(origin)?;
 
-			let addr = MultisigAddr {
+			let multisig_addr = MultisigAddr {
 				chain_type: chain_type,
 				multisig_addr: addr,
 			};
 
-			let mut list = MultisigAddrList::get();
-			list.push(addr.clone());
-			MultisigAddrList::put(list);
+			let mut list = Self::multisig_addr_list(chain_type);
+			list.push(multisig_addr.clone());
+			MultisigAddrList::insert(chain_type, list);
 
-			Self::deposit_event(Event::AddrStored(addr));
+			Self::deposit_event(Event::AddrStored(multisig_addr));
 
 			Ok(())
 		}
@@ -52,3 +52,20 @@ decl_event!(
 		AddrStored(MultisigAddr),
 	}
 );
+
+
+impl<T: Trait> Module<T> {
+
+	fn initialize_multisig_addrs(multisig_addrs: Vec<MultisigAddr>) {
+		for multisig_addr in multisig_addrs {
+			let mut list = Self::multisig_addr_list(multisig_addr.chain_type);
+			list.push(multisig_addr.clone());
+			MultisigAddrList::insert(multisig_addr.chain_type, list.clone());
+		}	
+	}
+
+	pub fn check_multisig_address(chain_type: ChainType, multisig_address: Vec<u8>) -> bool {
+		let list = Self::multisig_addr_list(chain_type);
+		list.into_iter().find(|addr| multisig_address == addr.multisig_addr).is_some()
+    }
+}

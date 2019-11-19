@@ -7,83 +7,17 @@ use sr_std::prelude::*;
 use sr_std::{
 	convert::{TryInto},
 };
-use sr_primitives::traits::Hash;
-use sr_primitives::traits::CheckedAdd;
-use parity_codec::{Encode, Decode};
-use stafi_primitives::StakeTokenType;
-use stafi_primitives::Balance;
-use log::info;
+use sr_primitives::traits::{Hash, CheckedAdd};
+use parity_codec::{Encode};
+
+use stafi_primitives::{Balance, VerifyStatus, AtomStakeStage, ChainType, Symbol, constants::currency::*};
+use stafi_primitives::AtomStakeData as CustomStakeData;
+use token_balances::bondtoken;
+use stafi_externalrpc::tezosrpc;
+use stafi_multisig::multisigaddr;
 
 
-#[cfg_attr(feature = "std", derive(Debug))]
-#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq)]
-pub enum AtomStakeStage {
-	// Init
-	Init,
-	// Transfer token to multi sig address
-	Transfering,
-	// Successful transfer
-	TransferSuccess,
-	// Active staking stage
-	Staking,
-	// Completed staking stage
-	Completed,
-}
-
-// TODO 
-// put this struct into specific module
-// #[cfg_attr(feature = "std", derive(Debug))]
-// #[derive(Encode, Decode, PartialEq)]
-// pub struct MultiSigAddress<Hash> {
-// 	// public key
-// 	pub public_key: Hash,
-// 	// multi sig address
-// 	pub address: Hash,
-// }
-
-#[cfg_attr(feature = "std", derive(Debug))]
-#[derive(Encode, Decode, Clone, PartialEq)]
-pub struct AtomStakeTokenData {
-	pub token_type: StakeTokenType,
-	// decimals of token
-	pub token_decimals: u32,
-	// validator
-	pub validator: Vec<u8>,
-	// Amount of stake
-	pub stake_amount: u128,
-	// Reward of stake
-	pub reward_amount: u128,
-}
-
-#[cfg_attr(feature = "std", derive(Debug))]
-#[derive(Encode, Decode, PartialEq)]
-pub struct AtomStakeData<AccountId, Hash> {
-	// identifier id
-	pub id: Hash,
-	// creator of stake
-	pub initiator: AccountId,
-	// multi sig address
-	pub multi_sig_address: Vec<u8>,
-	// Stage of stake
-	pub stage: AtomStakeStage,
-	// Token data of stake
-	pub stake_token_data: AtomStakeTokenData,
-}
-
-#[cfg_attr(feature = "std", derive(Debug))]
-#[derive(Encode, Decode, Clone, PartialEq)]
-pub struct AtomTransferData<AccountId, Hash> {
-	// identifier id
-	pub id: Hash,
-	// creator of stake
-	pub initiator: AccountId,
-	// transaction message
-	pub transfer_msg: Vec<u8>,
-	// signatures of transaction
-	pub signatures: Vec<u8>,
-}
-
-pub trait Trait: system::Trait + session::Trait + im_online::Trait + token_balances::Trait {
+pub trait Trait: system::Trait + balances::Trait + bondtoken::Trait + tezosrpc::Trait + multisigaddr::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -92,12 +26,23 @@ pub trait Trait: system::Trait + session::Trait + im_online::Trait + token_balan
 decl_storage! {
 	trait Store for Module<T: Trait> as AtomStaking {
 		// Just a dummy storage item.
-		pub StakeRecords get(stake_records): map (T::AccountId, T::Hash) => Option<AtomStakeData<T::AccountId, T::Hash>>;
-		pub StakeDataHashRecords get(stake_data_hash_records): map T::AccountId => Vec<T::Hash>;
-		pub TransferInitDataRecords get(transfer_init_data_records): linked_map (T::AccountId, T::Hash) => Option<AtomTransferData<T::AccountId, T::Hash>>;
-		pub TransferingDataRecords get(transfering_data_records): linked_map (T::AccountId, T::Hash) => T::AccountId;
-		pub TransferSuccessDataRecords get(transfer_success_data_records): linked_map (T::AccountId, T::Hash) => T::AccountId;
-		pub StakingDataRecords get(staking_data_records): linked_map (T::AccountId, T::Hash) => T::AccountId;
+		pub StakeRecords get(stake_records): map T::Hash => Option<CustomStakeData<T::AccountId, T::Hash, Balance>>;
+
+		pub AllStakeRecordsArray get(stake_by_index): map u64 => T::Hash;
+        pub AllStakeRecordsCount get(all_stake_count): u64;
+
+		pub OwnedStakeRecordsArray get(stake_of_owner_by_index): map (T::AccountId, u64) => T::Hash;
+        pub OwnedStakeRecordsCount get(owned_stake_count): map T::AccountId => u64;
+
+		pub TransferInitCheckRecords get(transfer_init_check_records): map Vec<u8> => bool;
+
+		pub TransferInitDataRecords get(transfer_init_data_records): Vec<CustomStakeData<T::AccountId, T::Hash, Balance>>;
+		pub TransferInitDataMapRecords get(transfer_init_data_map_records): linked_map u64 => T::Hash;
+
+		pub TransferSuccessDataRecords get(transfer_success_data_records): Vec<CustomStakeData<T::AccountId, T::Hash, Balance>>;
+		pub TransferSuccessDataMapRecords get(transfer_success_data_map_records): linked_map u64 => T::Hash;
+
+		Nonce: u64;
 	}
 }
 
@@ -109,44 +54,70 @@ decl_module! {
 		// this is needed only if you are using events in your module
 		fn deposit_event() = default;
 
-		// 
-		pub fn custom_stake(origin, multi_sig_address: Vec<u8>, stake_amount: u128, validator: Vec<u8>, transfer_msg: Vec<u8>, signatures: Vec<u8>) -> Result {
+		fn on_finalize(n: T::BlockNumber) {
+			if let Some(value) = n.try_into().ok() {
+				if value % 3 == 0 {
+					Self::handle_init();
+				}
+			}
+		}
+
+		// Custom stake
+		pub fn custom_stake(origin, multi_sig_address: Vec<u8>, stake_amount: u128, tx_hash: Vec<u8>, block_hash: Vec<u8>, pub_key: Vec<u8>, sig: Vec<u8>) -> Result {
 			let sender = ensure_signed(origin)?;
 
 			ensure!(stake_amount > 0, "Stake amount must be greater than 0");
-			// // TODO: Check multi sig address
-			// ensure!(stake_amount > 0, "Multi sig address is illegal");
 
+            ensure!(!<TransferInitCheckRecords>::exists(tx_hash.clone()), "This tx_hash exist");
+
+			ensure!(<multisigaddr::Module<T>>::check_multisig_address(ChainType::COSMOS, multi_sig_address.clone()), "Multi sig address is illegal");
+
+			// TODO: Check tx hash
+			// ensure!(tx_hash, "Stake amount must be greater than 0");
+			// TODO: Check block hash
+			// ensure!(block_hash, "Stake amount must be greater than 0");
+
+			// TODO: pub_key verify sig
+			// Self::check_sig(tx_hash.clone(), pub_key.clone(), sig.clone())?;
+			
+			let owned_stake_count = Self::owned_stake_count(&sender);
+        	let new_owned_stake_count = owned_stake_count.checked_add(1).ok_or("Overflow adding a new owned stake")?;
+
+			let all_stake_count = Self::all_stake_count();
+        	let new_all_stake_count = all_stake_count.checked_add(1).ok_or("Overflow adding a new stake")?;
+
+			// TODO: pub_key generate from
+			let _from: Vec<u8> = Vec::new();
+			
+			let nonce = <Nonce>::get();
 			let random_seed = <system::Module<T>>::random_seed();
-            let hash = (random_seed, &sender).using_encoded(<T as system::Trait>::Hashing::hash);
+            let hash = (random_seed, &sender, nonce).using_encoded(<T as system::Trait>::Hashing::hash);
 
-			let stake_token_data = AtomStakeTokenData {
-				token_type: StakeTokenType::ATOM,
-				token_decimals: 18,
-				validator: validator,
-				stake_amount: stake_amount,
-				reward_amount: 0,
-			};
-
-			<StakeRecords<T>>::insert((sender.clone(), hash.clone()), AtomStakeData {
-				id: hash.clone(),
+			let stake_data = CustomStakeData {
+				id: hash,
 				initiator: sender.clone(),
 				multi_sig_address: multi_sig_address,
 				stage: AtomStakeStage::Init,
-				stake_token_data: stake_token_data,
-			});
-
-			let mut hashs = <StakeDataHashRecords<T>>::get(sender.clone());
-			hashs.push(hash.clone());
-			<StakeDataHashRecords<T>>::insert(sender.clone(), hashs);
-
-			let transfer_data = AtomTransferData {
-				id: hash.clone(),
-				initiator: sender.clone(),
-				transfer_msg: transfer_msg,
-				signatures: signatures,
+				stake_amount: stake_amount,
+				tx_hash: tx_hash.clone(),
+				block_hash: block_hash.clone(),
+				stake_account: pub_key,
+				sig: sig
 			};
-			<TransferInitDataRecords<T>>::insert((sender.clone(), hash.clone()), transfer_data);
+
+			<StakeRecords<T>>::insert(hash, stake_data.clone());
+
+			<OwnedStakeRecordsArray<T>>::insert((sender.clone(), owned_stake_count), hash);
+			<OwnedStakeRecordsCount<T>>::insert(&sender, new_owned_stake_count);
+
+			<AllStakeRecordsArray<T>>::insert(all_stake_count, hash);
+			<AllStakeRecordsCount>::put(new_all_stake_count);
+
+			<TransferInitDataMapRecords<T>>::insert(all_stake_count, hash);
+
+			<TransferInitCheckRecords>::insert(tx_hash, true);
+
+			<Nonce>::mutate(|n| *n += 1);
 
 			// here we are raising the event
 			Self::deposit_event(RawEvent::StakeInit(sender, hash));
@@ -161,121 +132,124 @@ decl_event!(
 	}
 );
 
-
-impl<T: Trait> session::OneSessionHandler<T::AccountId> for Module<T> {
-	type Key = T::AuthorityId;
-
-	fn on_genesis_session<'a, I: 'a>(_validators: I)
-	where
-		I: Iterator<Item = (&'a T::AccountId, Self::Key)>,
-	{
-		// ignore
-	}
-
-	fn on_new_session<'a, I: 'a>(_changed: bool, _validators: I, _next_validators: I)
-	where
-		I: Iterator<Item = (&'a T::AccountId, Self::Key)>,
-	{
-		// ignore
-	}
-
-	fn on_before_session_ending() {
-		info!("aaa {}.", 1);
-
-		Self::handle_staking();
-		Self::handle_transfer_success();
-		Self::handle_transfering();
-		Self::handle_init();
-	}
-
-	fn on_disabled(_i: usize) {
-		// ignore
-	}
-}
-
 impl<T: Trait> Module<T> {
-    // 
-    fn handle_init() {
-        for (key, _transfer_data) in <TransferInitDataRecords<T>>::enumerate() {
-			let account_id = &key.0;
-			let hash = &key.1;
 
-			if let Some(mut atom_stake_data) = Self::stake_records((account_id.clone(), hash.clone())) {
-				if atom_stake_data.stage == AtomStakeStage::Init {
-					atom_stake_data.stage = AtomStakeStage::Transfering;
-					<StakeRecords<T>>::insert((account_id.clone(), hash.clone()), atom_stake_data);
+	fn handle_init() {
+		let mut tmp_datas: Vec<CustomStakeData<T::AccountId, T::Hash, Balance>> = Vec::new();
 
-					<TransferInitDataRecords<T>>::remove((account_id.clone(), hash.clone()));
-					<TransferingDataRecords<T>>::insert((account_id.clone(), hash.clone()), account_id.clone());
-				}
+        for (key, hash) in <TransferInitDataMapRecords<T>>::enumerate() {
+			if tmp_datas.len() >= 50 {
+				break;
 			}
-		}
-    }
 
-	// 
-    fn handle_transfering() {
-        for (key, _) in <TransferingDataRecords<T>>::enumerate() {
-			let account_id = &key.0;
-			let hash = &key.1;
+			if let Some(mut stake_data) = Self::stake_records(hash) {
 
-			if let Some(mut atom_stake_data) = Self::stake_records((account_id.clone(), hash.clone())) {
-				if atom_stake_data.stage == AtomStakeStage::Transfering {
-					atom_stake_data.stage = AtomStakeStage::TransferSuccess;
-					<StakeRecords<T>>::insert((account_id.clone(), hash.clone()), atom_stake_data);
-
-					<TransferingDataRecords<T>>::remove((account_id.clone(), hash.clone()));
-					<TransferSuccessDataRecords<T>>::insert((account_id.clone(), hash.clone()), account_id.clone());
+				if stake_data.stage == AtomStakeStage::Completed {
+					<TransferInitDataMapRecords<T>>::remove(key);
+					<tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
+					continue;
 				}
-			}
-		}
-    }
 
-	// 
-    fn handle_transfer_success() {
-        for (key, _) in <TransferSuccessDataRecords<T>>::enumerate() {
-			let account_id = &key.0;
-			let hash = &key.1;
+				let (status, _) = <tezosrpc::Module<T>>::verified(&stake_data.tx_hash);
+				let enum_status = VerifyStatus::create(status);
+				
+				match enum_status {
+					VerifyStatus::Confirmed => {
+						let account_id = &stake_data.initiator;
 
-			if let Some(mut atom_stake_data) = Self::stake_records((account_id.clone(), hash.clone())) {
-				if atom_stake_data.stage == AtomStakeStage::TransferSuccess {
-					atom_stake_data.stage = AtomStakeStage::Staking;
-					<StakeRecords<T>>::insert((account_id.clone(), hash.clone()), atom_stake_data);
+						stake_data.stage = AtomStakeStage::TransferSuccess;
+						<StakeRecords<T>>::insert(hash, stake_data.clone());
 
-					<TransferSuccessDataRecords<T>>::remove((account_id.clone(), hash.clone()));
-					<StakingDataRecords<T>>::insert((account_id.clone(), hash.clone()), account_id.clone());
-				}
-			}
-		}
-    }
+						<TransferSuccessDataMapRecords<T>>::insert(key, hash.clone());
+						let mut success_list = Self::transfer_success_data_records();
+						success_list.push(stake_data.clone());
+						<TransferSuccessDataRecords<T>>::put(success_list);
 
-	// 
-    fn handle_staking() {
-        for (key, _) in <StakingDataRecords<T>>::enumerate() {
-			let account_id = &key.0;
-			let hash = &key.1;
-
-			if let Some(mut atom_stake_data) = Self::stake_records((account_id.clone(), hash.clone())) {
-				if atom_stake_data.stage == AtomStakeStage::Staking {
-					atom_stake_data.stage = AtomStakeStage::Completed;
-					<StakeRecords<T>>::insert((account_id.clone(), hash.clone()), atom_stake_data);
-					<StakingDataRecords<T>>::remove((account_id.clone(), hash.clone()));
-
-					let free_balance = <balances::Module<T>>::free_balance(account_id.clone());
-					let add_value: Balance = 10 * 1_000_000_000 * 1_000 * 1_000;
-					if let Some(value) = add_value.try_into().ok() {
-						// check
-						match free_balance.checked_add(&value) {
-							Some(b) => {
-								balances::FreeBalance::<T>::insert(&account_id.clone(), b)
-							},
-							None => (),
-						};
+						<TransferInitDataMapRecords<T>>::remove(key);
+						<tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
 					}
-
-					// token_balances::Module::<T>::add_bond_token(account_id.clone(), Symbol::AtomBond, 10).expect("Error adding atom bond token");
+					VerifyStatus::NotFoundBlock | VerifyStatus::TxNotMatch => {
+						<TransferInitCheckRecords>::remove(&stake_data.tx_hash);
+						<TransferInitDataMapRecords<T>>::remove(key);
+						<tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
+					}
+					VerifyStatus::Rollback | VerifyStatus::NotFoundTx => {
+						<TransferInitDataMapRecords<T>>::remove(key);
+						<tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
+					}
+					_ => tmp_datas.push(stake_data),
 				}
+
 			}
 		}
+
+		<TransferInitDataRecords<T>>::put(tmp_datas);
     }
+
+
+	fn handle_transfer_success() {
+		let mut tmp_datas: Vec<CustomStakeData<T::AccountId, T::Hash, Balance>> = Vec::new();
+
+        for (key, hash) in <TransferSuccessDataMapRecords<T>>::enumerate() {
+			if tmp_datas.len() >= 50 {
+				break;
+			}
+
+			if let Some(mut stake_data) = Self::stake_records(hash) {
+
+				if stake_data.stage == AtomStakeStage::Completed {
+					<TransferSuccessDataMapRecords<T>>::remove(key);
+					// <tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
+					continue;
+				}
+
+				let (status, _) = <tezosrpc::Module<T>>::verified(&stake_data.tx_hash);
+				let enum_status = VerifyStatus::create(status);
+				
+				match enum_status {
+					VerifyStatus::Confirmed => {
+						let account_id = &stake_data.initiator;
+
+						stake_data.stage = AtomStakeStage::Completed;
+						<StakeRecords<T>>::insert(hash, stake_data.clone());
+
+						bondtoken::Module::<T>::create_bond_token(
+							account_id.clone(),
+							Symbol::ATOM,
+							stake_data.stake_amount,
+							stake_data.id,
+							stake_data.multi_sig_address
+						).expect("Error adding xtz bond token");
+
+						// // TODO: Add restrictive conditions to issue FIS token
+						// let free_balance = <balances::Module<T>>::free_balance(account_id.clone());
+						// let add_value: Balance = 100 * DOLLARS;
+						// if let Some(value) = add_value.try_into().ok() {
+						// 	// check
+						// 	match free_balance.checked_add(&value) {
+						// 		Some(total_value) => {
+						// 			balances::FreeBalance::<T>::insert(&account_id.clone(), total_value)
+						// 		},
+						// 		None => (),
+						// 	};
+						// }
+
+						<TransferSuccessDataMapRecords<T>>::remove(key);
+						// <tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
+					}
+					VerifyStatus::NotFoundBlock | VerifyStatus::TxNotMatch => {
+						// <TransferInitCheckRecords>::remove(&stake_data.tx_hash);
+						// <TransferInitDataMapRecords<T>>::remove(key);
+						// <tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
+					}
+					_ => tmp_datas.push(stake_data),
+				}
+
+			}
+		}
+
+		<TransferInitDataRecords<T>>::put(tmp_datas);
+    }
+
 }
 

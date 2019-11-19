@@ -14,30 +14,35 @@
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
 extern crate bip39;
-extern crate bitcoin;
-extern crate libsodium_sys as sodium;
+extern crate crypto;
+extern crate alloc;
 
 use bip39::{Mnemonic, MnemonicType, Language, Seed};
-use bitcoin::util::base58;
-use std::mem;
-use sodium::*;
+use super::base58;
+
+use alloc::vec::Vec;
+use core::str;
+use crypto::{blake2b, digest::*};
+use crypto::{ed25519};
 
 pub struct KeyPair {
-    pub mnemonic: String,
-    pub sk: String,
-    pub pk: String,
-    pub pkh: String
+    pub mnemonic: Vec<u8>,
+    pub sk: Vec<u8>,
+    pub pk: Vec<u8>,
+    pub pkh: Vec<u8>
 }
 
 pub fn generate_keypair() -> KeyPair {
     generate_keypair_with_password("mWcziEO9fE8kzGsV")
 }
 
+
 pub fn generate_keypair_with_password(password: &str) -> KeyPair {
     // create a new randomly generated mnemonic phrase
     let mnemonic = Mnemonic::new(MnemonicType::Words15, Language::English);
     generate_keypair_from_mnemonic(&mnemonic, password)
 }
+
 
 pub fn generate_keypair_from_mnemonic_str(mnemonic_str: &str,  password: &str) -> KeyPair  {
     let mnemonic = Mnemonic::from_phrase(mnemonic_str,  Language::English).map_err(|_| "Unexpected mnemonic").unwrap();
@@ -52,8 +57,12 @@ pub fn generate_keypair_from_mnemonic(mnemonic: &Mnemonic,  password: &str) -> K
 
     let keypair = generate_keypair_from_seed(seed_bytes);
 
-    KeyPair { mnemonic: mnemonic.phrase().to_string(), sk: keypair.0, pk: keypair.1 , pkh: keypair.2 }
+    KeyPair { mnemonic: mnemonic.phrase().to_string().as_bytes().to_vec(), 
+    sk: keypair.0.as_bytes().to_vec(),
+    pk: keypair.1.as_bytes().to_vec(),
+     pkh: keypair.2.as_bytes().to_vec() }
 }
+
 
 fn keypair_from_raw_keypair(raw_sk: &[u8], raw_pk: &[u8]) -> (String, String, String) {
      // PubKey
@@ -67,45 +76,27 @@ fn keypair_from_raw_keypair(raw_sk: &[u8], raw_pk: &[u8]) -> (String, String, St
     let sk_string = base58::check_encode_slice(&sk);
 
     // pkh
-    let mut pkh = vec![6, 161, 159]; // "tz1"
-    let message_len = 20;
-    let mut message: Vec<u8> = Vec::with_capacity(message_len);
-    let tmp_data = raw_pk.clone();
-    let tmp_data_ptr = tmp_data.as_ptr();
-    let tmp_len: u64 = tmp_data.len() as u64;
-    unsafe {
-        let message_ptr = message.as_mut_ptr();
-        mem::forget(message);
-        crypto_generichash(
-            message_ptr,
-            message_len,
-            tmp_data_ptr,
-            tmp_len,
-            vec![].as_ptr(),
-            0,
-        );
-        message = Vec::from_raw_parts(message_ptr, message_len, message_len)
-    }
-    pkh.extend(message);
-    let pkh_string = base58::check_encode_slice(&pkh);
+    let pkh_string = pkh_from_rawpk(raw_pk);
     (sk_string, pk_string, pkh_string)
 }
 
+
+pub fn pkh_from_rawpk(raw_pk: &[u8]) -> String {
+    let mut pkh = vec![6, 161, 159]; // "tz1"
+    let message_len = 20;
+    let tmp_data = raw_pk.clone();
+    let mut hasher = blake2b::Blake2b::new(message_len);
+    hasher.input(&tmp_data);
+    let mut hash = [0;20];
+    hasher.result(&mut hash);
+    pkh.extend(&hash);
+    let pkh_string = base58::check_encode_slice(&pkh);
+    pkh_string
+}
+
+
 pub fn generate_keypair_from_seed(seed: &[u8]) -> (String, String, String) {
-    let pub_len = 32;
-    let private_len = 64;
-    let mut pub_buffer:Vec<u8> = Vec::with_capacity(32);
-    let mut private_buffer:Vec<u8> = Vec::with_capacity(64);
-    unsafe {
-        let pub_ptr = pub_buffer.as_mut_ptr();
-        let private_ptr = private_buffer.as_mut_ptr();
-        mem::forget(pub_buffer);
-        mem::forget(private_buffer);
+    let (sk, pk) = ed25519::keypair(&seed[..32]);
 
-        crypto_sign_seed_keypair(pub_ptr, private_ptr, seed.as_ptr());
-        pub_buffer = Vec::from_raw_parts(pub_ptr, pub_len, pub_len);
-        private_buffer = Vec::from_raw_parts(private_ptr, private_len, private_len);
-    }
-
-    keypair_from_raw_keypair(&private_buffer, &pub_buffer)
+    keypair_from_raw_keypair(&sk, &pk)
 }

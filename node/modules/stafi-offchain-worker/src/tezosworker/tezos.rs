@@ -5,9 +5,9 @@ extern crate substrate_primitives as primitives;
 use primitives::offchain::{Duration, HttpRequestId, HttpRequestStatus};
 use rstd::result::Result;
 use rstd::vec::Vec;
-use sr_primitives::traits::{Member, SaturatedConversion};
-use stafi_primitives::rjson;
+use stafi_primitives::{rjson, VerifyStatus};
 use stafi_primitives::rjson::{JsonValue, JsonArray, JsonObject};
+//use test::OutputFormat::Json;
 
 pub const BUFFER_LEN: usize = 40960;
 pub const BUF_LEN: usize = 2048;
@@ -28,20 +28,25 @@ enum RequestError {
     ReadBodyError,
 }
 
-pub fn request_tezos() -> u32 {
-    let res = request_tezos_buf();
+pub fn request_tezos(host: Vec<u8>, blockhash: Vec<u8>, txhash: Vec<u8>, from: Vec<u8>, to: Vec<u8>, stake_amount: u128, level: &mut i64) -> VerifyStatus {
+
+    let uri = [core::str::from_utf8(&host).unwrap(), "/chains/main/blocks/", core::str::from_utf8(&blockhash).unwrap()].join("");
+    debug(&uri);
+
+    let res = request_tezos_buf(&uri);
     match res {
         Ok(buf) => {
-            return 1;//parse_result(buf, "onv7i9LSacMXjhTdpgzmY4q6PxiZ18TZPq7KrRBRUVX7XJicSDi");
+            let ret = parse_result(buf, core::str::from_utf8(&blockhash).unwrap(), core::str::from_utf8(&txhash).unwrap(),core::str::from_utf8(&from).unwrap(), core::str::from_utf8(&to).unwrap(), stake_amount, level);
+            return ret;
         }
         Err(err) => {
-            return 0;
+            return VerifyStatus::NotResponse;
         }
     }
 }
 
-fn request_tezos_buf() -> Result<[u8; BUFFER_LEN], RequestError> {
-    let uri = "https://rpc.tezrpc.me/chains/main/blocks/BKsxzJMXPxxJWRZcsgWG8AAegXNp2uUuUmMr8gzQcoEiGnNeCA";
+fn request_tezos_buf(uri: &str) -> Result<[u8; BUFFER_LEN], RequestError> {
+    //let uri = "https://rpc.tezrpc.me/chains/main/blocks/BKsxzJMXPxxJWRZcsgWG8AAegXNp2uUuUmMr8gzQcoEiGnNeCA6";
 
     let mut counter = 0;
 
@@ -133,81 +138,115 @@ fn http_request_get(
     }
 }
 
-fn parse_result(res: [u8; BUFFER_LEN], txid: &str) -> u32 {
-    if let Ok(data) = core::str::from_utf8(&res) {
-        runtime_io::print_utf8(&res);
-        let data_array: Vec<char> = data.chars().collect();
-        let mut index:usize = 0;
-        let o = rjson::parse::<JsonValue, JsonArray, JsonObject, JsonValue>(&*data_array, &mut index).unwrap_or(JsonValue::Null);
-        runtime_io::print_num(index as u64);
-        //Self::parse_json(&o);
-        let v = rjson::get_value_by_keys(&o, "header.level");
-        if let Some(v) = v {
-            if rjson::is_number(v) {
-                let n = rjson::get_number(&v);
-                if let Some(n) = n {
-                    debug("found level node");
-                    runtime_io::print_num(n as u64);
+fn parse_result(res: [u8; BUFFER_LEN], blockhash: &str, txid: &str, from: &str, to: &str, stake_amount: u128, level: &mut i64) -> VerifyStatus {
+    let data = core::str::from_utf8(&res).unwrap_or("");
+    if data == "" {
+        return VerifyStatus::Error;
+    }
 
-                    let v = rjson::get_value_by_key_recursively(&o, "operations");
-                    if let Some(ops) = v {
-                        if rjson::is_array(ops) {
-                            debug("found operations");
-                            let op_array = rjson::get_array(&ops);
-                            runtime_io::print_num(op_array.len() as u64);
-                            let mut found = false;
-                            for op_arr in op_array {
-                                if rjson::is_array(op_arr) {
-                                    let arr = rjson::get_array(&op_arr);
-                                    for node in arr {
-                                        found = rjson::find_object_by_key_and_value(&node, "hash", txid);
-                                        if found {
-                                            debug("found tx");
+    //runtime_io::print_utf8(&res);
+    let data_array: Vec<char> = data.chars().collect();
+    let mut index:usize = 0;
+    let o = rjson::parse::<JsonValue, JsonArray, JsonObject, JsonValue>(&*data_array, &mut index).unwrap_or(JsonValue::None);
+    if rjson::is_none(&o) {
+        return VerifyStatus::Error;
+    }
 
-                                            let contents = rjson::get_value_by_key(&node, "contents");
-                                            if let Some(contents) = contents {
-                                                if rjson::is_array(contents) {
-                                                    debug("found contents");
-                                                    let content_array = rjson::get_array(contents);
-                                                    for content in content_array {
-                                                        let kind = rjson::get_value_by_key(content, "kind");
-                                                        if let Some(kind) = kind {
-                                                            debug("found kind");
-                                                            debug(rjson::get_string(&kind).unwrap());
-                                                        }
+    runtime_io::print_num(index as u64);
+    //Self::parse_json(&o);
+    let v = rjson::get_value_by_keys(&o, "header.level").unwrap_or(&JsonValue::None);
+    if rjson::is_none(&v) || !rjson::is_number(v){
+        return VerifyStatus::NotFoundBlock;
+    }
 
-                                                        let status = rjson::get_value_by_keys(content, "metadata.operation_result.status");
-                                                        if let Some(status) = status {
-                                                            debug("found status");
-                                                            debug(rjson::get_string(&status).unwrap());
-                                                        }
+    let n = rjson::get_number(&v).unwrap_or(0.0);
+    if n == 0.0 {
+        return VerifyStatus::NotFoundBlock;
+    }
 
-                                                    }
-                                                }
-                                            }
-                                            break;
-                                        }
-                                    }
+    debug("found level node");
+    runtime_io::print_num(n as u64);
+    *level = n as i64;
 
-                                }
-                                if found {
-                                    break;
-                                }
-                            }
-                            //found
+    if blockhash == "head" {
+        return VerifyStatus::TxOk;
+    }
+
+    let ops = rjson::get_value_by_key_recursively(&o, "operations").unwrap_or(&JsonValue::None);
+    if rjson::is_none(&ops) || !rjson::is_array(ops){
+        return VerifyStatus::NotFoundTx;
+    }
+
+    debug("found operations");
+    let op_array = rjson::get_array(&ops);
+    runtime_io::print_num(op_array.len() as u64);
+    let mut found = false;
+    for op_arr in op_array {
+        if rjson::is_array(op_arr) {
+            let arr = rjson::get_array(&op_arr);
+            for node in arr {
+                found = rjson::find_object_by_key_and_value(&node, "hash", txid);
+                if found {
+                    debug("found tx");
+
+                    let contents = rjson::get_value_by_key(&node, "contents").unwrap_or(&JsonValue::None);
+                    if rjson::is_none(&contents) || !rjson::is_array(contents){
+                        break;
+                    }
+
+                    debug("found contents");
+                    let content_array = rjson::get_array(contents);
+                    for content in content_array {
+                        let kind = rjson::get_value_by_key(content, "kind").unwrap_or(&JsonValue::None);
+                        if rjson::is_none(&kind) || !rjson::is_string(kind) || rjson::get_string(&kind).unwrap_or("") != "transaction" {
+                            debug("not transaction");
+                            return VerifyStatus::TxNotMatch;
+                        }
+
+                        let source = rjson::get_value_by_key(content, "source").unwrap_or(&JsonValue::None);
+                        if rjson::is_none(&source) || rjson::get_string(&source).unwrap_or("") != from {
+                            debug("source not not match");
+                            return VerifyStatus::TxNotMatch;
+                        }
+
+                        let destination = rjson::get_value_by_key(content, "destination").unwrap_or(&JsonValue::None);
+                        if rjson::is_none(&destination) || rjson::get_string(&destination).unwrap_or("") != to {
+                            debug("destination not match");
+                            return VerifyStatus::TxNotMatch;
+                        }
+
+                        let amount = rjson::get_value_by_key(content, "amount").unwrap_or(&JsonValue::None);
+                        if rjson::is_none(&amount) {
+                            debug("amount not exist");
+                            return VerifyStatus::TxNotMatch;
+                        }
+
+                        let amount = rjson::get_string(&amount).unwrap_or("").parse::<u128>().unwrap_or(0);
+                        if amount != stake_amount {
+                            debug("amount not match");
+                            return VerifyStatus::TxNotMatch;
+                        }
+
+                        let status = rjson::get_value_by_keys(content, "metadata.operation_result.status").unwrap_or(&JsonValue::None);
+                        if rjson::is_none(&status) || rjson::get_string(&status).unwrap_or("") != "applied" {
+                            debug("not applied");
+                            return VerifyStatus::TxNotMatch;
                         }
                     }
 
-                    return n as u32;
+                    break;
                 }
             }
-        } else {
-            debug("not found");
+
         }
-
-        return 0;
-
-    } else {
-        return 0;
+        if found {
+            break;
+        }
     }
+    //found
+    if found {
+        return VerifyStatus::TxOk;
+    }
+
+    return VerifyStatus::NotFoundTx;
 }

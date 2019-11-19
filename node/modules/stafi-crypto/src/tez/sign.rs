@@ -13,25 +13,44 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
+extern crate alloc;
+extern crate crypto;
 
-extern crate bitcoin;
-extern crate libsodium_sys as sodium;
-
-use bitcoin::util::base58;
-use sodium::*;
-use std::mem;
+use crypto::{ed25519, blake2b, digest::*};
+use super::base58;
+use alloc::vec::Vec;
+use core::str;
 
 pub struct SignatureData {
     pub sig: Vec<u8>,
-    pub edsig: String,
+    pub edsig: Vec<u8>,
     pub sbytes: Vec<u8>,
 }
+
+struct SkWrapper<'a> {
+    sk_str: &'a str
+}
+
+impl<'a> Into<SkWrapper<'a>> for &'a str {
+    fn into(self) -> SkWrapper<'a> {
+        SkWrapper { sk_str: self }
+    }
+}
+
+
+impl Into<Vec<u8>> for SkWrapper<'_> {
+    fn into(self) -> Vec<u8> {
+        base58::from_check(self.sk_str).unwrap()
+    }
+}
+
 
 pub fn sign(data: Vec<u8>, sk_str: &str) -> SignatureData {
     sign_with_sk(data, base58::from_check(sk_str).unwrap())
 }
 
-pub fn sign_with_sk(data: Vec<u8>, sk: Vec<u8>) -> SignatureData {
+
+pub fn preprocess(data: Vec<u8>) -> (Vec<u8>, usize) {
     let watermark_generics: Vec<u8> = [3].to_vec();
     let mut tmp_data = vec![];
     tmp_data.extend(watermark_generics);
@@ -39,48 +58,24 @@ pub fn sign_with_sk(data: Vec<u8>, sk: Vec<u8>) -> SignatureData {
 
     // Get hash of data with generic
     let message_len = 32;
-    let mut message: Vec<u8> = Vec::with_capacity(message_len);
-    let tmp_data_ptr = tmp_data.as_ptr();
-    let tmp_len: u64 = tmp_data.len() as u64;
-    unsafe {
-        let message_ptr = message.as_mut_ptr();
-        mem::forget(message);
-        crypto_generichash(
-            message_ptr,
-            message_len,
-            tmp_data_ptr,
-            tmp_len,
-            vec![].as_ptr(),
-            0,
-        );
-        message = Vec::from_raw_parts(message_ptr, message_len, message_len)
-    }
 
-    // Signature
-    let sig_len = 64;
-    let mut sig_bytes: Vec<u8> = Vec::with_capacity(sig_len);
+    let mut hasher = blake2b::Blake2b::new(message_len);
+    hasher.input(&tmp_data);
+    let mut out = [0;32];
+    hasher.result(&mut out);
+
+    (out.to_vec(), message_len)
+}
+
+
+pub fn sign_with_sk(data: Vec<u8>, sk: Vec<u8>) -> SignatureData {
+    let (message, _) = preprocess(data.clone());
 
     // Sk to sign
     // The sk has prefix "edsk", which need to be removed
     let sk_data: Vec<u8> = sk[4..].to_vec();
-    unsafe {
-        let sig_bytes_ptr = sig_bytes.as_mut_ptr();
-        mem::forget(sig_bytes);
 
-        let mut siglen: u64 = 0;
-        let siglen_ptr: *mut u64 = &mut siglen;
-        let message_ptr = message.as_ptr();
-        let sk_ptr = sk_data.as_ptr();
-        crypto_sign_detached(
-            sig_bytes_ptr,
-            siglen_ptr,
-            message_ptr,
-            message_len as u64,
-            sk_ptr,
-        );
-        let siglen_usize: usize = siglen as usize;
-        sig_bytes = Vec::from_raw_parts(sig_bytes_ptr, siglen_usize, siglen_usize);
-    }
+    let sig_bytes = ed25519::signature(&message, &sk_data).to_vec();
 
     // EDSIG
     // The edsig has prefix "edsig" = vec![9, 245, 205, 134, 18]
@@ -95,7 +90,7 @@ pub fn sign_with_sk(data: Vec<u8>, sk: Vec<u8>) -> SignatureData {
 
     SignatureData {
         sig: sig_bytes.clone(),
-        edsig: base58::check_encode_slice(&edsig_data),
+        edsig: base58::check_encode_slice(&edsig_data).as_bytes().to_vec(),
         sbytes: sbytes,
     }
 }

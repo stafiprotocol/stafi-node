@@ -120,23 +120,26 @@ client::decl_runtime_apis! {
 
 	pub trait StakesApi {
 		fn get_stake_hash(account: AccountId) -> Vec<Hash>;
-		fn get_stake_data(account: AccountId, hash: Hash) -> Option<XtzStakeData<AccountId, Hash, Balance>>;
+		fn get_stake_data(hash: Hash) -> Option<XtzStakeData<AccountId, Hash, Balance>>;
 	}
 }
 
 pub mod constants;
 
 pub mod stafistaking;
-pub use stafistaking::{StakeTokenType, XtzTransferData, XtzStakeData, XtzStakeStage};
+pub use stafistaking::{XtzStakeData, XtzStakeStage, AtomStakeData, AtomStakeStage};
 
 pub mod externalrpc;
 pub use externalrpc::{VerifiedData, VerifyStatus, TxHashType, BabeIdType, HostData};
 
 pub mod tokenbalances;
-pub use tokenbalances::{BondTokenLockType, BondTokenLockStatus, Symbol, CustomRedeemData};
+pub use tokenbalances::{BondTokenLockType, BondTokenLockStatus, CustomRedeemData};
 
 pub mod multisig;
-pub use multisig::{ChainType, MultisigAddr};
+pub use multisig::{MultisigAddr};
+
+pub mod chain;
+pub use chain::{ChainType, StakeTokenType, Symbol};
 
 pub mod rjson;
 

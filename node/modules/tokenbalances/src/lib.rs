@@ -13,7 +13,6 @@ use srml_timestamp as timestamp;
 use stafi_primitives::{Symbol}; 
 
 pub mod bondtoken;
-// pub use bondtoken::{Module as BondTokenModule, Trait as BondTokenTrait, RawEvent as BondTokenRawEvent, Event as BondTokenEvent};
 
 pub type SymbolString = &'static [u8];
 pub type DescString = SymbolString;

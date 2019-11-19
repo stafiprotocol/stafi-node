@@ -44,7 +44,7 @@ pub trait StakesRpcApi {
 	#[rpc(name = "stake_xtz_gethash")]
 	fn get_stake_hash(&self, account: AccountId) -> Result<Vec<Hash>>;
 	#[rpc(name = "stake_xtz_getdata")]
-	fn get_stake_data(&self, account: AccountId, hash: Hash) -> Result<Option<RpcXtzStakeData<AccountId, Hash>>>;
+	fn get_stake_data(&self, hash: Hash) -> Result<Option<RpcXtzStakeData<AccountId, Hash>>>;
 }
 
 pub struct Stakes<C> {
@@ -80,12 +80,12 @@ where
 		Ok(hashes)
 	}
 
-	fn get_stake_data(&self, account: AccountId, hash: Hash) -> Result<Option<RpcXtzStakeData<AccountId, Hash>>> {
+	fn get_stake_data(&self, hash: Hash) -> Result<Option<RpcXtzStakeData<AccountId, Hash>>> {
 		let api = self.client.runtime_api();
 		let best = self.client.info().best_hash;
 		let at = BlockId::hash(best);
 
-		let data = api.get_stake_data(&at, account, hash).map_err(|e| Error {
+		let data = api.get_stake_data(&at, hash).map_err(|e| Error {
 			code: ErrorCode::ServerError(crate::constants::RUNTIME_ERROR),
 			message: "Unable to query stake data.".into(),
 			data: Some(format!("{:?}", e).into()),

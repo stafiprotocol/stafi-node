@@ -15,10 +15,14 @@
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
 extern crate num_bigint;
 extern crate num_traits;
+extern crate bitcoin;
+extern crate hex;
 
+use bitcoin::util::base58;
 use super::base128;
 use num_bigint::*;
 use num_traits::*;
+use core::str;
 
 // fn parseInt(hex: &str, radix: u32) -> Result<i32, ParseIntError> {
 //     i32::from_str_radix(hex, radix)
@@ -28,7 +32,7 @@ use num_traits::*;
  * Encodes a bool as 0 or 255 by calling writeInt.
  * @param {bool} value
  */
-pub fn writebool(value: bool) -> &'static str {
+pub fn write_bool(value: bool) -> &'static str {
     if value {
         "ff"
     } else {
@@ -51,7 +55,7 @@ pub fn writebool(value: bool) -> &'static str {
  * Encodes an integer into hex after converting it to Zarith format.
  * @param {number} value Number to be obfuscated.
  */
-pub fn writeInt(value: u64) -> String {
+pub fn write_int(value: u64) -> String {
     let encoded = base128::encode(value);
 
     let hex_vec = hex::decode(encoded).unwrap();
@@ -68,7 +72,7 @@ pub fn writeInt(value: u64) -> String {
  * Encodes a signed integer into hex.
  * @param {number} value Number to be obfuscated.
  */
-pub fn writeSignedInt(value: i64) -> String {
+pub fn write_signed_int(value: i64) -> String {
     if value == 0 {
         return "00".into();
     }
@@ -216,27 +220,31 @@ pub fn writeSignedInt(value: i64) -> String {
  * @param {String} address Base58-check address to encode.
  * @returns {String} Hex representation of a Tezos address.
  */
-// pub fn writeAddress(address: String) -> Result<String, String> {
-//     const hex = base58check.decode(address).slice(3).toString("hex");
-//     if (address.startsWith("tz1")) {
-//         return "0000" + hex;
-//     } else if (address.startsWith("tz2")) {
-//         return "0001" + hex;
-//     } else if (address.startsWith("tz3")) {
-//         return "0002" + hex;
-//     } else if (address.startsWith("KT1")) {
-//         return "01" + hex + "00";
-//     } else {
-//         Err(format!("Unrecognized address prefix: {:?}", address[0..3])
-//     }
-// }
+pub fn write_address(address: &str) -> Result<String, String> {
+    let hex_vec = base58::from_check(&address).unwrap();
+    let hex_str = hex::encode(&hex_vec[3..]).to_string();
+    if address.starts_with("tz1") {
+        return Ok("0000".to_owned() + &hex_str);
+    } else if address.starts_with("tz2") {
+        return Ok("0001".to_owned() + &hex_str);
+    } else if address.starts_with("tz3") {
+        return Ok("0002".to_owned() + &hex_str);
+    } else if address.starts_with("KT1") {
+        return Ok("01".to_owned() + &hex_str + "00");
+    } else {
+        let err = format!("Unrecognized address prefix: {:?}", address[0..3].to_string());
+        return Err(err);
+    }
+}
 
 /**
  * Reads the branch hash from the provided, bounded hex String.
  * @param {String} hex Encoded message part.
  */
-// pub fn readBranch(hex: String) ->  String {
-//     if (hex.length !== 64) { throw new Error('Incorrect hex length to parse a branch hash'); }
+// pub fn readBranch(hex: String) -> Result<String, String> {
+//     if (hex.length !== 64) { 
+//         return Err("Incorrect hex length to parse a branch hash".to_owned()); 
+//     }
 //     return base58check.encode(Buffer.from('0134' + hex, 'hex'));
 // }
 
@@ -246,9 +254,10 @@ pub fn writeSignedInt(value: i64) -> String {
  * @param {String} branch Branch hash.
  * @returns {String} Hex representation of the Base58-check branch hash.
  */
-// pub fn writeBranch(branch: String) ->  String {
-//     return base58check.decode(branch).slice(2).toString("hex");
-// }
+pub fn write_branch(branch: String) ->  String {
+    let hex_vec = base58::from_check(&branch).unwrap();
+    return hex::encode(&hex_vec[2..]).to_string();
+}
 
 /**
  * Reads the public key from the provided, bounded hex String into a Base58-check String.
@@ -393,7 +402,7 @@ mod tests {
     fn test_write_int() {
         let test_num = 1143410;
         let test_result = "f2e445";
-        let encoded = writeInt(test_num);
+        let encoded = write_int(test_num);
         assert_eq!(encoded, test_result);
     }
 
@@ -401,7 +410,15 @@ mod tests {
     fn test_write_signed_int() {
         let test_num = 1143410;
         let test_result = "b2c98b01";
-        let encoded = writeSignedInt(test_num);
+        let encoded = write_signed_int(test_num);
         assert_eq!(encoded, test_result);
+    }
+
+    #[test]
+    fn test_write_addresses() {
+        let address = "tz1MNu6ytbdEYrHyyQwctJ7rZVFcLrHWjKoN";
+        let test_result = "00001313ad719d0be20ce6fc624a19c08430a596cc21";
+        let encoded = write_address(address).unwrap();
+        assert_eq!(&encoded, test_result);
     }
 }

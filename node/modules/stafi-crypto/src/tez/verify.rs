@@ -14,8 +14,21 @@
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
 
-// extern crate stafi_crypto;
+extern crate crypto;
 
-// pub use stafi_crypto::SignatureData;
+use super::base58;
+use core::str;
 
-// pub fn pack_transfer_
+use crypto::{ed25519};
+
+pub fn verify_with_ed(data: &[u8], edsig: &[u8], edpk: &[u8]) -> bool {
+    let edsig_str = str::from_utf8(edsig).unwrap();
+    let edsig_bytes = base58::from_check(&edsig_str).unwrap();
+    let edpk_str = str::from_utf8(edpk).unwrap();
+    let pk = base58::from_check(&edpk_str).unwrap();
+    verify(data, &edsig_bytes[5..], &pk[4..])
+}
+
+pub fn verify(data: &[u8], sig: &[u8], pk: &[u8]) -> bool {
+     ed25519::verify(data, pk, sig)
+}
