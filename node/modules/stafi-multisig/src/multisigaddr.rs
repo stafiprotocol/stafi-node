@@ -1,10 +1,10 @@
-extern crate srml_support as support;
-extern crate srml_system as system;
+extern crate paint_support as support;
+extern crate paint_system as system;
 
 use support::{decl_module, decl_storage, decl_event, dispatch::Result, dispatch::Vec};
 use system::ensure_root;
 
-use stafi_primitives::{ChainType, MultisigAddr};
+use node_primitives::{ChainType, MultisigAddr};
 
 pub trait Trait: system::Trait {
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;

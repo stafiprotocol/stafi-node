@@ -1,6 +1,6 @@
 #[cfg(feature = "std")]
 use inherents::{ProvideInherentData};
-use inherents::{RuntimeString, InherentIdentifier, InherentData};
+use inherents::{InherentIdentifier, InherentData};
 #[cfg(feature = "std")]
 use primitives;
 #[cfg(feature = "std")]
@@ -9,8 +9,6 @@ use hex;
 use reqwest;
 #[cfg(feature = "std")]
 use serde_json::{Value};
-//#[cfg(feature = "std")]
-//use sr_io;
 
 pub const INHERENT_IDENTIFIER: InherentIdentifier = *b"irisdata";
 pub const RPC_REQUEST_INTERVAL: u64 = 60000; //1 minute
@@ -82,7 +80,7 @@ impl ProvideInherentData for InherentDataProvider {
 		&INHERENT_IDENTIFIER
 	}
 
-	fn provide_inherent_data(&self, inherent_data: &mut InherentData) -> Result<(), RuntimeString> {
+	fn provide_inherent_data(&self, inherent_data: &mut InherentData) -> Result<(), inherents::Error> {
 		use std::time::SystemTime;
 		let now = SystemTime::now();
 		let d:u64 = now.duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64;

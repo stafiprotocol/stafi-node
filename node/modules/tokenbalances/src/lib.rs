@@ -1,16 +1,16 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-extern crate srml_support as support;
-extern crate srml_system as system;
-extern crate srml_balances as balances;
+extern crate paint_support as support;
+extern crate paint_system as system;
+extern crate paint_balances as balances;
 extern crate sr_primitives as runtime_primitives;
 
 use support::{decl_module, decl_storage, decl_event, dispatch::Result, Parameter, dispatch::Vec};
 use system::ensure_signed;
 use parity_codec::{Codec, Encode, Decode};
-use sr_primitives::traits::MaybeSerializeDebug;
-use srml_timestamp as timestamp;
-use stafi_primitives::{Symbol}; 
+use sr_primitives::traits::MaybeSerialize;
+use paint_timestamp as timestamp;
+use node_primitives::{Symbol}; 
 
 pub mod bondtoken;
 
@@ -20,7 +20,7 @@ pub type DescString = SymbolString;
 pub trait Trait: balances::Trait+timestamp::Trait {
 	const STAFI_SYMBOL: SymbolString;
     const STAFI_TOKEN_DESC: DescString;
-	type TokenBalance: Parameter + Codec + Default + Copy + MaybeSerializeDebug + From<Self::BlockNumber>;
+	type TokenBalance: Parameter + Codec + Default + Copy + MaybeSerialize + From<Self::BlockNumber>;
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 

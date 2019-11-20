@@ -15,12 +15,13 @@ sr-std = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-fe
 sr-io = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 primitives = { package = "substrate-primitives", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 sr-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-srml-support = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-srml-system = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-srml-balances = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-srml-timestamp = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+paint-support = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+paint-system = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+paint-balances = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+paint-timestamp = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+randomness-collective-flip = { package = "paint-randomness-collective-flip", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 
-stafi-primitives = { path = "../../primitives", default-features = false }
+node-primitives = { path = "../../primitives", default-features = false }
 
 [features]
 default = ["std"]
@@ -30,11 +31,12 @@ std = [
     "parity-codec/std",
     "sr-std/std",
     "sr-io/std",
-    "srml-support/std",
+    "paint-support/std",
     "primitives/std",
     "sr-primitives/std",
-    "srml-system/std",
-    "srml-balances/std",
-    "stafi-primitives/std",
-    "srml-timestamp/std",
+    "paint-system/std",
+    "paint-balances/std",
+    "node-primitives/std",
+    "paint-timestamp/std",
+    "randomness-collective-flip/std"
 ]

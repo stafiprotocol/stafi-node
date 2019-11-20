@@ -1,11 +1,12 @@
 #![allow(unused_imports)]
 
-extern crate srml_support as support;
-extern crate srml_system as system;
-extern crate srml_balances as balances;
+extern crate paint_support as support;
+extern crate paint_system as system;
+extern crate paint_balances as balances;
 extern crate sr_primitives as runtime_primitives;
+extern crate randomness_collective_flip as random;
 
-use support::{decl_module, decl_storage, decl_event, ensure, dispatch::Result, dispatch::Vec};
+use support::{decl_module, decl_storage, decl_event, ensure, dispatch::Result, dispatch::Vec, traits::Randomness};
 use system::ensure_signed;
 
 use sr_std::{
@@ -19,8 +20,8 @@ use serde::{Serialize, Deserialize};
 
 use parity_codec::{Encode, Decode};
 use runtime_primitives::traits::Hash;
-use stafi_primitives::{Balance, BondTokenLockType, BondTokenLockStatus, Symbol, CustomRedeemData}; 
-use srml_timestamp as timestamp;
+use node_primitives::{Balance, BondTokenLockType, BondTokenLockStatus, Symbol, CustomRedeemData}; 
+use paint_timestamp as timestamp;
 
 
 pub trait Trait: timestamp::Trait {
@@ -204,7 +205,7 @@ impl<T: Trait> Module<T> {
         let new_symbol_bond_count = symbol_bond_count.checked_add(1).ok_or("Overflow adding a new symbol bond token")?;
 
 		let nonce = <CreateNonce>::get();
-		let random_seed = <system::Module<T>>::random_seed();
+		let random_seed = <random::Module<T>>::random_seed();
 		let bond_id = (random_seed, &sender, nonce).using_encoded(<T as system::Trait>::Hashing::hash);
 
 		ensure!(!<BondTokens<T>>::exists(&bond_id), "Bond token already exists");
@@ -237,7 +238,7 @@ impl<T: Trait> Module<T> {
 
 	fn lock_bond_token(sender: T::AccountId, bond_id: T::Hash, amount: Balance, lock_type: BondTokenLockType) -> T::Hash {
 		let nonce = <LockNonce>::get();
-		let random_seed = <system::Module<T>>::random_seed();
+		let random_seed = <random::Module<T>>::random_seed();
 		let lock_id = (random_seed, &sender, nonce).using_encoded(<T as system::Trait>::Hashing::hash);
 		let now = <timestamp::Module<T>>::get();
 		let lock_bond_token = LockBondData {

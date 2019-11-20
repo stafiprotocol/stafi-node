@@ -19,62 +19,61 @@
 //! Since `substrate` core functionality makes no assumptions
 //! about the modules used inside the runtime, so do
 //! RPC methods defined in `substrate-rpc` crate.
-//! It means that `core/rpc` can't have any methods that
+//! It means that `client/rpc` can't have any methods that
 //! need some strong assumptions about the particular runtime.
 //!
 //! The RPCs available in this crate however can make some assumptions
 //! about how the runtime is constructed and what `SRML` modules
 //! are part of it. Therefore all node-runtime-specific RPCs can
-//! be placed here.
+//! be placed here or imported from corresponding `SRML` RPC definitions.
 
-#![allow(missing_docs)]
+#![warn(missing_docs)]
 
 use std::sync::Arc;
 
-use stafi_primitives::{Block, AccountNonceApi, ContractsApi, MultisigAddrApi, StakesApi};
+use node_primitives::{Block, AccountId, Index, Balance};
+use node_runtime::UncheckedExtrinsic;
 use sr_primitives::traits::ProvideRuntimeApi;
 use transaction_pool::txpool::{ChainApi, Pool};
 
-pub mod accounts;
-pub mod contracts;
 pub mod multisigs;
 pub mod stakes;
-
-mod constants {
-	/// A status code indicating an error happened while trying to call into the runtime.
-	///
-	/// This typically means that the runtime trapped.
-	pub const RUNTIME_ERROR: i64 = 1;
-}
 
 /// Instantiate all RPC extensions.
 pub fn create<C, P, M>(client: Arc<C>, pool: Arc<Pool<P>>) -> jsonrpc_core::IoHandler<M> where
 	C: ProvideRuntimeApi,
 	C: client::blockchain::HeaderBackend<Block>,
 	C: Send + Sync + 'static,
-	C::Api: AccountNonceApi<Block> + ContractsApi<Block> + MultisigAddrApi<Block> + StakesApi<Block>,
+	C::Api: paint_system_rpc::AccountNonceApi<Block, AccountId, Index>,
+	C::Api: paint_contracts_rpc::ContractsRuntimeApi<Block, AccountId, Balance>,
+	C::Api: paint_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance, UncheckedExtrinsic>,
+	// C::Api: multisigs::MultisigsApi,
+	// C::Api: stakes::StakesRpcApi,
 	P: ChainApi + Sync + Send + 'static,
 	M: jsonrpc_core::Metadata + Default,
 {
-	use self::{
-		accounts::{Accounts, AccountsApi},
-		contracts::{Contracts, ContractsApi},
-		multisigs::{Multisigs, MultisigsApi},
-		stakes::{Stakes, StakesRpcApi},
-	};
+	use paint_system_rpc::{System, SystemApi};
+	use paint_contracts_rpc::{Contracts, ContractsApi};
+	use paint_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
+	use multisigs::{Multisigs, MultisigsApi};
+	use stakes::{Stakes, StakesRpcApi};
 
 	let mut io = jsonrpc_core::IoHandler::default();
 	io.extend_with(
-		AccountsApi::to_delegate(Accounts::new(client.clone(), pool))
+		SystemApi::to_delegate(System::new(client.clone(), pool))
 	);
 	io.extend_with(
 		ContractsApi::to_delegate(Contracts::new(client.clone()))
 	);
 	io.extend_with(
-		MultisigsApi::to_delegate(Multisigs::new(client.clone()))
+		TransactionPaymentApi::to_delegate(TransactionPayment::new(client))
 	);
-	io.extend_with(
-		StakesRpcApi::to_delegate(Stakes::new(client))
-	);
+	// io.extend_with(
+	// 	MultisigsApi::to_delegate(Multisigs::new(client.clone()))
+	// );
+	// io.extend_with(
+	// 	StakesRpcApi::to_delegate(Stakes::new(client))
+	// );
 	io
 }
+

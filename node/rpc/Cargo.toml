@@ -1,26 +1,21 @@
 [package]
 name = "node-rpc"
-version = "2.0.0"
+version = "0.1.0"
 authors = ["Stafi Protocol"]
 edition = "2018"
 
 [dependencies]
 client = { package = "substrate-client", git = "https://github.com/stafiprotocol/stafi-blockchain" }
-jsonrpc-core = "13.2.0"
-jsonrpc-core-client = "13.2.0"
-jsonrpc-derive = "13.2.0"
-jsonrpc-pubsub = "13.2.0"
-keyring = { package = "substrate-keyring", git = "https://github.com/stafiprotocol/stafi-blockchain" }
-log = "0.4"
-stafi-primitives = { path = "../primitives" }
+jsonrpc-core = "14.0.3"
+jsonrpc-core-client = "14.0.3"
+jsonrpc-derive = "14.0.3"
 codec = { package = "parity-scale-codec", version = "1.0.0" }
-serde = { version = "1.0", features = ["derive"] }
 hex = { version = "0.4.0" }
-sr-primitives = { package = "sr-primitives", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-substrate-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-rpc-primitives = { package = "substrate-rpc-primitives", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+serde = { version = "1.0", features = ["derive"] }
+node-primitives = { path = "../primitives" }
+node-runtime = { path = "../runtime" }
+sr-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
+paint-contracts-rpc = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
+paint-transaction-payment-rpc = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
+paint-system-rpc = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
 transaction_pool = { package = "substrate-transaction-pool", git = "https://github.com/stafiprotocol/stafi-blockchain" }
-
-[dev-dependencies]
-stafi-runtime = { path = "../runtime" }
-env_logger = "0.6"

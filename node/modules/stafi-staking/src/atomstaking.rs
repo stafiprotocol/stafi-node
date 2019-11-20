@@ -1,7 +1,9 @@
-extern crate srml_system as system;
-extern crate srml_balances as balances;
+extern crate paint_system as system;
+extern crate paint_balances as balances;
+extern crate paint_support as support;
+extern crate randomness_collective_flip as random;
 
-use srml_support::{decl_module, decl_storage, decl_event, ensure, dispatch::Result};
+use support::{decl_module, decl_storage, decl_event, ensure, dispatch::Result, traits::Randomness};
 use system::ensure_signed;
 use sr_std::prelude::*;
 use sr_std::{
@@ -10,8 +12,8 @@ use sr_std::{
 use sr_primitives::traits::{Hash, CheckedAdd};
 use parity_codec::{Encode};
 
-use stafi_primitives::{Balance, VerifyStatus, AtomStakeStage, ChainType, Symbol, constants::currency::*};
-use stafi_primitives::AtomStakeData as CustomStakeData;
+use node_primitives::{Balance, VerifyStatus, AtomStakeStage, ChainType, Symbol, constants::currency::*};
+use node_primitives::AtomStakeData as CustomStakeData;
 use token_balances::bondtoken;
 use stafi_externalrpc::tezosrpc;
 use stafi_multisig::multisigaddr;
@@ -90,7 +92,7 @@ decl_module! {
 			let _from: Vec<u8> = Vec::new();
 			
 			let nonce = <Nonce>::get();
-			let random_seed = <system::Module<T>>::random_seed();
+			let random_seed = <random::Module<T>>::random_seed();
             let hash = (random_seed, &sender, nonce).using_encoded(<T as system::Trait>::Hashing::hash);
 
 			let stake_data = CustomStakeData {

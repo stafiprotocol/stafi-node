@@ -1,15 +1,16 @@
 //#![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate sr_std as rstd;
-extern crate srml_support as support;
-extern crate srml_system as system;
+extern crate paint_support as support;
+extern crate paint_system as system;
 
 use support::{decl_module, decl_storage};
 use rstd::prelude::*;
 use system::{ensure_signed, ensure_none, ensure_root};
-use inherents::{RuntimeString, InherentIdentifier, ProvideInherent, MakeFatalError, InherentData};
+use inherents::{InherentIdentifier, ProvideInherent, MakeFatalError, InherentData};
+use sr_primitives::RuntimeString;
 
-use stafi_primitives::{VerifiedData, VerifyStatus, TxHashType, BabeIdType, HostData, XtzStakeData, Balance};
+use node_primitives::{VerifiedData, VerifyStatus, TxHashType, BabeIdType, HostData, XtzStakeData, Balance};
 use codec::Decode;
 
 pub mod tezos;
@@ -218,7 +219,7 @@ impl<T: Trait> ProvideInherent for Module<T> {
 mod tests {
 	use super::*;
 	use std::time::SystemTime;
-	use stafi_primitives::{VerifiedData, VerifyStatus, TxHashType, BabeIdType};
+	use node_primitives::{VerifiedData, VerifyStatus, TxHashType, BabeIdType};
 
 	#[test]
 	fn test_get_new_status() {

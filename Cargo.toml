@@ -1,37 +1,42 @@
-[package]
-name = "stafi"
-version = "0.1.0"
-authors = ["Stafi Protocol"]
-build = "build.rs"
-edition = "2018"
+# [package]
+# name = "stafi"
+# version = "0.1.0"
+# authors = ["Stafi Protocol"]
+# build = "build.rs"
+# edition = "2018"
 
-[[bin]]
-name = "stafi"
-path = "node/src/main.rs"
+# [[bin]]
+# name = "stafi"
+# path = "node/bin/main.rs"
 
-[dependencies]
-error-chain = "0.12"
-stafi-cli = { path = "node/cli" }
-futures = "0.1"
-ctrlc = { version = "3.0", features = ["termination"] }
+# [dependencies]
+# error-chain = "0.12"
+# # stafi-cli = { path = "node/cli" }
+# futures = "0.1"
+# ctrlc = { version = "3.0", features = ["termination"] }
 
-[build-dependencies]
-vergen = "3"
+# [build-dependencies]
+# vergen = "3"
 
 [workspace]
 members = [
 	"node/runtime",
 	"node/cli",
+	"node/rpc-client",
+	"node/rpc",
 	"node/executor",
 	"node/primitives",
-	"node/service",
-	"node/modules/stafi-multisig",
 	"node/modules/stafi-crypto",
 	"node/modules/bridge-tezos",
+	"node/modules/stafi-externalrpc",
+	"node/modules/stafi-fund",
+	"node/modules/stafi-multisig",
+	"node/modules/stafi-staking",
+	"node/modules/tokenbalances",
 ]
 
-[badges]
-travis-ci = { repository = "stafiprotocol/stafi-node", branch = "master" }
+# [badges]
+# travis-ci = { repository = "stafiprotocol/stafi-node", branch = "master" }
 
 [profile.release]
 # Substrate runtime requires unwinding.
