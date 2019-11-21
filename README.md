@@ -67,32 +67,9 @@ To start up the Stafi node and connect to the latest testnet, run:
 ./target/release/stafi --chain=stafi --name <INSERT_NAME>
 ```
 
-If you use the `--key` flag, ensure that either it is a 32-byte hex string or prefixed with `//` like so:
-```
-./target/release/stafi --chain=stafi --name <INSERT_NAME> --key //testkey
-```
-
 ## Implemented Modules
 
 ### Stafi
 
-* [Multisig](https://github.com/stafiprotocol/stafi-node/tree/master/node/modules/stafi-multisig)
-* [Tokenbalances](https://github.com/stafiprotocol/stafi-node/tree/master/node/modules/tokenbalances)
-
-### SRML
-* [System](https://github.com/paritytech/substrate/tree/master/srml/system)
-* [Aura](https://github.com/paritytech/substrate/tree/master/srml/aura)
-* [Timestamp](https://github.com/paritytech/substrate/tree/master/srml/timestamp)
-* [Authorship](https://github.com/paritytech/substrate/tree/master/srml/authorship)
-* [Indices](https://github.com/paritytech/substrate/tree/master/srml/indices)
-* [Balances](https://github.com/paritytech/substrate/tree/master/srml/balances)
-* [Staking](https://github.com/paritytech/substrate/tree/master/srml/staking)
-* [Session](https://github.com/paritytech/substrate/tree/master/srml/session)
-* [Democracy](https://github.com/paritytech/substrate/tree/master/srml/democracy)
-* [Council](https://github.com/paritytech/substrate/tree/master/srml/council)
-* [Elections](https://github.com/paritytech/substrate/tree/master/srml/elections)
-* [FinalityTracker](https://github.com/paritytech/substrate/tree/master/srml/finality-tracker)
-* [Grandpa](https://github.com/paritytech/substrate/tree/master/srml/grandpa)
-* [Treasury](https://github.com/paritytech/substrate/tree/master/srml/treasury)
-* [Contracts](https://github.com/paritytech/substrate/tree/master/srml/contracts)
-* [Sudo](https://github.com/paritytech/substrate/tree/master/srml/sudo)
+* [Multisig](https://github.com/stafiprotocol/stafi/tree/master/node/modules/stafi-multisig)
+* [Tokenbalances](https://github.com/stafiprotocol/stafi/tree/master/node/modules/tokenbalances)
