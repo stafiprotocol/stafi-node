@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Substrate.  If not, see <http://www.gnu.org/licenses/>.
 
-//! Substrate Node CLI
+//! Stafi Node CLI
 
 #![warn(missing_docs)]
 
@@ -45,13 +45,13 @@ impl substrate_cli::IntoExit for Exit {
 
 fn main() -> Result<(), substrate_cli::error::Error> {
 	let version = VersionInfo {
-		name: "Substrate Node",
+		name: "Stafi Node",
 		commit: env!("VERGEN_SHA_SHORT"),
 		version: env!("CARGO_PKG_VERSION"),
-		executable_name: "substrate",
-		author: "Parity Technologies <admin@parity.io>",
-		description: "Generic substrate node",
-		support_url: "https://github.com/paritytech/substrate/issues/new",
+		executable_name: "stafi",
+		author: "Stafi Protocol <technical@stafi.com>",
+		description: "Generic stafi node",
+		support_url: "https://github.com/stafiprotocol/stafi/issues/new",
 	};
 
 	node_cli::run(std::env::args(), Exit, version)

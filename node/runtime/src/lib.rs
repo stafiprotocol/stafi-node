@@ -213,9 +213,6 @@ impl authorship::Trait for Runtime {
 	type EventHandler = (Staking, ImOnline);
 }
 
-type SessionHandlers = (Grandpa, Babe, ImOnline, AuthorityDiscovery, Stafifund);
-
-
 impl_opaque_keys! {
 	pub struct SessionKeys {
 		pub grandpa: Grandpa,
@@ -225,11 +222,6 @@ impl_opaque_keys! {
 	}
 }
 
-// NOTE: `SessionHandler` and `SessionKeys` are co-dependent: One key will be used for each handler.
-// The number and order of items in `SessionHandler` *MUST* be the same number and order of keys in
-// `SessionKeys`.
-// TODO: Introduce some structure to tie these together to make it a bit less of a footgun. This
-// should be easy, since OneSessionHandler trait provides the `Key` as an associated type. #2858
 parameter_types! {
 	pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(17);
 }

@@ -1017,11 +1017,11 @@ mod tests {
 
 	#[test]
 	fn transaction_fee_is_correct_ultimate() {
-		// This uses the exact values of substrate-node.
+		// This uses the exact values of stafi-node.
 		//
 		// weight of transfer call as of now: 1_000_000
 		// if weight of the cheapest weight would be 10^7, this would be 10^9, which is:
-		//   - 1 MILLICENTS in substrate node.
+		//   - 1 MILLICENTS in stafi node.
 		//   - 1 milli-dot based on current polkadot runtime.
 		// (this baed on assigning 0.1 CENT to the cheapest tx with `weight = 100`)
 		let mut t = TestExternalities::<Blake2Hasher>::new_with_code(COMPACT_CODE, (map![

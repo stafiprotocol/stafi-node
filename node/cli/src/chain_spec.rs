@@ -15,7 +15,7 @@
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>
 
 use chain_spec::ChainSpecExtension;
-use primitives::{Pair, Public, crypto::UncheckedInto, sr25519};
+use primitives::{Pair, Public, sr25519};
 use serde::{Serialize, Deserialize};
 use node_runtime::{
 	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, ContractsConfig, CouncilConfig, DemocracyConfig,
@@ -25,7 +25,6 @@ use node_runtime::{
 use node_runtime::Block;
 use node_primitives::{constants::currency::*, ChainType};
 use substrate_service;
-use hex_literal::hex;
 use substrate_telemetry::TelemetryEndpoints;
 use grandpa_primitives::{AuthorityId as GrandpaId};
 use babe_primitives::{AuthorityId as BabeId};
@@ -41,7 +40,7 @@ type AccountPublic = <Signature as Verify>::Signer;
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
-const DEFAULT_PROTOCOL_ID: &str = "sfi";
+const DEFAULT_PROTOCOL_ID: &str = "fis";
 
 /// Node `ChainSpec` extensions.
 ///
@@ -59,6 +58,7 @@ pub type ChainSpec = substrate_service::ChainSpec<
 	Extensions,
 >;
 
+/// Stafi generator
 pub fn stafi_config() -> Result<ChainSpec, String> {
 	ChainSpec::from_json_bytes(&include_bytes!("../../../testnets/v0.1.0/stafi.json")[..])
 }
@@ -72,6 +72,7 @@ fn session_keys(
 	SessionKeys { grandpa, babe, im_online, authority_discovery }
 }
 
+/// Stafi testnet generator
 pub fn stafi_testnet_config_gensis() -> GenesisConfig {
     let initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId)> = get_vals();
     let root_key = get_root_key();
@@ -81,7 +82,8 @@ pub fn stafi_testnet_config_gensis() -> GenesisConfig {
 	testnet_genesis(
         initial_authorities,
         root_key,
-        Some(endowed_accounts)
+        Some(endowed_accounts),
+		false
     )
 }
 
@@ -137,9 +139,8 @@ pub fn testnet_genesis(
     initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId)>,
     root_key: AccountId,
     endowed_accounts: Option<Vec<AccountId>>,
+	enable_println: bool,
 ) -> GenesisConfig {
-	let enable_println: bool = false;
-
     let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(|| {
 		vec![
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -247,7 +248,8 @@ fn development_config_genesis() -> GenesisConfig {
             get_authority_keys_from_seed("Alice"),
         ],
         get_account_id_from_seed::<sr25519::Public>("Alice"),
-        None
+        None,
+		true
     )
 }
 
@@ -259,7 +261,7 @@ pub fn development_config() -> ChainSpec {
         development_config_genesis,
         vec![],
         None,
-        Some(DEFAULT_PROTOCOL_ID),
+        None,
         None,
         Default::default(),
 	)
@@ -272,7 +274,8 @@ fn local_testnet_genesis() -> GenesisConfig {
             get_authority_keys_from_seed("Bob"),
         ],
         get_account_id_from_seed::<sr25519::Public>("Alice"),
-        None
+        None,
+		false
     )
 }
 
