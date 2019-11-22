@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
 
-pub mod sign;
+pub mod base58;
 pub mod generator;
+pub mod sign;
 pub mod verify;
-mod base58;

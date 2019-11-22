@@ -9,11 +9,18 @@ edition = "2018"
 [dependencies]
 tiny-bip39 = { version = "^0.6" }
 rust-crypto = { version = "^0.2", git = "https://github.com/BurningSea/rust-crypto" }
-bitcoin_hashes = "^0.7"
-byteorder = "^1.3"
+bitcoin_hashes = { version = "^0.7", default-features = false }
+byteorder = { version = "^1.3", default-features = false }
+sr-std = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 
 [dev-dependencies]
 hex-literal = "^0.2"
 hex = "^0.4"
 
 [features]
+default = [ "std" ]
+std = [
+    "bitcoin_hashes/std",
+    "byteorder/std",
+    "sr-std/std",
+]

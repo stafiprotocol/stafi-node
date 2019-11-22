@@ -13,13 +13,13 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
-extern crate alloc;
 extern crate crypto;
+extern crate sr_std;
 
-use crypto::{ed25519, blake2b, digest::*};
 use super::base58;
-use alloc::vec::Vec;
-use core::str;
+use crypto::{blake2b, digest::*, ed25519};
+
+use sr_std::prelude::*;
 
 pub struct SignatureData {
     pub sig: Vec<u8>,
@@ -28,7 +28,7 @@ pub struct SignatureData {
 }
 
 struct SkWrapper<'a> {
-    sk_str: &'a str
+    sk_str: &'a str,
 }
 
 impl<'a> Into<SkWrapper<'a>> for &'a str {
@@ -37,18 +37,15 @@ impl<'a> Into<SkWrapper<'a>> for &'a str {
     }
 }
 
-
 impl Into<Vec<u8>> for SkWrapper<'_> {
     fn into(self) -> Vec<u8> {
         base58::from_check(self.sk_str).unwrap()
     }
 }
 
-
 pub fn sign(data: Vec<u8>, sk_str: &str) -> SignatureData {
     sign_with_sk(data, base58::from_check(sk_str).unwrap())
 }
-
 
 pub fn preprocess(data: Vec<u8>) -> (Vec<u8>, usize) {
     let watermark_generics: Vec<u8> = [3].to_vec();
@@ -61,12 +58,11 @@ pub fn preprocess(data: Vec<u8>) -> (Vec<u8>, usize) {
 
     let mut hasher = blake2b::Blake2b::new(message_len);
     hasher.input(&tmp_data);
-    let mut out = [0;32];
+    let mut out = [0; 32];
     hasher.result(&mut out);
 
     (out.to_vec(), message_len)
 }
-
 
 pub fn sign_with_sk(data: Vec<u8>, sk: Vec<u8>) -> SignatureData {
     let (message, _) = preprocess(data.clone());

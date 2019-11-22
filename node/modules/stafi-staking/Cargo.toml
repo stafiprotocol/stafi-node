@@ -37,4 +37,5 @@ std = [
     "stafi-primitives/std",
     "token-balances/std",
     "stafi-externalrpc/std",
+    "stafi-crypto/std",
 ]

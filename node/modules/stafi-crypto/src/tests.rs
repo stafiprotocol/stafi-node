@@ -46,7 +46,7 @@ mod tests {
         assert_eq!(pkh.as_bytes(), keypair.pkh.as_slice());
     }
 
-    use bitcoin::util::base58;
+    use super::super::tez::base58;
     #[test]
     fn test_pkh() {
         let pk = "edpkvQQhHzGoFf2zSESp1Kh57sFhbhtA16XAGXqjAYse75BC9RdoXW";
@@ -61,7 +61,9 @@ mod tests {
     fn test_tez_verify() {
         let test_data = "TEST".as_bytes();
         let sk = "edskS2SDFgtTqWbEoKyW5CkXuwfki2NLzcGz6YDLQ5Pexp5iEuJgb8Wj6rG3D9pVrWRo9EJ4iihnqdvHx4cgSCGuTMjpSSSF7f";
-        let pk = base58::from_check("edpkuw9X1bauTMKiAadWJJioLujYxADYrf4Q3dGRJbSmLbgGn3TC1j").ok().unwrap();
+        let pk = base58::from_check("edpkuw9X1bauTMKiAadWJJioLujYxADYrf4Q3dGRJbSmLbgGn3TC1j")
+            .ok()
+            .unwrap();
         let signature_data = sign(test_data.to_vec(), sk);
         let (message, _) = preprocess(test_data.to_vec());
         assert!(verify(&message, &signature_data.sig, &pk[4..]));

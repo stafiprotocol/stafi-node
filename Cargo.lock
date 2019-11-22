@@ -4010,6 +4010,7 @@ dependencies = [
  "hex 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex-literal 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rust-crypto 0.2.36 (git+https://github.com/BurningSea/rust-crypto)",
+ "sr-std 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "tiny-bip39 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

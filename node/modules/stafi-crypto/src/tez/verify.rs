@@ -13,13 +13,12 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
-
 extern crate crypto;
+extern crate sr_std;
 
 use super::base58;
-use core::str;
-
-use crypto::{ed25519};
+use crypto::ed25519;
+use sr_std::prelude::*;
 
 pub fn verify_with_ed(data: &[u8], edsig: &[u8], edpk: &[u8]) -> bool {
     let edsig_str = str::from_utf8(edsig).unwrap();
@@ -30,5 +29,5 @@ pub fn verify_with_ed(data: &[u8], edsig: &[u8], edpk: &[u8]) -> bool {
 }
 
 pub fn verify(data: &[u8], sig: &[u8], pk: &[u8]) -> bool {
-     ed25519::verify(data, pk, sig)
+    ed25519::verify(data, pk, sig)
 }
