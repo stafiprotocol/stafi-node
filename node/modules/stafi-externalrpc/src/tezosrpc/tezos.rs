@@ -21,6 +21,8 @@ use node_primitives::{AccountId, Hash, Balance, XtzStakeData, VerifiedData, Veri
 
 use babe_primitives::{AuthorityId, BabeAuthorityWeight};
 
+use log::info;
+
 pub const INHERENT_IDENTIFIER: InherentIdentifier = *b"tezosrpc";
 pub const RPC_REQUEST_INTERVAL: u64 = 60000; //1 minute
 pub const TEZOS_TXHASH_LEN: u8 = 51;
@@ -192,6 +194,8 @@ impl ProvideInherentData for InherentDataProvider {
 	}
 
 	fn provide_inherent_data(&self, inherent_data: &mut InherentData) -> Result<(), inherents::Error> {	
+		info!("inherent {}.", 12345);
+
 		use std::time::SystemTime;
 		let mut now_millis:u64 = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64;
 		let verify_in_batch = false;

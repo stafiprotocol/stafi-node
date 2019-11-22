@@ -25,6 +25,7 @@ use client::{self, LongestChain};
 use grandpa::{self, FinalityProofProvider as GrandpaFinalityProofProvider};
 use node_executor;
 use node_primitives::Block;
+use node_primitives::constants::time::SLOT_DURATION;
 use node_runtime::{GenesisConfig, RuntimeApi};
 use substrate_service::{
 	AbstractService, ServiceBuilder, config::Configuration, error::{Error as ServiceError},
@@ -41,6 +42,9 @@ use node_executor::NativeExecutor;
 use network::NetworkService;
 use offchain::OffchainWorkers;
 use primitives::Blake2Hasher;
+use primitives::crypto::KeyTypeId;
+use primitives::sr25519;
+
 
 construct_simple_protocol! {
 	/// Demo protocol attachment for substrate.
@@ -122,12 +126,14 @@ macro_rules! new_full {
 			is_authority,
 			force_authoring,
 			name,
-			disable_grandpa
+			disable_grandpa,
+			rpc_http_addr
 		) = (
 			$config.roles.is_authority(),
 			$config.force_authoring,
 			$config.name.clone(),
-			$config.disable_grandpa
+			$config.disable_grandpa,
+			$config.rpc_http
 		);
 
 		// sentry nodes announce themselves as authorities to the network
@@ -246,6 +252,18 @@ macro_rules! new_full {
 				)?;
 			},
 		}
+
+		let _reg = inherent_data_providers.register_provider(stafi_externalrpc::irisnetrpc::InherentDataProvider::new(String::from("https://lcd.testnet.irisnet.org/"), String::from("http://127.0.0.1:9933"), SLOT_DURATION as u64)).unwrap();
+		
+		let babe_ids = service.keystore().read().public_keys_by_type::<sr25519::Public>(KeyTypeId(*b"babe")).unwrap_or_default();
+		let mut babe_id = "".to_string();
+		if babe_ids.len() > 0 {
+			babe_id = babe_ids[0].to_string();
+			let rpc_http = format!("http://{}",rpc_http_addr.unwrap().to_string());
+			let _reg_tezos = inherent_data_providers.register_provider(stafi_externalrpc::tezosrpc::InherentDataProvider::new(rpc_http, SLOT_DURATION as u64, babe_id.clone())).unwrap();
+		}
+		println!("my babe id is : {:}", babe_id);
+
 
 		Ok((service, inherent_data_providers))
 	}};

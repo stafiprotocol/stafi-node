@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Stafi Protocol"]
 build = "build.rs"
 edition = "2018"
+default-run = "stafi"
 
 [[bin]]
 name = "stafi"
@@ -69,6 +70,7 @@ node-runtime = { path = "../runtime" }
 node-rpc = { path = "../rpc" }
 node-primitives = { path = "../primitives" }
 node-executor = { path = "../executor" }
+stafi-externalrpc = { path = "../modules/stafi-externalrpc" }
 
 # CLI-specific dependencies
 tokio = { version = "0.1.22", optional = true }

@@ -78,7 +78,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 /// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("stafi"),
+	spec_name: create_runtime_str!("node"),
 	impl_name: create_runtime_str!("stafi-node"),
 	authoring_version: 10,
 	// Per convention: if the runtime behavior changes, increment spec_version

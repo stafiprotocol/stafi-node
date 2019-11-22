@@ -25,6 +25,8 @@ babe-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain", p
 
 node-primitives = { path = "../../primitives", default-features = false }
 
+log = "0.4"
+
 [features]
 default = ["std"]
 std = [

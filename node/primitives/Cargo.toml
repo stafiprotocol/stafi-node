@@ -10,7 +10,7 @@ serde = { version = "1.0.102", features = [ "derive" ] }
 sr-api = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 primitives = { package = "substrate-primitives", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 sr-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-parity-codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
+parity-codec = { package = "parity-scale-codec", version = "1.0.6", default-features = false, features = ["derive"] }
 rstd = { package = "sr-std", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 
 [dev-dependencies]
