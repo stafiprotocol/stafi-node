@@ -3849,19 +3849,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust-crypto"
-version = "0.2.36"
-source = "git+https://github.com/BurningSea/rust-crypto#3a2b0b04cba5a2449260197e3d27aa5c082e08a0"
-dependencies = [
- "base64 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "gcc 0.3.55 (registry+https://github.com/rust-lang/crates.io-index)",
- "hex 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.62 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
- "sr-std 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
-]
-
-[[package]]
 name = "proc-macro-hack"
 version = "0.5.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4348,6 +4335,19 @@ dependencies = [
  "base64 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "blake2b_simd 0.5.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "crossbeam-utils 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "rust-crypto"
+version = "0.2.36"
+source = "git+https://github.com/BurningSea/rust-crypto#3a2b0b04cba5a2449260197e3d27aa5c082e08a0"
+dependencies = [
+ "base64 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gcc 0.3.55 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hex 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.65 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-std 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
 ]
 
 [[package]]
@@ -4923,6 +4923,7 @@ dependencies = [
  "serde 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-primitives 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "sr-std 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
+ "stafi-crypto 0.1.0",
  "stafi-externalrpc 0.1.0",
  "stafi-multisig 0.1.0",
  "tokenbalances 0.1.0",
