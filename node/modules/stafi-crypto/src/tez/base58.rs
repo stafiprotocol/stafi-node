@@ -22,8 +22,7 @@ use byteorder::LittleEndian;
 use sr_std::clone;
 use sr_std::prelude::*;
 use sr_std::{
-    iter, slice,
-    vec::{Self, *},
+    iter, slice, vec
 };
 
 use hashes::{sha256d, Hash};
@@ -44,7 +43,7 @@ pub enum Error {
     /// Checked data was less than 4 bytes
     TooShort(usize),
     /// Any other error
-    Other(String),
+    Other(Vec<u8>),
 }
 
 //impl fmt::Display for Error {
@@ -304,10 +303,9 @@ pub fn from_check(data: &str) -> Result<Vec<u8>, Error> {
     Ok(ret)
 }
 
-fn format_iter<I, W>(writer: &mut W, data: I) -> Result<(), fmt::Error>
+fn format_iter<I>(writer: &mut Vec<u8>, data: I) -> Result<(), ()>
 where
-    I: Iterator<Item = u8> + Clone,
-    W: fmt::Write,
+    I: Iterator<Item = u8> + Clone
 {
     let mut ret = SmallVec::new();
 
@@ -339,29 +337,29 @@ where
     }
 
     for ch in ret.iter().rev() {
-        writer.write_char(BASE58_CHARS[*ch as usize] as char)?;
+        writer.push(BASE58_CHARS[*ch as usize]);
     }
 
     Ok(())
 }
 
-fn encode_iter<I>(data: I) -> String
+fn encode_iter<I>(data: I) -> Vec<u8>
 where
     I: Iterator<Item = u8> + Clone,
 {
-    let mut ret = String::new();
+    let mut ret: Vec<u8> = Vec::new();
     format_iter(&mut ret, data).expect("writing into string shouldn't fail");
     ret
 }
 
 /// Directly encode a slice as base58
-pub fn encode_slice(data: &[u8]) -> String {
+pub fn encode_slice(data: &[u8]) -> Vec<u8> {
     encode_iter(data.iter().cloned())
 }
 
 /// Obtain a string with the base58check encoding of a slice
 /// (Tack the first 4 256-digits of the object's Bitcoin hash onto the end.)
-pub fn check_encode_slice(data: &[u8]) -> String {
+pub fn check_encode_slice(data: &[u8]) -> Vec<u8> {
     let checksum = sha256d::Hash::hash(&data);
     encode_iter(data.iter().cloned().chain(checksum[0..4].iter().cloned()))
 }
@@ -379,18 +377,19 @@ mod tests {
     use super::*;
     extern crate hex;
     use hex::decode as hex_decode;
+    use sr_std::str;
 
     #[test]
     fn test_base58_encode() {
         // Basics
-        assert_eq!(&encode_slice(&[0][..]), "1");
-        assert_eq!(&encode_slice(&[1][..]), "2");
-        assert_eq!(&encode_slice(&[58][..]), "21");
-        assert_eq!(&encode_slice(&[13, 36][..]), "211");
+        assert_eq!(encode_slice(&[0][..]), "1".as_bytes().to_vec());
+        assert_eq!(encode_slice(&[1][..]), "2".as_bytes().to_vec());
+        assert_eq!(encode_slice(&[58][..]), "21".as_bytes().to_vec());
+        assert_eq!(encode_slice(&[13, 36][..]), "211".as_bytes().to_vec());
 
         // Leading zeroes
-        assert_eq!(&encode_slice(&[0, 13, 36][..]), "1211");
-        assert_eq!(&encode_slice(&[0, 0, 0, 0, 13, 36][..]), "1111211");
+        assert_eq!(encode_slice(&[0, 13, 36][..]), "1211".as_bytes().to_vec());
+        assert_eq!(encode_slice(&[0, 0, 0, 0, 13, 36][..]), "1111211".as_bytes().to_vec());
 
         // Long input (>100 bytes => has to use heap)
         let res = encode_slice(
@@ -401,13 +400,13 @@ mod tests {
         let exp = "ZqC5ZdfpZRi7fjA8hbhX5pEE96MdH9hEaC1YouxscPtbJF16qVWksHWR4wwvx7MotFcs2ChbJqK8KJ9X\
         wZznwWn1JFDhhTmGo9v6GjAVikzCsBWZehu7bm22xL8b5zBR5AsBygYRwbFJsNwNkjpyFuDKwmsUTKvkULCvucPJrN5\
         QUdxpGakhqkZFL7RU4yT";
-        assert_eq!(&res, exp);
+        assert_eq!(res, exp.as_bytes().to_vec());
 
         // Addresses
         let addr = hex_decode("00f8917303bfa8ef24f292e8fa1419b20460ba064d").unwrap();
         assert_eq!(
-            &check_encode_slice(&addr[..]),
-            "1PfJpZsjreyVrqeoAfabrRwwjQyoSQMmHH"
+            check_encode_slice(&addr[..]),
+            "1PfJpZsjreyVrqeoAfabrRwwjQyoSQMmHH".as_bytes().to_vec()
         );
     }
 
@@ -434,7 +433,7 @@ mod tests {
     fn test_base58_roundtrip() {
         let s = "xprv9wTYmMFdV23N2TdNG573QoEsfRrWKQgWeibmLntzniatZvR9BmLnvSxqu53Kw1UmYPxLgboyZQaXwTCg8MSY3H2EU4pWcQDnRnrVA1xe8fs";
         let v: Vec<u8> = from_check(s).unwrap();
-        assert_eq!(check_encode_slice(&v[..]), s);
-        assert_eq!(from_check(&check_encode_slice(&v[..])).ok(), Some(v));
+        assert_eq!(check_encode_slice(&v[..]), s.as_bytes().to_vec());
+        assert_eq!(from_check(str::from_utf8(&check_encode_slice(&v[..])).unwrap()).ok(), Some(v));
     }
 }

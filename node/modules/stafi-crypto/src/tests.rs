@@ -47,13 +47,14 @@ mod tests {
     }
 
     use super::super::tez::base58;
+    use sr_std::str;
     #[test]
     fn test_pkh() {
         let pk = "edpkvQQhHzGoFf2zSESp1Kh57sFhbhtA16XAGXqjAYse75BC9RdoXW";
         let except_pkh = "tz1MNu6ytbdEYrHyyQwctJ7rZVFcLrHWjKoN";
         let raw_pk_with_prefix = base58::from_check(pk).unwrap();
         let pkh = pkh_from_rawpk(&raw_pk_with_prefix[4..]);
-        assert_eq!(except_pkh, pkh);
+        assert_eq!(except_pkh.as_bytes().to_vec(), pkh);
     }
 
     use super::super::tez::verify::*;

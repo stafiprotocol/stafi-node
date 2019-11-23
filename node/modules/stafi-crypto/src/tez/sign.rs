@@ -86,7 +86,7 @@ pub fn sign_with_sk(data: Vec<u8>, sk: Vec<u8>) -> SignatureData {
 
     SignatureData {
         sig: sig_bytes.clone(),
-        edsig: base58::check_encode_slice(&edsig_data).as_bytes().to_vec(),
+        edsig: base58::check_encode_slice(&edsig_data),
         sbytes: sbytes,
     }
 }

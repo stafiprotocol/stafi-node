@@ -57,13 +57,13 @@ pub fn generate_keypair_from_mnemonic(mnemonic: &Mnemonic, password: &str) -> Ke
 
     KeyPair {
         mnemonic: mnemonic.phrase().to_string().as_bytes().to_vec(),
-        sk: keypair.0.as_bytes().to_vec(),
-        pk: keypair.1.as_bytes().to_vec(),
-        pkh: keypair.2.as_bytes().to_vec(),
+        sk: keypair.0,
+        pk: keypair.1,
+        pkh: keypair.2,
     }
 }
 
-fn keypair_from_raw_keypair(raw_sk: &[u8], raw_pk: &[u8]) -> (String, String, String) {
+fn keypair_from_raw_keypair(raw_sk: &[u8], raw_pk: &[u8]) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
     // PubKey
     let mut pk = vec![13, 15, 37, 217]; // edpk
     pk.extend(raw_pk.clone().iter());
@@ -79,7 +79,7 @@ fn keypair_from_raw_keypair(raw_sk: &[u8], raw_pk: &[u8]) -> (String, String, St
     (sk_string, pk_string, pkh_string)
 }
 
-pub fn pkh_from_rawpk(raw_pk: &[u8]) -> String {
+pub fn pkh_from_rawpk(raw_pk: &[u8]) -> Vec<u8> {
     let mut pkh = vec![6, 161, 159]; // "tz1"
     let message_len = 20;
     let tmp_data = raw_pk.clone();
@@ -92,7 +92,7 @@ pub fn pkh_from_rawpk(raw_pk: &[u8]) -> String {
     pkh_string
 }
 
-pub fn generate_keypair_from_seed(seed: &[u8]) -> (String, String, String) {
+pub fn generate_keypair_from_seed(seed: &[u8]) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
     let (sk, pk) = ed25519::keypair(&seed[..32]);
 
     keypair_from_raw_keypair(&sk, &pk)
