@@ -19,7 +19,7 @@ randomness-collective-flip = { package = "paint-randomness-collective-flip", git
 node-primitives = { path = "../../primitives", default-features = false }
 token-balances = { package = "tokenbalances", path = "../tokenbalances", default-features = false }
 stafi-externalrpc = { path = "../stafi-externalrpc", default-features = false }
-# stafi-crypto = { path = "../stafi-crypto", default-features = false }
+stafi-crypto = { path = "../stafi-crypto", default-features = false }
 stafi-multisig = { path = "../stafi-multisig", default-features = false }
 
 log = "0.4"
