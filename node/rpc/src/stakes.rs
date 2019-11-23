@@ -21,7 +21,7 @@ use std::sync::Arc;
 use client::blockchain::HeaderBackend;
 use jsonrpc_core::{Result, Error, ErrorCode};
 use jsonrpc_derive::rpc;
-use stafi_primitives::{
+use node_primitives::{
 	Block, BlockId, AccountId, Hash, StakesApi, XtzStakeStage
 };
 use codec::{Encode, Decode};
@@ -29,6 +29,10 @@ use sr_primitives::traits;
 use hex;
 
 use serde::{Serialize, Deserialize};
+
+const RUNTIME_ERROR: i64 = 1;
+
+
 #[derive(Debug, Serialize, Deserialize)]
 #[derive(Encode, Decode, Clone, Eq, PartialEq)]
 pub struct RpcXtzStakeData<AccountId, Hash> {
@@ -44,7 +48,7 @@ pub trait StakesRpcApi {
 	#[rpc(name = "stake_xtz_gethash")]
 	fn get_stake_hash(&self, account: AccountId) -> Result<Vec<Hash>>;
 	#[rpc(name = "stake_xtz_getdata")]
-	fn get_stake_data(&self, account: AccountId, hash: Hash) -> Result<Option<RpcXtzStakeData<AccountId, Hash>>>;
+	fn get_stake_data(&self, hash: Hash) -> Result<Option<RpcXtzStakeData<AccountId, Hash>>>;
 }
 
 pub struct Stakes<C> {
@@ -72,7 +76,7 @@ where
 		let at = BlockId::hash(best);
 
 		let hashes = api.get_stake_hash(&at, account).map_err(|e| Error {
-			code: ErrorCode::ServerError(crate::constants::RUNTIME_ERROR),
+			code: ErrorCode::ServerError(RUNTIME_ERROR),
 			message: "Unable to query stake hash.".into(),
 			data: Some(format!("{:?}", e).into()),
 		})?;
@@ -80,13 +84,13 @@ where
 		Ok(hashes)
 	}
 
-	fn get_stake_data(&self, account: AccountId, hash: Hash) -> Result<Option<RpcXtzStakeData<AccountId, Hash>>> {
+	fn get_stake_data(&self, hash: Hash) -> Result<Option<RpcXtzStakeData<AccountId, Hash>>> {
 		let api = self.client.runtime_api();
 		let best = self.client.info().best_hash;
 		let at = BlockId::hash(best);
 
-		let data = api.get_stake_data(&at, account, hash).map_err(|e| Error {
-			code: ErrorCode::ServerError(crate::constants::RUNTIME_ERROR),
+		let data = api.get_stake_data(&at, hash).map_err(|e| Error {
+			code: ErrorCode::ServerError(RUNTIME_ERROR),
 			message: "Unable to query stake data.".into(),
 			data: Some(format!("{:?}", e).into()),
 		})?;

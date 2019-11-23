@@ -1,28 +1,28 @@
 [package]
-name = "stafi-primitives"
+name = "node-primitives"
 version = "0.1.0"
 authors = ["Stafi Protocol"]
 edition = "2018"
 
+
 [dependencies]
-serde = { version = "1.0", optional = true }
-client = { package = "substrate-client", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-parity-codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
+serde = { version = "1.0.102", features = [ "derive" ] }
+sr-api = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 primitives = { package = "substrate-primitives", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+sr-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+parity-codec = { package = "parity-scale-codec", version = "1.0.6", default-features = false, features = ["derive"] }
 rstd = { package = "sr-std", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-runtime_primitives = { package = "sr-primitives", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 
 [dev-dependencies]
 substrate-serializer = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
-pretty_assertions = "0.5"
+pretty_assertions = "0.6.1"
 
 [features]
 default = ["std"]
 std = [
-	"client/std",
-	"parity-codec/std",
 	"primitives/std",
+	"parity-codec/std",
 	"rstd/std",
-	"runtime_primitives/std",
-	"serde",
+	"sr-api/std",
+	"sr-primitives/std",
 ]

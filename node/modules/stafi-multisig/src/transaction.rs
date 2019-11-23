@@ -16,9 +16,10 @@
 
 use super::{balances, system, Codec, Decode, Encode};
 use rstd::prelude::*;
+use sr_primitives::RuntimeDebug;
 
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Debug))]
-#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug)]
 pub enum TransactionType {
     TransferStafi,
 }

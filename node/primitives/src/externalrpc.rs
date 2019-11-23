@@ -1,11 +1,11 @@
 use parity_codec::{Encode, Decode};
 use rstd::prelude::*;
+use sr_primitives::RuntimeDebug;
 
 pub type TxHashType = Vec<u8>;
 pub type BabeIdType = Vec<u8>;
 
-#[cfg_attr(feature = "std", derive(Debug))]
-#[derive(Encode, Decode, Clone, PartialEq)]
+#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
 pub struct VerifiedData {
 	// transaction hash
 	pub tx_hash: TxHashType,
@@ -31,8 +31,11 @@ pub enum VerifyStatus {
 	Verified = 1,
 	Confirmed = 2,
 	Rollback = 3,
-	NotFound = 4,
-	BadRequest = 5,
+	NotFoundTx = 4,
+	//BadRequest = 5,
+	NotFoundBlock = 5,
+	NotResponse = 6,
+	TxNotMatch = 7,
 	Error = 99,
 }
 
@@ -43,8 +46,10 @@ impl VerifyStatus {
 			1 => VerifyStatus::Verified,
 			2 => VerifyStatus::Confirmed,
 			3 => VerifyStatus::Rollback,
-			4 => VerifyStatus::NotFound,
-			5 => VerifyStatus::BadRequest,
+			4 => VerifyStatus::NotFoundTx,
+			5 => VerifyStatus::NotFoundBlock,
+			6 => VerifyStatus::NotResponse,
+			7 => VerifyStatus::TxNotMatch,
 			99=> VerifyStatus::Error,
 			_ => VerifyStatus::Error,
 		}

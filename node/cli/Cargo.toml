@@ -1,55 +1,135 @@
 [package]
-name = "stafi-cli"
+name = "node-cli"
 version = "0.1.0"
 authors = ["Stafi Protocol"]
+build = "build.rs"
 edition = "2018"
+default-run = "stafi"
+
+[[bin]]
+name = "stafi"
+path = "bin/main.rs"
+required-features = ["cli"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-log = "0.4"
-tokio = "0.1.7"
-futures = "0.1"
-exit-future = "0.1"
-jsonrpc-core = "13.2.0"
-substrate-cli = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
-parity-codec = { package = "parity-scale-codec", version = "1.0.0" }
-sr-io = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
-client = { package = "substrate-client", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+# third-party dependencies
+codec = { package = "parity-scale-codec", version = "1.0.6" }
+serde = { version = "1.0.102", features = [ "derive" ] }
+futures = "0.1.29"
+futures03 = { package = "futures-preview", version = "0.3.0-alpha.19", features = ["compat"] }
+hex-literal = "0.2.1"
+jsonrpc-core = "14.0.3"
+log = "0.4.8"
+rand = "0.7.2"
+structopt = "0.3.3"
+
+# primitives
+authority-discovery-primitives = { package = "substrate-authority-discovery-primitives", git = "https://github.com/stafiprotocol/stafi-blockchain"}
+babe-primitives = { package = "substrate-consensus-babe-primitives", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+grandpa_primitives = { package = "substrate-finality-grandpa-primitives", git = "https://github.com/stafiprotocol/stafi-blockchain" }
 primitives = { package = "substrate-primitives", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+sr-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
+
+# core dependencies
+runtime-io = { package = "sr-io", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+client-api = { package = "substrate-client-api", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+client = { package = "substrate-client", git = "https://github.com/stafiprotocol/stafi-blockchain" }
 inherents = { package = "substrate-inherents", git = "https://github.com/stafiprotocol/stafi-blockchain" }
-hex-literal = "0.2"
-substrate-basic-authorship = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
-substrate-service = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
+chain-spec = { package = "substrate-chain-spec", git = "https://github.com/stafiprotocol/stafi-blockchain" }
 transaction_pool = { package = "substrate-transaction-pool", git = "https://github.com/stafiprotocol/stafi-blockchain" }
 network = { package = "substrate-network", git = "https://github.com/stafiprotocol/stafi-blockchain" }
-grandpa = { package = "substrate-finality-grandpa", git = "https://github.com/stafiprotocol/stafi-blockchain" }
-grandpa_primitives = { package = "substrate-finality-grandpa-primitives", git = "https://github.com/stafiprotocol/stafi-blockchain" }
-sr-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
-substrate-keystore = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
-substrate-telemetry = { package = "substrate-telemetry", git = "https://github.com/stafiprotocol/stafi-blockchain" }
-app-crypto = { package = "substrate-application-crypto",  git = "https://github.com/stafiprotocol/stafi-blockchain" }
-structopt = "0.2"
-transaction-factory = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
-keyring = { package = "substrate-keyring", git = "https://github.com/stafiprotocol/stafi-blockchain" }
-indices = { package = "srml-indices", git = "https://github.com/stafiprotocol/stafi-blockchain" }
-timestamp = { package = "srml-timestamp", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-rand = "0.6"
-finality_tracker = { package = "srml-finality-tracker", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-contracts = { package = "srml-contracts", git = "https://github.com/stafiprotocol/stafi-blockchain" }
-system = { package = "srml-system", git = "https://github.com/stafiprotocol/stafi-blockchain" }
-balances = { package = "srml-balances", git = "https://github.com/stafiprotocol/stafi-blockchain" }
-serde_json = "1.0"
-node-rpc = { path = "../rpc" }
-substrate-rpc = { package = "substrate-rpc", git = "https://github.com/stafiprotocol/stafi-blockchain" }
-authority-discovery = { package = "substrate-authority-discovery", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 babe = { package = "substrate-consensus-babe", git = "https://github.com/stafiprotocol/stafi-blockchain" }
-client_db = { package = "substrate-client-db", git = "https://github.com/stafiprotocol/stafi-blockchain", features = ["kvdb-rocksdb"] }
+grandpa = { package = "substrate-finality-grandpa", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+keyring = { package = "substrate-keyring", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+client_db = { package = "substrate-client-db", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 offchain = { package = "substrate-offchain", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+substrate-rpc = { package = "substrate-rpc", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+substrate-basic-authorship = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
+substrate-service = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+substrate-telemetry = { package = "substrate-telemetry", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+authority-discovery = { package = "substrate-authority-discovery", git = "https://github.com/stafiprotocol/stafi-blockchain"}
 
-stafi-service = { path = "../service" }
-stafi-primitives = { path = "../primitives" }
-stafi-runtime = { path = "../runtime" }
-stafi-executor = { path = "../executor" }
+# paint dependencies
+indices = { package = "paint-indices", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+timestamp = { package = "paint-timestamp", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+finality_tracker = { package = "paint-finality-tracker", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+contracts = { package = "paint-contracts", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+system = { package = "paint-system", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+balances = { package = "paint-balances", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+transaction-payment = { package = "paint-transaction-payment", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+support = { package = "paint-support", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+im_online = { package = "paint-im-online", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+sr-authority-discovery = { package = "paint-authority-discovery", git = "https://github.com/stafiprotocol/stafi-blockchain"}
+
+
+# node-specific dependencies
+node-runtime = { path = "../runtime" }
+node-rpc = { path = "../rpc" }
+node-primitives = { path = "../primitives" }
+node-executor = { path = "../executor" }
 stafi-externalrpc = { path = "../modules/stafi-externalrpc" }
 
+# CLI-specific dependencies
+tokio = { version = "0.1.22", optional = true }
+exit-future = { version = "0.1.4", optional = true }
+substrate-cli = { git = "https://github.com/stafiprotocol/stafi-blockchain", optional = true }
+transaction-factory = { git = "https://github.com/stafiprotocol/stafi-blockchain", optional = true }
+ctrlc = { version = "3.1.3", features = ["termination"], optional = true }
+
+# WASM-specific dependencies
+libp2p = { version = "0.13.0", default-features = false, optional = true }
+clear_on_drop = { version = "0.2.3", features = ["no_cc"], optional = true }	# Imported just for the `no_cc` feature
+console_error_panic_hook = { version = "0.1.1", optional = true }
+console_log = { version = "0.1.2", optional = true }
+js-sys = { version = "0.3.22", optional = true }
+wasm-bindgen = { version = "0.2.45", optional = true }
+wasm-bindgen-futures = { version = "0.3.22", optional = true }
+kvdb-memorydb = { git = "https://github.com/paritytech/parity-common", rev="b0317f649ab2c665b7987b8475878fc4d2e1f81d", optional = true }
+rand6 = { package = "rand", version = "0.6", features = ["wasm-bindgen"], optional = true }	# Imported just for the `wasm-bindgen` feature
+
+[dev-dependencies]
+keystore = { package = "substrate-keystore", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+babe = { package = "substrate-consensus-babe", git = "https://github.com/stafiprotocol/stafi-blockchain", features = ["test-helpers"] }
+consensus-common = { package = "substrate-consensus-common", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+service-test = { package = "substrate-service-test", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+futures03 = { package = "futures-preview", version = "0.3.0-alpha.19" }
+tempfile = "3.1.0"
+
 [build-dependencies]
-structopt = "0.2"
+substrate-cli = { package = "substrate-cli", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+build-script-utils = { package = "substrate-build-script-utils", git = "https://github.com/stafiprotocol/stafi-blockchain" }
+structopt = "0.3.3"
+vergen = "3.0.4"
+
+[features]
+default = ["cli"]
+browser = [
+	"clear_on_drop",
+	"console_error_panic_hook",
+	"console_log",
+	"js-sys",
+	"libp2p",
+	"wasm-bindgen",
+	"wasm-bindgen-futures",
+	"kvdb-memorydb",
+	"rand/wasm-bindgen",
+	"rand6"
+]
+cli = [
+	"substrate-cli",
+	"transaction-factory",
+	"tokio",
+	"exit-future",
+	"ctrlc",
+	"substrate-service/rocksdb",
+	"node-executor/wasmi-errno",
+]
+wasmtime = [
+	"cli",
+	"node-executor/wasmtime",
+	"substrate-cli/wasmtime",
+	"substrate-service/wasmtime",
+]

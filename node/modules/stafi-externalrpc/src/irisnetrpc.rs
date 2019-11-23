@@ -1,13 +1,14 @@
 //#![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate sr_std as rstd;
-extern crate srml_support as support;
-extern crate srml_system as system;
+extern crate paint_support as support;
+extern crate paint_system as system;
 
 use support::{decl_module, decl_storage};
 use rstd::prelude::*;
 use system::{ensure_none};
-use inherents::{RuntimeString, InherentIdentifier, ProvideInherent, MakeFatalError, InherentData};
+use inherents::{InherentIdentifier, ProvideInherent, MakeFatalError, InherentData};
+use sr_primitives::RuntimeString;
 
 pub type InherentType = Vec<u8>;
 

@@ -17,12 +17,13 @@ substrate-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchai
 sr-std = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 sr-io = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 sr-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-srml-support = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-srml-system = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-srml-balances = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-session = { package = "srml-session", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false, features = ["historical"] }
-stafi-primitives = { path = "../../primitives", default-features = false }
-im-online = { package = "srml-im-online", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+paint-support = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+paint-system = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+paint-balances = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+session = { package = "paint-session", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false, features = ["historical"] }
+im-online = { package = "paint-im-online", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+
+node-primitives = { path = "../../primitives", default-features = false }
 
 [features]
 default = ["std"]
@@ -34,11 +35,11 @@ std = [
     "substrate-primitives/std",
     "sr-std/std",
     "sr-io/std",
-    "srml-support/std",
+    "paint-support/std",
     "sr-primitives/std",
-    "srml-system/std",
-    "srml-balances/std",
-    "stafi-primitives/std",
+    "paint-system/std",
+    "paint-balances/std",
+    "node-primitives/std",
     "session/std",
     "im-online/std",
 ]

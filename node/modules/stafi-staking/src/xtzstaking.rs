@@ -1,8 +1,9 @@
-extern crate srml_system as system;
-extern crate srml_balances as balances;
-extern crate stafi_crypto as crypto;
+extern crate paint_system as system;
+extern crate paint_balances as balances;
+extern crate paint_support as support;
+extern crate randomness_collective_flip as random;
 
-use srml_support::{decl_module, decl_storage, decl_event, ensure, dispatch::Result};
+use support::{decl_module, decl_storage, decl_event, ensure, dispatch::Result, traits::Randomness};
 use system::ensure_signed;
 use sr_std::prelude::*;
 use sr_std::{
@@ -11,13 +12,13 @@ use sr_std::{
 use sr_primitives::traits::{Hash, CheckedAdd};
 use parity_codec::{Encode};
 
-use stafi_primitives::{Balance, VerifyStatus, XtzStakeStage, XtzStakeData, Symbol, constants::currency::*};
+use node_primitives::{Balance, VerifyStatus, XtzStakeStage, XtzStakeData, ChainType, Symbol, constants::currency::*};
 use token_balances::bondtoken;
 use stafi_externalrpc::tezosrpc;
+use stafi_multisig::multisigaddr;
 use log::info;
-use crypto::tez::verify;
 
-pub trait Trait: system::Trait + balances::Trait + bondtoken::Trait + tezosrpc::Trait {
+pub trait Trait: system::Trait + balances::Trait + bondtoken::Trait + tezosrpc::Trait + multisigaddr::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -26,11 +27,19 @@ pub trait Trait: system::Trait + balances::Trait + bondtoken::Trait + tezosrpc::
 decl_storage! {
 	trait Store for Module<T: Trait> as XtzStaking {
 		// Just a dummy storage item.
-		pub StakeRecords get(stake_records): map (T::AccountId, T::Hash) => Option<XtzStakeData<T::AccountId, T::Hash, Balance>>;
-		pub StakeDataHashRecords get(stake_data_hash_records): map T::AccountId => Vec<T::Hash>;
+		pub StakeRecords get(stake_records): map T::Hash => Option<XtzStakeData<T::AccountId, T::Hash, Balance>>;
+
+		pub AllStakeRecordsArray get(stake_by_index): map u64 => T::Hash;
+        pub AllStakeRecordsCount get(all_stake_count): u64;
+
+		pub OwnedStakeRecordsArray get(stake_of_owner_by_index): map (T::AccountId, u64) => T::Hash;
+        pub OwnedStakeRecordsCount get(owned_stake_count): map T::AccountId => u64;
+
 		pub TransferInitDataRecords get(transfer_init_data_records): Vec<XtzStakeData<T::AccountId, T::Hash, Balance>>;
 		pub TransferInitCheckRecords get(transfer_init_check_records): map Vec<u8> => bool;
-		pub TransferInitDataMapRecords get(transfer_init_data_map_records): linked_map Vec<u8> => Option<XtzStakeData<T::AccountId, T::Hash, Balance>>;
+		pub TransferInitDataMapRecords get(transfer_init_data_map_records): linked_map u64 => T::Hash;
+
+		Nonce: u64;
 	}
 }
 
@@ -44,50 +53,69 @@ decl_module! {
 
 		fn on_finalize(n: T::BlockNumber) {
 			if let Some(value) = n.try_into().ok() {
-				info!("ddd {}.", value);
 				if value % 3 == 0 {
+					info!("ddd {}.", value);
 					Self::handle_init();
 				}
 			}
 		}
 
 		// Custom stake xtz
-		pub fn custom_stake(origin, multi_sig_address: Vec<u8>, stake_amount: Balance, tx_hash: Vec<u8>, block_hash: Vec<u8>) -> Result {
+		pub fn custom_stake(origin, multi_sig_address: Vec<u8>, stake_amount: u128, tx_hash: Vec<u8>, block_hash: Vec<u8>, pub_key: Vec<u8>, sig: Vec<u8>) -> Result {
 			let sender = ensure_signed(origin)?;
 
-			// Check that the tx_hash exists
+			ensure!(stake_amount > 0, "Stake amount must be greater than 0");
+
             ensure!(!<TransferInitCheckRecords>::exists(tx_hash.clone()), "This tx_hash exist");
 
-			// TODO: Check multi sig address
-			// ensure!(multi_sig_address > 0, "Multi sig address is illegal");
-			ensure!(stake_amount > 0, "Stake amount must be greater than 0");
+			ensure!(<multisigaddr::Module<T>>::check_multisig_address(ChainType::TEZOS, multi_sig_address.clone()), "Multi sig address is illegal");
+
 			// TODO: Check tx hash
 			// ensure!(tx_hash, "Stake amount must be greater than 0");
 			// TODO: Check block hash
 			// ensure!(block_hash, "Stake amount must be greater than 0");
+
+			// TODO: pub_key verify sig
+			Self::check_sig(tx_hash.clone(), pub_key.clone(), sig.clone())?;
 			
-			let random_seed = <system::Module<T>>::random_seed();
-            let hash = (random_seed, &sender).using_encoded(<T as system::Trait>::Hashing::hash);
+			let owned_stake_count = Self::owned_stake_count(&sender);
+        	let new_owned_stake_count = owned_stake_count.checked_add(1).ok_or("Overflow adding a new owned stake")?;
+
+			let all_stake_count = Self::all_stake_count();
+        	let new_all_stake_count = all_stake_count.checked_add(1).ok_or("Overflow adding a new stake")?;
+
+			// TODO: pub_key generate from
+			let _from: Vec<u8> = Vec::new();
+			
+			let nonce = <Nonce>::get();
+			let random_seed = <random::Module<T>>::random_seed();
+            let hash = (random_seed, &sender, nonce).using_encoded(<T as system::Trait>::Hashing::hash);
 
 			let stake_data = XtzStakeData {
-				id: hash.clone(),
+				id: hash,
 				initiator: sender.clone(),
 				multi_sig_address: multi_sig_address,
 				stage: XtzStakeStage::Init,
 				stake_amount: stake_amount,
 				tx_hash: tx_hash.clone(),
 				block_hash: block_hash.clone(),
+				stake_account: pub_key,
+				sig: sig
 			};
 
-			<StakeRecords<T>>::insert((sender.clone(), hash.clone()), stake_data.clone());
+			<StakeRecords<T>>::insert(hash, stake_data.clone());
 
-			let mut hashs = <StakeDataHashRecords<T>>::get(sender.clone());
-			hashs.push(hash.clone());
-			<StakeDataHashRecords<T>>::insert(sender.clone(), hashs);
+			<OwnedStakeRecordsArray<T>>::insert((sender.clone(), owned_stake_count), hash);
+			<OwnedStakeRecordsCount<T>>::insert(&sender, new_owned_stake_count);
 
-			<TransferInitDataMapRecords<T>>::insert(tx_hash.clone(), stake_data.clone());
+			<AllStakeRecordsArray<T>>::insert(all_stake_count, hash);
+			<AllStakeRecordsCount>::put(new_all_stake_count);
+
+			<TransferInitDataMapRecords<T>>::insert(all_stake_count, hash);
 
 			<TransferInitCheckRecords>::insert(tx_hash, true);
+
+			<Nonce>::mutate(|n| *n += 1);
 
 			// here we are raising the event
 			Self::deposit_event(RawEvent::StakeInit(sender, hash));
@@ -104,35 +132,51 @@ decl_event!(
 
 impl<T: Trait> Module<T> {
 
+	fn check_sig(tx_hash: Vec<u8>, pub_key: Vec<u8>, sig: Vec<u8>) -> Result {
+		// if !stafi_crypto::tez::verify::verify_with_ed(&tx_hash, &sig, &pub_key) {
+		// 	return Err("");
+		// }
+
+		Ok(())
+	}
+
+	// #[cfg(not(feature = "std"))]
+	// fn check_sig(tx_hash: Vec<u8>, pub_key: Vec<u8>, sig: Vec<u8>) -> Result {
+	// 	Ok(())
+	// }
+
 	fn handle_init() {
 		let mut tmp_datas: Vec<XtzStakeData<T::AccountId, T::Hash, Balance>> = Vec::new();
 
-		let mut count = 0;
-        for (key, stake_data) in <TransferInitDataMapRecords<T>>::enumerate() {
-			count += 1;
-			if count >= 20 {
-				tmp_datas.push(stake_data);
-				continue;
+        for (key, hash) in <TransferInitDataMapRecords<T>>::enumerate() {
+			if tmp_datas.len() >= 50 {
+				break;
 			}
 
-			let account_id = &stake_data.initiator;
-			let hash = &stake_data.id;
+			if let Some(mut xtz_stake_data) = Self::stake_records(hash) {
 
-			if let Some(mut xtz_stake_data) = Self::stake_records((account_id.clone(), hash.clone())) {
+				if xtz_stake_data.stage == XtzStakeStage::Completed {
+					<TransferInitDataMapRecords<T>>::remove(key);
+					<tezosrpc::Module<T>>::remove_verified(xtz_stake_data.tx_hash);
+					continue;
+				}
 
-				let (status, _) = <tezosrpc::Module<T>>::verified(&stake_data.tx_hash);
+				let (status, _) = <tezosrpc::Module<T>>::verified(&xtz_stake_data.tx_hash);
 				let enum_status = VerifyStatus::create(status);
 				
-				if xtz_stake_data.stage == XtzStakeStage::Init {
-					if enum_status == VerifyStatus::Confirmed {
-						xtz_stake_data.stage = XtzStakeStage::Completed;
-						<StakeRecords<T>>::insert((account_id.clone(), hash.clone()), xtz_stake_data.clone());
+				match enum_status {
+					VerifyStatus::Confirmed => {
+						let account_id = &xtz_stake_data.initiator;
 
-						bondtoken::Module::<T>::add_bond_token(
+						xtz_stake_data.stage = XtzStakeStage::Completed;
+						<StakeRecords<T>>::insert(hash, xtz_stake_data.clone());
+
+						bondtoken::Module::<T>::create_bond_token(
 							account_id.clone(),
-							Symbol::XtzBond,
+							Symbol::XTZ,
 							xtz_stake_data.stake_amount,
-							xtz_stake_data.id
+							xtz_stake_data.id,
+							xtz_stake_data.multi_sig_address
 						).expect("Error adding xtz bond token");
 
 						// TODO: Add restrictive conditions to issue FIS token
@@ -149,16 +193,20 @@ impl<T: Trait> Module<T> {
 						}
 
 						<TransferInitDataMapRecords<T>>::remove(key);
-					} else if enum_status == VerifyStatus::NotFound {
-						<TransferInitCheckRecords>::remove(key.clone());
-						<TransferInitDataMapRecords<T>>::remove(key.clone());
-						<tezosrpc::Module<T>>::remove_verified(key.clone());
-					} else if enum_status == VerifyStatus::Rollback {
-						<TransferInitDataMapRecords<T>>::remove(key.clone());
-					} else if status <= VerifyStatus::Verified as i8 {
-						tmp_datas.push(stake_data);
+						<tezosrpc::Module<T>>::remove_verified(xtz_stake_data.tx_hash);
 					}
+					VerifyStatus::NotFoundBlock | VerifyStatus::TxNotMatch => {
+						<TransferInitCheckRecords>::remove(&xtz_stake_data.tx_hash);
+						<TransferInitDataMapRecords<T>>::remove(key);
+						<tezosrpc::Module<T>>::remove_verified(xtz_stake_data.tx_hash);
+					}
+					VerifyStatus::Rollback | VerifyStatus::NotFoundTx => {
+						<TransferInitDataMapRecords<T>>::remove(key);
+						<tezosrpc::Module<T>>::remove_verified(xtz_stake_data.tx_hash);
+					}
+					_ => tmp_datas.push(xtz_stake_data),
 				}
+
 			}
 		}
 

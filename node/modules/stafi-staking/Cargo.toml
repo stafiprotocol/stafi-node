@@ -9,16 +9,18 @@ serde = { version = "1.0", default_features = false }
 parity-codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 sr-std = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 sr-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-srml-support = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-srml-system = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-srml-balances = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-session = { package = "srml-session", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-im-online = { package = "srml-im-online", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+paint-support = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+paint-system = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+paint-balances = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+session = { package = "paint-session", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+im-online = { package = "paint-im-online", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+randomness-collective-flip = { package = "paint-randomness-collective-flip", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 
-stafi-primitives = { path = "../../primitives", default-features = false }
+node-primitives = { path = "../../primitives", default-features = false }
 token-balances = { package = "tokenbalances", path = "../tokenbalances", default-features = false }
 stafi-externalrpc = { path = "../stafi-externalrpc", default-features = false }
-stafi-crypto = { path = "../stafi-crypto", default-features = false }
+# stafi-crypto = { path = "../stafi-crypto", default-features = false }
+stafi-multisig = { path = "../stafi-multisig", default-features = false }
 
 log = "0.4"
 
@@ -29,13 +31,15 @@ std = [
     "parity-codec/std",
     "sr-std/std",
     "sr-primitives/std",
-    "srml-support/std",
-    "srml-system/std",
-    "srml-balances/std",
+    "paint-support/std",
+    "paint-system/std",
+    "paint-balances/std",
     "session/std",
     "im-online/std",
-    "stafi-primitives/std",
+    "node-primitives/std",
     "token-balances/std",
     "stafi-externalrpc/std",
+    "stafi-multisig/std",
+    "randomness-collective-flip/std",
     "stafi-crypto/std",
 ]
