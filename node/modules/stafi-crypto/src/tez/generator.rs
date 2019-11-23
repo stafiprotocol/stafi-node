@@ -13,15 +13,18 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
-extern crate bip39;
 extern crate crypto;
 extern crate sr_std;
 
 use super::base58;
+
+#[cfg(any(feature = "std", test))]
 use bip39::{Language, Mnemonic, MnemonicType, Seed};
+
 use crypto::ed25519;
 use crypto::{blake2b, digest::*};
 use sr_std::prelude::*;
+use sr_std::vec;
 
 pub struct KeyPair {
     pub mnemonic: Vec<u8>,
@@ -30,16 +33,19 @@ pub struct KeyPair {
     pub pkh: Vec<u8>,
 }
 
+#[cfg(any(feature = "std", test))]
 pub fn generate_keypair() -> KeyPair {
     generate_keypair_with_password("mWcziEO9fE8kzGsV")
 }
 
+#[cfg(any(feature = "std", test))]
 pub fn generate_keypair_with_password(password: &str) -> KeyPair {
     // create a new randomly generated mnemonic phrase
     let mnemonic = Mnemonic::new(MnemonicType::Words15, Language::English);
     generate_keypair_from_mnemonic(&mnemonic, password)
 }
 
+#[cfg(any(feature = "std", test))]
 pub fn generate_keypair_from_mnemonic_str(mnemonic_str: &str, password: &str) -> KeyPair {
     let mnemonic = Mnemonic::from_phrase(mnemonic_str, Language::English)
         .map_err(|_| "Unexpected mnemonic")
@@ -47,6 +53,7 @@ pub fn generate_keypair_from_mnemonic_str(mnemonic_str: &str, password: &str) ->
     generate_keypair_from_mnemonic(&mnemonic, password)
 }
 
+#[cfg(any(feature = "std", test))]
 pub fn generate_keypair_from_mnemonic(mnemonic: &Mnemonic, password: &str) -> KeyPair {
     let seed = Seed::new(&mnemonic, password);
 
@@ -56,7 +63,7 @@ pub fn generate_keypair_from_mnemonic(mnemonic: &Mnemonic, password: &str) -> Ke
     let keypair = generate_keypair_from_seed(seed_bytes);
 
     KeyPair {
-        mnemonic: mnemonic.phrase().to_string().as_bytes().to_vec(),
+        mnemonic: mnemonic.phrase().as_bytes().to_vec(),
         sk: keypair.0,
         pk: keypair.1,
         pkh: keypair.2,

@@ -3063,15 +3063,14 @@ dependencies = [
 [[package]]
 name = "rust-crypto"
 version = "0.2.36"
-source = "git+https://github.com/BurningSea/rust-crypto#c572e33a6a5d1236c6fd0e94912b5a23e07ade7d"
+source = "git+https://github.com/BurningSea/rust-crypto#3a2b0b04cba5a2449260197e3d27aa5c082e08a0"
 dependencies = [
  "base64 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "gcc 0.3.55 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.62 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand 0.3.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
- "time 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-std 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
 ]
 
 [[package]]

@@ -15,6 +15,7 @@
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
 
 pub mod base58;
-pub mod generator;
 pub mod sign;
 pub mod verify;
+
+pub mod generator;

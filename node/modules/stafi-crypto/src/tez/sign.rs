@@ -20,6 +20,7 @@ use super::base58;
 use crypto::{blake2b, digest::*, ed25519};
 
 use sr_std::prelude::*;
+use sr_std::vec;
 
 pub struct SignatureData {
     pub sig: Vec<u8>,

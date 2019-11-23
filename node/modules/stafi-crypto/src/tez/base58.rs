@@ -19,7 +19,6 @@ extern crate sr_std;
 
 use byteorder::ByteOrder;
 use byteorder::LittleEndian;
-use sr_std::clone;
 use sr_std::prelude::*;
 use sr_std::{
     iter, slice, vec

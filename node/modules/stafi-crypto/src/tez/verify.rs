@@ -18,7 +18,6 @@ extern crate sr_std;
 
 use super::base58;
 use crypto::ed25519;
-use sr_std::prelude::*;
 use sr_std::str;
 
 pub fn verify_with_ed(data: &[u8], edsig: &[u8], edpk: &[u8]) -> bool {
