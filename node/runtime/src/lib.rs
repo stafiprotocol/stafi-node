@@ -24,7 +24,7 @@ use stafi_staking::atomstaking as atomStaking;
 use stafi_staking::xtzstaking as xtzStaking;
 use tokenbalances;
 use tokenbalances::bondtoken as bondToken;
-use stafi_externalrpc::{irisnetrpc, tezosrpc};
+use stafi_externalrpc::{ tezosrpc };
 use stafi_offchain_worker::{tezosworker};
 use stafi_fund;
 use stafi_multisig::multisigaddr as multisigAddr;
@@ -51,7 +51,7 @@ use runtime_primitives::curve::PiecewiseLinear;
 use runtime_primitives::transaction_validity::TransactionValidity;
 use runtime_primitives::weights::Weight;
 use runtime_primitives::traits::{
-	self, BlakeTwo256, Block as BlockT, NumberFor, StaticLookup, SaturatedConversion,
+	BlakeTwo256, Block as BlockT, NumberFor, StaticLookup, SaturatedConversion,
 };
 use version::RuntimeVersion;
 use elections::VoteIndex;
@@ -522,8 +522,8 @@ impl bondToken::Trait for Runtime {
 	type Event = Event;
 }
 
-impl irisnetrpc::Trait for Runtime {	
-}
+//impl irisnetrpc::Trait for Runtime {
+//}
 
 impl tezosrpc::Trait for Runtime {	
 }
@@ -535,7 +535,6 @@ pub mod offchaincb_crypto {
 
 	impl From<Signature> for super::Signature {
 		fn from(a: Signature) -> Self {
-			sr_io::print_utf8(b"in from");
 			sr25519::Signature::from(a).into()
 		}
 	}
@@ -565,7 +564,6 @@ impl system::offchain::CreateTransaction<Runtime, UncheckedExtrinsic> for Runtim
 		Call,
 		<UncheckedExtrinsic as runtime_primitives::traits::Extrinsic>::SignaturePayload,
 	)> {
-		sr_io::print_utf8(b"in create_transaction");
 		let period = 1 << 8;
 		let current_block = System::block_number().saturated_into::<u64>();
 		let tip = 0;
@@ -580,9 +578,13 @@ impl system::offchain::CreateTransaction<Runtime, UncheckedExtrinsic> for Runtim
 		);
 		let raw_payload = SignedPayload::new(call, extra).ok()?;
 		let signature = F::sign(account.clone(), &raw_payload)?;
-		let address = Indices::unlookup(account);
-		let (call, extra, _) = raw_payload.deconstruct();
-		sr_io::print_utf8(b"in create_transaction4");
+		let address = Indices::unlookup(account.clone());
+        let (call, extra, _) = raw_payload.deconstruct();
+        sr_io::print_hex(&account.encode().to_vec());
+		//let b:Vec<u8> = account.encode().to_vec();
+		//let a:Vec<u8> = Decode::decode(&mut &b[..]).unwrap();
+		//sr_io::print_utf8(&a);
+        sr_io::print_utf8(b"create_transaction ok");
 		Some((call, (address, signature, extra)))
 	}
 }
@@ -620,7 +622,7 @@ construct_runtime!(
 		BondToken: bondToken::{Module, Call, Storage, Event<T>},
 		Stafifund: stafi_fund::{Module, Call, Storage, Event<T>},
 		MultiSig: stafi_multisig::{Module, Call, Storage, Event<T>},
-		StafiIrisnetRpc: irisnetrpc::{Module, Call, Storage, Inherent},
+		//StafiIrisnetRpc: irisnetrpc::{Module, Call, Storage, Inherent},
 		StafiTezosRpc: tezosrpc::{Module, Call, Storage, Inherent},
 		MultisigAddress: multisigAddr::{Module, Call, Storage, Event, Config},
 		StafiTezosWorker: tezosworker::{Module, Call, Storage, Event<T>},

@@ -130,7 +130,7 @@ pub mod stafistaking;
 pub use stafistaking::{XtzStakeData, XtzStakeStage, AtomStakeData, AtomStakeStage};
 
 pub mod externalrpc;
-pub use externalrpc::{VerifiedData, VerifyStatus, TxHashType, BabeIdType, HostData};
+pub use externalrpc::{VerifiedData, OcVerifiedData, VerifyStatus, TxHashType, BabeIdType, HostData};
 
 pub mod tokenbalances;
 pub use tokenbalances::{BondTokenLockType, BondTokenLockStatus, CustomRedeemData};

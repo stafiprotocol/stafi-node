@@ -20,6 +20,8 @@ srml-support = { git = "https://github.com/stafiprotocol/stafi-blockchain", pack
 srml-system = { git = "https://github.com/stafiprotocol/stafi-blockchain", package = "srml-system", default-features = false }
 srml-babe = { git = "https://github.com/stafiprotocol/stafi-blockchain", package = "srml-babe", default-features = false }
 srml-timestamp = { git = "https://github.com/stafiprotocol/stafi-blockchain", package = "srml-timestamp", default-features = false }
+indices = { package = "srml-indices", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+session = { package = "srml-session", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 sr-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain", package = "sr-primitives", default-features = false }
 app-crypto = { git = "https://github.com/stafiprotocol/stafi-blockchain", package = "substrate-application-crypto", default-features = false }
 substrate-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain", package = "substrate-primitives", default-features = false }

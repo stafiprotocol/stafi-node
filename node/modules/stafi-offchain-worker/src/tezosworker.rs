@@ -5,31 +5,31 @@ extern crate srml_support as support;
 extern crate srml_system as system;
 extern crate srml_babe as babe;
 extern crate srml_timestamp as timestamp;
+extern crate sr_io as runtime_io;
 
-use support::{decl_module, decl_storage, decl_event};
+use support::{decl_module, decl_storage, decl_event, ensure};
 use rstd::prelude::*;
 use rstd::vec::Vec;
-use rstd::result::Result;
-use system::{ensure_none, ensure_signed, ensure_root};
-use stafi_primitives::{VerifiedData, VerifyStatus, TxHashType, BabeIdType, HostData, XtzStakeData, Balance};
-use codec::Decode;
-use sr_primitives::traits::{Member, SaturatedConversion};
+//use rstd::result::Result;
+use system::{ensure_signed, ensure_root};
+use stafi_primitives::{OcVerifiedData, VerifyStatus, TxHashType, HostData, XtzStakeData, Balance};
+use sr_primitives::traits::{Convert, SaturatedConversion};
 
 use app_crypto::{KeyTypeId, RuntimeAppPublic};
 use system::offchain::SubmitSignedTransaction;
+//use babe::AuthorityId;
 
 pub mod tezos;
 
 /// only for debug
 fn debug(msg: &str) {
-	// let msg = format!("\x1b[34m{}", msg);
-	sr_io::print_utf8(msg.as_bytes());
+	runtime_io::print_utf8(msg.as_bytes());
 }
 
-pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"orin");
+pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"stez");
 pub const TEZOS_BLOCK_CONFIRMED: u8 = 3;
 pub const TEZOS_BLOCK_DURATION: u64 = 60000;
-pub const TEZOS_RPC_HOST: &'static [u8] = b"https://rpc.tezrpc.me";
+pub const TEZOS_RPC_HOST: &'static [u8] = b"https://rpc.tezrpc.me/";
 
 pub mod sr25519 {
 	mod app_sr25519 {
@@ -43,23 +43,16 @@ pub mod sr25519 {
 		}
 	}
 
-	/// An oracle signature using sr25519 as its crypto.
 	// pub type AuthoritySignature = app_sr25519::Signature;
 
-	/// An oracle identifier using sr25519 as its crypto.
-	pub type AuthorityId = app_sr25519::Public;
+	// pub type Public = app_sr25519::Public;
 }
 
-pub trait Trait: system::Trait + babe::Trait + timestamp::Trait{
-	/// The overarching event type.
+pub trait Trait: system::Trait + babe::Trait + timestamp::Trait + session::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
-
-	/// A dispatchable call type.
-	type Call: From<Call<Self>>;
-	/// A transaction submitter.
-	//type SubmitTransaction: SubmitUnsignedTransaction<Self, <Self as Trait>::Call>;
+    //type AuthorityId: Member + Parameter + RuntimeAppPublic + Default + Ord;
+    type Call: From<Call<Self>>;
 	type SubmitTransaction: SubmitSignedTransaction<Self, <Self as Trait>::Call>;
-	/// The local keytype
 	type KeyType: RuntimeAppPublic + From<Self::AccountId> + Into<Self::AccountId> + Clone;
 }
 
@@ -67,11 +60,10 @@ decl_storage! {
 	trait Store for Module<T: Trait> as TezosWorker {
 		pub Verified get(verified): map TxHashType => (i8, u64);
 		VerifiedBak get(verified_bak): Vec<(TxHashType, i8, u64)>;
-		pub NodeResponse get(node_response): linked_map TxHashType => Vec<VerifiedData>;
+		pub NodeResponse get(node_response): linked_map TxHashType => Vec<OcVerifiedData<T::AccountId>>;
 		RpcHost get(rpc_host): Vec<HostData>;
 		BlocksConfirmed get(blocks_confirmed): u8;
 		BlockDuration get(block_duration): u64;
-		pub SendRequest get(send_request): map (TxHashType, BabeIdType) => u64;
 
 		//for test
 		StakeData get(stake_data): Vec<XtzStakeData<T::AccountId, T::Hash, Balance>>;
@@ -88,12 +80,16 @@ decl_module! {
 			<StakeData<T>>::put(data);
 		}
 
-		fn set_node_response(origin, txhash: TxHashType, babe_id: BabeIdType, v_data: VerifiedData) {
-			let _who = ensure_signed(origin)?;
+		fn set_node_response(origin, txhash: TxHashType, v_data: OcVerifiedData<T::AccountId>) {
+			let who = ensure_signed(origin)?;
 
-			let mut vd: Vec<VerifiedData> = NodeResponse::get(&txhash).into_iter().filter(|x| x.babe_id != babe_id).collect();
+            ensure!(who == v_data.babe_id, "babe account unmatched");
+            let w = <T as session::Trait>::ValidatorIdOf::convert(who.clone());
+            ensure!(w.is_some(), "not a babe account");
+
+			let mut vd: Vec<OcVerifiedData<T::AccountId>> = <NodeResponse<T>>::get(&txhash).into_iter().filter(|x| x.babe_id != who).collect();
 			vd.push(v_data);
-			NodeResponse::insert(txhash, vd);
+			<NodeResponse<T>>::insert(txhash, vd);
 		}
 
 		fn add_rpc_host(origin, host:Vec<u8>) {
@@ -129,10 +125,11 @@ decl_module! {
 		}
 
 		fn on_finalize() {
-		    //return;
+		    //let bn = <system::Module<T>>::block_number().saturated_into::<u64>();
+            //runtime_io::print_num(bn);
 
-			let mut response_list: Vec<(TxHashType, Vec<VerifiedData>)> = Vec::new();
-			for (k, v) in NodeResponse::enumerate() {
+			let mut response_list: Vec<(TxHashType, Vec<OcVerifiedData<T::AccountId>>)> = Vec::new();
+			for (k, v) in <NodeResponse<T>>::enumerate() {
 				let txhash = k;
 				let status = VerifyStatus::create(Verified::get(txhash.clone()).0);
 				if status != VerifyStatus::Confirmed && status != VerifyStatus::NotFoundTx && status != VerifyStatus::Rollback && status != VerifyStatus::NotFoundBlock {
@@ -147,7 +144,7 @@ decl_module! {
 				let mut ts = 0;
 				let txhash = k;
 
-				let new_status = get_new_status(v.clone(), &mut ts);
+				let new_status = Self::get_new_status(v.clone(), &mut ts);
 				if new_status != VerifyStatus::UnVerified {
 					let status = new_status as i8;
 					let (s, t) = Verified::get(txhash.clone());
@@ -163,20 +160,17 @@ decl_module! {
 
 		fn offchain_worker(now: T::BlockNumber) {
 			debug("in offchain worker");
-			Self::offchain(now);
-            debug("end of offchain worker");
-			/*if let Some(key) = Self::authority_id() {
-                debug("sign...");
 
-                //let call = Call::add_rpc_host([0x33,0x34].to_vec());
-		        //let _ = T::SubmitTransaction::sign_and_submit(call, key.clone().into());
-            }*/
-
+            Self::offchain(now);
 		}
 	}
 }
 
 impl<T: Trait> Module<T> {
+    //fn get_babe_list() -> Vec<AuthorityId> {
+    //    <babe::Module<T>>::authorities().iter().map(|x| x.0.clone().into()).collect::<Vec<AuthorityId>>()
+    //}
+
     fn get_babe_num() -> usize {
         return <babe::Module<T>>::authorities().len();
     }
@@ -185,8 +179,16 @@ impl<T: Trait> Module<T> {
         return <timestamp::Module<T>>::now().saturated_into::<u64>();
     }
 
-	fn offchain(now: T::BlockNumber) {
-        let bn = <system::Module<T>>::block_number().saturated_into::<u64>();
+    fn submit_call(call: Call<T>, account: T::AccountId) {
+        let ret = T::SubmitTransaction::sign_and_submit(call, account);
+        match ret {
+            Ok(_) => debug("submit ok"),
+            Err(_) => debug("submit failed"),
+        }
+    }
+
+    fn offchain(now: T::BlockNumber) {
+        let bn = now.saturated_into::<u64>();
 
         let host;
         if Self::rpc_host().len() == 0 {
@@ -206,34 +208,26 @@ impl<T: Trait> Module<T> {
         }
 
         let key = Self::authority_id();
-        if let None = key  {
+        if key.is_none() {
             debug("no authority_id");
             return
         }
 
         let babe_num = Self::get_babe_num();
 
-        let babe_id: Vec<u8> = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY".as_bytes().to_vec();
+        for xsd in Self::stake_data() {
+        //for i in 0..1 {
+            //let blockhash: Vec<u8> = "BKsxzJMXPxxJWRZcsgWG8AAegXNp2uUuUmMr8gzQcoEiGnNeCA6".as_bytes().to_vec();
+            //let txhash: Vec<u8> = "onv7i9LSacMXjhTdpgzmY4q6PxiZ18TZPq7KrRBRUVX7XJicSDi".as_bytes().to_vec();
+            //let from = "tz1SYq214SCBy9naR6cvycQsYcUGpBqQAE8d".as_bytes().to_vec();
+            //let to = "tz1S4MTpEV356QcuzkjQUdyZdAy36gPwPWXa".as_bytes().to_vec();
+            //let amount = 710391;
 
-        //for xsd in Self::stake_data() {
-        for i in 0..1 {
-            let blockhash: Vec<u8> = "BKsxzJMXPxxJWRZcsgWG8AAegXNp2uUuUmMr8gzQcoEiGnNeCA6".as_bytes().to_vec();
-            let txhash: Vec<u8> = "onv7i9LSacMXjhTdpgzmY4q6PxiZ18TZPq7KrRBRUVX7XJicSDi".as_bytes().to_vec();
-            //let blockhash = xsd.block_hash;
-            //let txhash = xsd.tx_hash;
-
-            let ts = SendRequest::get((txhash.clone(), babe_id.clone()));
-            if ts > 0 {
-                debug("already send request");
-                continue;
-            }
-
-            let from = "tz1SYq214SCBy9naR6cvycQsYcUGpBqQAE8d".as_bytes().to_vec();
-            let to = "tz1S4MTpEV356QcuzkjQUdyZdAy36gPwPWXa".as_bytes().to_vec();
-            let amount = 710391;
-            //let from = xsd.stake_account;
-            //let to = xsd.multi_sig_address;
-            //let amount = xsd.stake_amount as u128;
+            let blockhash = xsd.block_hash;
+            let txhash = xsd.tx_hash;
+            let from = xsd.stake_account;
+            let to = xsd.multi_sig_address;
+            let amount = xsd.stake_amount as u128;
 
             let enum_status = VerifyStatus::create(Verified::get(txhash.clone()).0);
             if enum_status == VerifyStatus::Error {
@@ -242,29 +236,25 @@ impl<T: Trait> Module<T> {
             }
 
             if enum_status == VerifyStatus::Confirmed || enum_status == VerifyStatus::NotFoundTx || enum_status == VerifyStatus::Rollback || enum_status == VerifyStatus::NotFoundBlock || enum_status == VerifyStatus::TxNotMatch {
-                //sr_io::print_utf8(&format!("{:}'s status is {:}.", txhash, enum_status as i8).into_bytes());
+                //runtime_io::print_utf8(&format!("{:}'s status is {:}.", txhash, enum_status as i8).into_bytes());
                 debug("tx status set");
                 continue;
             }
 
             let last_timestamp = Verified::get(txhash.clone()).1;
-            let now_millis = Self::get_now();
-            if enum_status == VerifyStatus::Verified && last_timestamp + blocks_confirmed as u64 * block_duration > now_millis {
+            if enum_status == VerifyStatus::Verified && last_timestamp + blocks_confirmed as u64 * block_duration > Self::get_now() {
                 debug("status is Verified and last_timestamp + blocks_confirmed * block_duration > now_millis.");
                 continue;
             }
 
-            let nodes_response = NodeResponse::get(txhash.clone());
+            let nodes_response = <NodeResponse<T>>::get(txhash.clone());
             let mut node_status_set = false;
             for node_response in nodes_response {
-                if babe_id == node_response.babe_id {
+                if key.clone().unwrap() == node_response.babe_id {
                     let status = VerifyStatus::create(node_response.status);
                     if status != VerifyStatus::UnVerified {
                         node_status_set = true;
-                    } /*else if status == VerifyStatus::WaitForReply {
-                        //TODO: how long time passed ?
-                        node_status_set = true;
-                    } */
+                    }
                     break;
                 }
             }
@@ -274,16 +264,29 @@ impl<T: Trait> Module<T> {
                 continue;
             }
 
-            //
-            debug("run here");
-            sr_io::print_utf8(&txhash.clone());
-            sr_io::print_utf8(&babe_id.clone());
-            sr_io::print_num(Self::get_now());
-            SendRequest::insert((txhash.clone(), babe_id.clone()), Self::get_now());
+            let v = tezos::get_value(&txhash.clone()).unwrap_or((0 as u64).to_be_bytes().to_vec());
+            let mut a: [u8; 8] = [0; 8];
+            for i in 0..8 {
+                a[i] = v[i];
+            }
+
+            let ts = u64::from_be_bytes(a);
+            runtime_io::print_num(ts);
+            if ts > 0 {
+                debug("already send request");
+                if Self::get_now() - ts > 2 * 60 * 1000 { //2 minutes
+                    tezos::set_value(&txhash.clone(), &(0 as u64).to_be_bytes());
+                }
+
+                continue;
+            }
+
+
+            tezos::set_value(&txhash.clone(), &Self::get_now().to_be_bytes());
 
             let mut new_status = VerifyStatus::Verified;
-            let mut level:i64 = 0;
-            let mut cur_level:i64 = 0;
+            let mut level: i64 = 0;
+            let mut cur_level: i64 = 0;
             let status = tezos::request_tezos(host.clone(), blockhash, txhash.clone(), from, to, amount, &mut level);
             if status == VerifyStatus::TxOk || status == VerifyStatus::NotFoundTx {
                 let _ = tezos::request_tezos(host.clone(), "head".as_bytes().to_vec(), "".as_bytes().to_vec(), "".as_bytes().to_vec(), "".as_bytes().to_vec(), 0, &mut cur_level);
@@ -298,99 +301,94 @@ impl<T: Trait> Module<T> {
             }
 
             if new_status == VerifyStatus::NotFoundTx {
-                if enum_status == VerifyStatus::Verified && cur_level > 0 && cur_level - level > 0 && (cur_level - level) as u8 >= blocks_confirmed  {
+                if enum_status == VerifyStatus::Verified && cur_level > 0 && cur_level - level > 0 && (cur_level - level) as u8 >= blocks_confirmed {
                     new_status = VerifyStatus::Rollback;
                 }
             }
 
-            debug("run here1");
-
-            let verified_data = VerifiedData {
+            let verified_data = OcVerifiedData {
                 tx_hash: txhash.clone(),
                 timestamp: Self::get_now(),
                 status: new_status as i8,
-                babe_id: babe_id.clone(),
+                babe_id: key.clone().unwrap(),
                 babe_num: babe_num as u8,
             };
 
+            debug("set_node_response ...");
+            let call = Call::set_node_response(txhash.clone(), verified_data);
+            Self::submit_call(call, key.clone().unwrap().into());
 
-            debug("sign...");
-
-            let call = Call::set_node_response(txhash.clone(), babe_id.clone(), verified_data);
-            let _ = T::SubmitTransaction::sign_and_submit(call, key.unwrap().clone().into());
-
-            //SendRequest::remove((txhash, babe_id.clone()));
+            tezos::set_value(&txhash.clone(), &(0 as u64).to_be_bytes());
 
             break;
         }
+    }
 
-	}
-
-	pub fn remove_verified(txhash: TxHashType) {
+    pub fn remove_verified(txhash: TxHashType) {
         if Verified::exists(&txhash) {
             Verified::remove(&txhash);
-            NodeResponse::remove(&txhash);
-        }
-	}
-
-	fn authority_id() -> Option<T::AccountId> {
-		let local_keys = T::KeyType::all().iter().map(
-			|i| (*i).clone().into()
-		).collect::<Vec<T::AccountId>>();
-
-		if local_keys.len() > 0 {
-			Some(local_keys[0].clone())
-		} else {
-			None
-		}
-	}
-}
-
-fn get_new_status(vd: Vec<VerifiedData>, ts: &mut u64) -> VerifyStatus {
-    let mut verified_counter = 0;
-    let mut confirmed_counter = 0;
-    let mut notfoundtx_counter = 0;
-    let mut rollback_counter = 0;
-    let mut notfoundblock_counter = 0;
-    let mut notresponse_counter = 0;
-    let mut txnotmatch_counter = 0;
-
-    let mut babe_num = 0;
-    for v in vd {
-        *ts = v.timestamp;
-        babe_num = v.babe_num;
-
-        match VerifyStatus::create(v.status) {
-            VerifyStatus::Verified => verified_counter = verified_counter + 1,
-            VerifyStatus::Confirmed => confirmed_counter = confirmed_counter + 1,
-            VerifyStatus::NotFoundTx => notfoundtx_counter = notfoundtx_counter + 1,
-            VerifyStatus::Rollback => rollback_counter = rollback_counter + 1,
-            VerifyStatus::NotFoundBlock => notfoundblock_counter = notfoundblock_counter + 1,
-            VerifyStatus::NotResponse => notresponse_counter = notresponse_counter + 1,
-            VerifyStatus::TxNotMatch => txnotmatch_counter = txnotmatch_counter + 1,
-            _ => (),
+            <NodeResponse<T>>::remove(&txhash);
         }
     }
 
-    let mut new_status = VerifyStatus::UnVerified;
+    fn authority_id() -> Option<T::AccountId> {
+        let local_keys = T::KeyType::all().iter().map(
+            |i| (*i).clone().into()
+        ).collect::<Vec<T::AccountId>>();
 
-    if verified_counter >= (babe_num + 2)/2 {
-        new_status = VerifyStatus::Verified;
-    } else if confirmed_counter >= (babe_num + 2)/2 {
-        new_status = VerifyStatus::Confirmed;
-    } else if notfoundtx_counter >= (babe_num + 2)/2 {
-        new_status = VerifyStatus::NotFoundTx;
-    } else if rollback_counter >= (babe_num + 2)/2 {
-        new_status = VerifyStatus::Rollback;
-    } else if notfoundblock_counter >= (babe_num + 2)/2 {
-        new_status = VerifyStatus::NotFoundBlock;
-    } else if notresponse_counter >= (babe_num + 2)/2 {
-        new_status = VerifyStatus::NotResponse;
-    } else if txnotmatch_counter >= (babe_num + 2)/2 {
-        new_status = VerifyStatus::TxNotMatch;
+        if local_keys.len() > 0 {
+            Some(local_keys[0].clone())
+        } else {
+            None
+        }
     }
 
-    return new_status;
+    fn get_new_status(vd: Vec<OcVerifiedData<T::AccountId>>, ts: &mut u64) -> VerifyStatus {
+        let mut verified_counter = 0;
+        let mut confirmed_counter = 0;
+        let mut notfoundtx_counter = 0;
+        let mut rollback_counter = 0;
+        let mut notfoundblock_counter = 0;
+        let mut notresponse_counter = 0;
+        let mut txnotmatch_counter = 0;
+
+        let mut babe_num = 0;
+        for v in vd {
+            *ts = v.timestamp;
+            babe_num = v.babe_num;
+
+            match VerifyStatus::create(v.status) {
+                VerifyStatus::Verified => verified_counter = verified_counter + 1,
+                VerifyStatus::Confirmed => confirmed_counter = confirmed_counter + 1,
+                VerifyStatus::NotFoundTx => notfoundtx_counter = notfoundtx_counter + 1,
+                VerifyStatus::Rollback => rollback_counter = rollback_counter + 1,
+                VerifyStatus::NotFoundBlock => notfoundblock_counter = notfoundblock_counter + 1,
+                VerifyStatus::NotResponse => notresponse_counter = notresponse_counter + 1,
+                VerifyStatus::TxNotMatch => txnotmatch_counter = txnotmatch_counter + 1,
+                _ => (),
+            }
+        }
+
+        let mut new_status = VerifyStatus::UnVerified;
+
+        if verified_counter >= (babe_num + 2) / 2 {
+            new_status = VerifyStatus::Verified;
+        } else if confirmed_counter >= (babe_num + 2) / 2 {
+            new_status = VerifyStatus::Confirmed;
+        } else if notfoundtx_counter >= (babe_num + 2) / 2 {
+            new_status = VerifyStatus::NotFoundTx;
+        } else if rollback_counter >= (babe_num + 2) / 2 {
+            new_status = VerifyStatus::Rollback;
+        } else if notfoundblock_counter >= (babe_num + 2) / 2 {
+            new_status = VerifyStatus::NotFoundBlock;
+        } else if notresponse_counter >= (babe_num + 2) / 2 {
+            new_status = VerifyStatus::NotResponse;
+        } else if txnotmatch_counter >= (babe_num + 2) / 2 {
+            new_status = VerifyStatus::TxNotMatch;
+        }
+
+        return new_status;
+    }
 }
 
 decl_event!(

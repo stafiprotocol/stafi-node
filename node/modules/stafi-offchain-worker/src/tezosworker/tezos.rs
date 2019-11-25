@@ -2,12 +2,11 @@ extern crate sr_io as runtime_io;
 extern crate sr_std as rstd;
 extern crate substrate_primitives as primitives;
 
-use primitives::offchain::{Duration, HttpRequestId, HttpRequestStatus};
+use primitives::offchain::{Duration, HttpRequestId, HttpRequestStatus, StorageKind};
 use rstd::result::Result;
 use rstd::vec::Vec;
 use stafi_primitives::{rjson, VerifyStatus};
 use stafi_primitives::rjson::{JsonValue, JsonArray, JsonObject};
-//use test::OutputFormat::Json;
 
 pub const BUFFER_LEN: usize = 40960;
 pub const BUF_LEN: usize = 2048;
@@ -39,15 +38,13 @@ pub fn request_tezos(host: Vec<u8>, blockhash: Vec<u8>, txhash: Vec<u8>, from: V
             let ret = parse_result(buf, core::str::from_utf8(&blockhash).unwrap(), core::str::from_utf8(&txhash).unwrap(),core::str::from_utf8(&from).unwrap(), core::str::from_utf8(&to).unwrap(), stake_amount, level);
             return ret;
         }
-        Err(err) => {
+        Err(_err) => {
             return VerifyStatus::NotResponse;
         }
     }
 }
 
 fn request_tezos_buf(uri: &str) -> Result<[u8; BUFFER_LEN], RequestError> {
-    //let uri = "https://rpc.tezrpc.me/chains/main/blocks/BKsxzJMXPxxJWRZcsgWG8AAegXNp2uUuUmMr8gzQcoEiGnNeCA6";
-
     let mut counter = 0;
 
     loop {
@@ -73,7 +70,6 @@ fn request_tezos_buf(uri: &str) -> Result<[u8; BUFFER_LEN], RequestError> {
                     }
                     _ => return Err(RequestError::BadRequest),
                 }
-                //return 0;
             }
         }
     }
@@ -152,7 +148,7 @@ fn parse_result(res: [u8; BUFFER_LEN], blockhash: &str, txid: &str, from: &str, 
         return VerifyStatus::Error;
     }
 
-    runtime_io::print_num(index as u64);
+    //runtime_io::print_num(index as u64);
     //Self::parse_json(&o);
     let v = rjson::get_value_by_keys(&o, "header.level").unwrap_or(&JsonValue::None);
     if rjson::is_none(&v) || !rjson::is_number(v){
@@ -165,7 +161,7 @@ fn parse_result(res: [u8; BUFFER_LEN], blockhash: &str, txid: &str, from: &str, 
     }
 
     debug("found level node");
-    runtime_io::print_num(n as u64);
+    //runtime_io::print_num(n as u64);
     *level = n as i64;
 
     if blockhash == "head" {
@@ -179,7 +175,7 @@ fn parse_result(res: [u8; BUFFER_LEN], blockhash: &str, txid: &str, from: &str, 
 
     debug("found operations");
     let op_array = rjson::get_array(&ops);
-    runtime_io::print_num(op_array.len() as u64);
+    //runtime_io::print_num(op_array.len() as u64);
     let mut found = false;
     for op_arr in op_array {
         if rjson::is_array(op_arr) {
@@ -249,4 +245,13 @@ fn parse_result(res: [u8; BUFFER_LEN], blockhash: &str, txid: &str, from: &str, 
     }
 
     return VerifyStatus::NotFoundTx;
+}
+
+//local storage
+pub fn set_value(key: &[u8], value: &[u8]) {
+    runtime_io::local_storage_set(StorageKind::PERSISTENT, key, value);
+}
+
+pub fn get_value(key: &[u8]) -> Option<Vec<u8>> {
+    runtime_io::local_storage_get(StorageKind::PERSISTENT, key)
 }

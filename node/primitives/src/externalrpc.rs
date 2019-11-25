@@ -19,6 +19,19 @@ pub struct VerifiedData {
 
 #[cfg_attr(feature = "std", derive(Debug))]
 #[derive(Encode, Decode, Clone, PartialEq)]
+pub struct OcVerifiedData<AccountId> {
+	// transaction hash
+	pub tx_hash: TxHashType,
+	// time
+	pub timestamp: u64,
+	// status
+	pub status: i8,
+	pub babe_id: AccountId,
+	pub babe_num: u8,
+}
+
+#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(Encode, Decode, Clone, PartialEq)]
 pub struct HostData {
 	pub host: Vec<u8>,
 	pub weight: u8,
