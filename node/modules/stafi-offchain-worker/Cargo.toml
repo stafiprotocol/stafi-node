@@ -28,6 +28,7 @@ substrate-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchai
 babe-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain", package = "substrate-consensus-babe-primitives", default-features = false }
 
 stafi-primitives = { path = "../../primitives", default-features = false }
+stafi-staking = { path = "../stafi-staking", default-features = false }
 
 [features]
 default = ["std"]

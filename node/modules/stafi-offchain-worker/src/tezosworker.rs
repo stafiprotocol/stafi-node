@@ -18,6 +18,7 @@ use sr_primitives::traits::{Convert, SaturatedConversion};
 use app_crypto::{KeyTypeId, RuntimeAppPublic};
 use system::offchain::SubmitSignedTransaction;
 //use babe::AuthorityId;
+use stafi_staking::xtzstaking;
 
 pub mod tezos;
 
@@ -29,7 +30,7 @@ fn debug(msg: &str) {
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"stez");
 pub const TEZOS_BLOCK_CONFIRMED: u8 = 3;
 pub const TEZOS_BLOCK_DURATION: u64 = 60000;
-pub const TEZOS_RPC_HOST: &'static [u8] = b"https://rpc.tezrpc.me/";
+pub const TEZOS_RPC_HOST: &'static [u8] = b"https://tezos-test-rpc.wetez.io";
 
 pub mod sr25519 {
 	mod app_sr25519 {
@@ -48,7 +49,7 @@ pub mod sr25519 {
 	// pub type Public = app_sr25519::Public;
 }
 
-pub trait Trait: system::Trait + babe::Trait + timestamp::Trait + session::Trait {
+pub trait Trait: system::Trait + babe::Trait + timestamp::Trait + session::Trait + xtzstaking::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
     //type AuthorityId: Member + Parameter + RuntimeAppPublic + Default + Ord;
     type Call: From<Call<Self>>;
@@ -62,8 +63,8 @@ decl_storage! {
 		VerifiedBak get(verified_bak): Vec<(TxHashType, i8, u64)>;
 		pub NodeResponse get(node_response): linked_map TxHashType => Vec<OcVerifiedData<T::AccountId>>;
 		RpcHost get(rpc_host): Vec<HostData>;
-		BlocksConfirmed get(blocks_confirmed): u8;
-		BlockDuration get(block_duration): u64;
+		BlocksConfirmed get(blocks_confirmed): Option<u8>;
+		BlockDuration get(block_duration): Option<u64>;
 
 		//for test
 		StakeData get(stake_data): Vec<XtzStakeData<T::AccountId, T::Hash, Balance>>;
@@ -179,6 +180,14 @@ impl<T: Trait> Module<T> {
         return <timestamp::Module<T>>::now().saturated_into::<u64>();
     }
 
+    fn vec8_to_u64(v: Vec<u8>) -> u64 {
+        let mut a: [u8; 8] = [0; 8];
+        for i in 0..8 {
+            a[i] = v[i];
+        }
+        u64::from_be_bytes(a)
+    }
+
     fn submit_call(call: Call<T>, account: T::AccountId) {
         let ret = T::SubmitTransaction::sign_and_submit(call, account);
         match ret {
@@ -197,15 +206,8 @@ impl<T: Trait> Module<T> {
             host = Self::rpc_host()[(bn % (Self::rpc_host().len() as u64)) as usize].host.clone();
         }
 
-        let mut blocks_confirmed = Self::blocks_confirmed();
-        if blocks_confirmed == 0 {
-            blocks_confirmed = TEZOS_BLOCK_CONFIRMED;
-        }
-
-        let mut block_duration = Self::block_duration();
-        if block_duration == 0 {
-            block_duration = TEZOS_BLOCK_DURATION;
-        }
+        let blocks_confirmed = Self::blocks_confirmed().unwrap_or(TEZOS_BLOCK_CONFIRMED);
+        let block_duration = Self::block_duration().unwrap_or(TEZOS_BLOCK_DURATION);
 
         let key = Self::authority_id();
         if key.is_none() {
@@ -213,9 +215,8 @@ impl<T: Trait> Module<T> {
             return
         }
 
-        let babe_num = Self::get_babe_num();
-
-        for xsd in Self::stake_data() {
+        for xsd in <xtzstaking::Module<T>>::transfer_init_data_records() {
+        //for xsd in Self::stake_data() {
         //for i in 0..1 {
             //let blockhash: Vec<u8> = "BKsxzJMXPxxJWRZcsgWG8AAegXNp2uUuUmMr8gzQcoEiGnNeCA6".as_bytes().to_vec();
             //let txhash: Vec<u8> = "onv7i9LSacMXjhTdpgzmY4q6PxiZ18TZPq7KrRBRUVX7XJicSDi".as_bytes().to_vec();
@@ -265,13 +266,8 @@ impl<T: Trait> Module<T> {
             }
 
             let v = tezos::get_value(&txhash.clone()).unwrap_or((0 as u64).to_be_bytes().to_vec());
-            let mut a: [u8; 8] = [0; 8];
-            for i in 0..8 {
-                a[i] = v[i];
-            }
-
-            let ts = u64::from_be_bytes(a);
-            runtime_io::print_num(ts);
+            let ts = Self::vec8_to_u64(v);
+            //runtime_io::print_num(ts);
             if ts > 0 {
                 debug("already send request");
                 if Self::get_now() - ts > 2 * 60 * 1000 { //2 minutes
@@ -311,7 +307,7 @@ impl<T: Trait> Module<T> {
                 timestamp: Self::get_now(),
                 status: new_status as i8,
                 babe_id: key.clone().unwrap(),
-                babe_num: babe_num as u8,
+                babe_num: Self::get_babe_num() as u8,
             };
 
             debug("set_node_response ...");
