@@ -13,16 +13,16 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
+extern crate hex;
 extern crate num_bigint;
 extern crate num_traits;
-extern crate bitcoin;
-extern crate hex;
+extern crate stafi_crypto;
 
-use bitcoin::util::base58;
 use super::base128;
+use core::str;
 use num_bigint::*;
 use num_traits::*;
-use core::str;
+use stafi_crypto::tez::base58;
 
 // fn parseInt(hex: &str, radix: u32) -> Result<i32, ParseIntError> {
 //     i32::from_str_radix(hex, radix)
@@ -232,7 +232,10 @@ pub fn write_address(address: &str) -> Result<String, String> {
     } else if address.starts_with("KT1") {
         return Ok("01".to_owned() + &hex_str + "00");
     } else {
-        let err = format!("Unrecognized address prefix: {:?}", address[0..3].to_string());
+        let err = format!(
+            "Unrecognized address prefix: {:?}",
+            address[0..3].to_string()
+        );
         return Err(err);
     }
 }
@@ -242,8 +245,8 @@ pub fn write_address(address: &str) -> Result<String, String> {
  * @param {String} hex Encoded message part.
  */
 // pub fn readBranch(hex: String) -> Result<String, String> {
-//     if (hex.length !== 64) { 
-//         return Err("Incorrect hex length to parse a branch hash".to_owned()); 
+//     if (hex.length !== 64) {
+//         return Err("Incorrect hex length to parse a branch hash".to_owned());
 //     }
 //     return base58check.encode(Buffer.from('0134' + hex, 'hex'));
 // }
@@ -254,7 +257,7 @@ pub fn write_address(address: &str) -> Result<String, String> {
  * @param {String} branch Branch hash.
  * @returns {String} Hex representation of the Base58-check branch hash.
  */
-pub fn write_branch(branch: String) ->  String {
+pub fn write_branch(branch: String) -> String {
     let hex_vec = base58::from_check(&branch).unwrap();
     return hex::encode(&hex_vec[2..]).to_string();
 }
