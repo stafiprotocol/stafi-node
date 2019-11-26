@@ -1,8 +1,6 @@
 //#![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate sr_std as rstd;
-extern crate paint_support as support;
-extern crate paint_system as system;
 
 use support::{decl_module, decl_storage};
 use rstd::prelude::*;

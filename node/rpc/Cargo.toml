@@ -15,7 +15,7 @@ serde = { version = "1.0.102", features = [ "derive" ] }
 node-primitives = { path = "../primitives" }
 node-runtime = { path = "../runtime" }
 sr-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
-paint-contracts-rpc = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
-paint-transaction-payment-rpc = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
-paint-system-rpc = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
+pallet-contracts-rpc = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
+pallet-transaction-payment-rpc = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
+frame-system-rpc = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
 transaction_pool = { package = "substrate-transaction-pool", git = "https://github.com/stafiprotocol/stafi-blockchain" }
