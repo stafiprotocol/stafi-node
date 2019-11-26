@@ -21,7 +21,7 @@ use std::sync::Arc;
 use client::blockchain::HeaderBackend;
 use jsonrpc_core::{Result, Error, ErrorCode};
 use jsonrpc_derive::rpc;
-use stafi_primitives::{
+use node_primitives::{
 	Block, BlockId, MultisigAddrApi, ChainType
 };
 use codec::{Encode, Decode};
@@ -29,6 +29,9 @@ use sr_primitives::traits;
 use hex;
 
 use serde::{Serialize, Deserialize};
+
+const RUNTIME_ERROR: i64 = 1;
+
 #[derive(Debug, Serialize, Deserialize)]
 #[derive(Encode, Decode, Clone, Eq, PartialEq)]
 pub struct RpcMultisigAddr {
@@ -67,7 +70,7 @@ where
 		let at = BlockId::hash(best);
 
 		let addrs = api.multisig_addr(&at).map_err(|e| Error {
-			code: ErrorCode::ServerError(crate::constants::RUNTIME_ERROR),
+			code: ErrorCode::ServerError(RUNTIME_ERROR),
 			message: "Unable to query multisig address.".into(),
 			data: Some(format!("{:?}", e).into()),
 		})?;

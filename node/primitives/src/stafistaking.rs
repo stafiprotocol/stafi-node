@@ -3,6 +3,7 @@ use rstd::prelude::*;
 #[cfg(feature = "std")]
 use serde::{Serialize, Deserialize};
 use crate::chain::StakeTokenType;
+use sr_primitives::RuntimeDebug;
 
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq)]
@@ -13,8 +14,8 @@ pub enum XtzStakeStage {
 	Completed,
 }
 
-#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
-#[derive(Encode, Decode, Clone, PartialEq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
 pub struct XtzStakeData<AccountId, Hash, Balance> {
 	// stake identifier id
 	pub id: Hash,

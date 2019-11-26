@@ -17,30 +17,27 @@
 //! A `CodeExecutor` specialization which uses natively compiled runtime when the wasm to be
 //! executed is equivalent to the natively compiled code.
 
-#![cfg_attr(feature = "benchmarks", feature(test))]
-
-#[cfg(feature = "benchmarks")] extern crate test;
-
 pub use substrate_executor::NativeExecutor;
-pub use substrate_executor::RuntimesCache;
 use substrate_executor::native_executor_instance;
 
 // Declare an instance of the native executor named `Executor`. Include the wasm binary as the
 // equivalent wasm code.
 native_executor_instance!(
 	pub Executor,
-	stafi_runtime::api::dispatch,
-	stafi_runtime::native_version
+	node_runtime::api::dispatch,
+	node_runtime::native_version
 );
 
 #[cfg(test)]
 mod tests {
+	use substrate_executor::error::Result;
 	use super::Executor;
 	use {balances, contracts, indices, system, timestamp};
-	use runtime_io;
 	use codec::{Encode, Decode, Joiner};
 	use runtime_support::{
-		Hashable, StorageValue, StorageMap, traits::Currency,
+		Hashable, StorageValue, StorageMap,
+		traits::Currency,
+		weights::{GetDispatchInfo, DispatchInfo, DispatchClass},
 	};
 	use state_machine::TestExternalities as CoreTestExternalities;
 	use primitives::{
@@ -48,18 +45,19 @@ mod tests {
 		traits::{CodeExecutor, Externalities}, storage::well_known_keys,
 	};
 	use sr_primitives::{
-		assert_eq_error_rate,
-		traits::{Header as HeaderT, Hash as HashT, Convert}, ApplyResult,
-		transaction_validity::InvalidTransaction, weights::{WeightMultiplier, GetDispatchInfo},
+		Fixed64, traits::{Header as HeaderT, Hash as HashT, Convert}, ApplyExtrinsicResult,
+		transaction_validity::InvalidTransaction,
 	};
 	use contracts::ContractAddressFor;
+	use substrate_executor::{NativeExecutor, WasmExecutionMethod};
 	use system::{EventRecord, Phase};
-	use stafi_runtime::{
+	use node_runtime::{
 		Header, Block, UncheckedExtrinsic, CheckedExtrinsic, Call, Runtime, Balances, BuildStorage,
-		System, Event, TransferFee, TransactionBaseFee, TransactionByteFee,
-		impls::WeightToFee,
+		System, TransactionPayment, Event, TransferFee, TransactionBaseFee, TransactionByteFee,
+		WeightFeeCoefficient, constants::currency::*,
 	};
-	use stafi_primitives::{Balance, Hash, BlockNumber, constants::currency::*};
+	use node_runtime::impls::LinearWeightToFee;
+	use node_primitives::{Balance, Hash, BlockNumber};
 	use node_testing::keyring::*;
 	use wabt;
 
@@ -69,18 +67,18 @@ mod tests {
 	/// making the binary slimmer. There is a convention to use compact version of the runtime
 	/// as canonical. This is why `native_executor_instance` also uses the compact version of the
 	/// runtime.
-	const COMPACT_CODE: &[u8] = stafi_runtime::WASM_BINARY;
+	const COMPACT_CODE: &[u8] = node_runtime::WASM_BINARY;
 
 	/// The wasm runtime binary which hasn't undergone the compacting process.
 	///
 	/// The idea here is to pass it as the current runtime code to the executor so the executor will
 	/// have to execute provided wasm code instead of the native equivalent. This trick is used to
 	/// test code paths that differ between native and wasm versions.
-	const BLOATY_CODE: &[u8] = stafi_runtime::WASM_BINARY_BLOATY;
+	const BLOATY_CODE: &[u8] = node_runtime::WASM_BINARY_BLOATY;
 
 	const GENESIS_HASH: [u8; 32] = [69u8; 32];
 
-	const VERSION: u32 = stafi_runtime::VERSION.spec_version;
+	const VERSION: u32 = node_runtime::VERSION.spec_version;
 
 	type TestExternalities<H> = CoreTestExternalities<H, u64>;
 
@@ -89,17 +87,15 @@ mod tests {
 	}
 
 	/// Default transfer fee
-	fn transfer_fee<E: Encode>(extrinsic: &E) -> Balance {
+	fn transfer_fee<E: Encode>(extrinsic: &E, fee_multiplier: Fixed64) -> Balance {
 		let length_fee = TransactionBaseFee::get() +
 			TransactionByteFee::get() *
 			(extrinsic.encode().len() as Balance);
 
 		let weight = default_transfer_call().get_dispatch_info().weight;
-		// NOTE: this is really hard to apply, since the multiplier of each block needs to be fetched
-		// before the block, while we compute this after the block.
-		// weight = <system::Module<Runtime>>::next_weight_multiplier().apply_to(weight);
-		let weight_fee = <Runtime as balances::Trait>::WeightToFee::convert(weight);
-		length_fee + weight_fee + TransferFee::get()
+		let weight_fee = <Runtime as transaction_payment::Trait>::WeightToFee::convert(weight);
+
+		fee_multiplier.saturated_multiply_accumulate(length_fee + weight_fee) + TransferFee::get()
 	}
 
 	fn default_transfer_call() -> balances::Call<Runtime> {
@@ -117,12 +113,32 @@ mod tests {
 		Header::new(n, Default::default(), Default::default(), [69; 32].into(), Default::default())
 	}
 
-	fn executor() -> ::substrate_executor::NativeExecutor<Executor> {
-		substrate_executor::NativeExecutor::new(None)
+	fn executor() -> NativeExecutor<Executor> {
+		NativeExecutor::new(WasmExecutionMethod::Interpreted, None)
 	}
 
-	fn set_heap_pages<E: Externalities<Blake2Hasher>>(ext: &mut E, heap_pages: u64) {
+	fn set_heap_pages<E: Externalities>(ext: &mut E, heap_pages: u64) {
 		ext.place_storage(well_known_keys::HEAP_PAGES.to_vec(), Some(heap_pages.encode()));
+	}
+
+	fn executor_call<
+		R:Decode + Encode + PartialEq,
+		NC: FnOnce() -> std::result::Result<R, String> + std::panic::UnwindSafe
+	>(
+		t: &mut TestExternalities<Blake2Hasher>,
+		method: &str,
+		data: &[u8],
+		use_native: bool,
+		native_call: Option<NC>,
+	) -> (Result<NativeOrEncoded<R>>, bool) {
+		let mut t = t.ext();
+		executor().call::<_, R, NC>(
+			&mut t,
+			method,
+			data,
+			use_native,
+			native_call,
+		)
 	}
 
 	#[test]
@@ -142,7 +158,7 @@ mod tests {
 			}
 		], map![]));
 
-		let r = executor().call::<_, NeverNativeValue, fn() -> _>(
+		let r = executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"Core_initialize_block",
 			&vec![].and(&from_block_number(1u32)),
@@ -150,14 +166,14 @@ mod tests {
 			None,
 		).0;
 		assert!(r.is_ok());
-		let v = executor().call::<_, NeverNativeValue, fn() -> _>(
+		let v = executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"BlockBuilder_apply_extrinsic",
 			&vec![].and(&xt()),
 			true,
 			None,
 		).0.unwrap();
-		let r = ApplyResult::decode(&mut &v.as_encoded()[..]).unwrap();
+		let r = ApplyExtrinsicResult::decode(&mut &v.as_encoded()[..]).unwrap();
 		assert_eq!(r, Err(InvalidTransaction::Payment.into()));
 	}
 
@@ -178,7 +194,7 @@ mod tests {
 			}
 		], map![]));
 
-		let r = executor().call::<_, NeverNativeValue, fn() -> _>(
+		let r = executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"Core_initialize_block",
 			&vec![].and(&from_block_number(1u32)),
@@ -186,14 +202,14 @@ mod tests {
 			None,
 		).0;
 		assert!(r.is_ok());
-		let v = executor().call::<_, NeverNativeValue, fn() -> _>(
+		let v = executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"BlockBuilder_apply_extrinsic",
 			&vec![].and(&xt()),
 			true,
 			None,
 		).0.unwrap();
-		let r = ApplyResult::decode(&mut &v.as_encoded()[..]).unwrap();
+		let r = ApplyExtrinsicResult::decode(&mut &v.as_encoded()[..]).unwrap();
 		assert_eq!(r, Err(InvalidTransaction::Payment.into()));
 	}
 
@@ -210,7 +226,7 @@ mod tests {
 			<system::BlockHash<Runtime>>::hashed_key_for(0) => vec![0u8; 32]
 		], map![]));
 
-		let r = executor().call::<_, NeverNativeValue, fn() -> _>(
+		let r = executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"Core_initialize_block",
 			&vec![].and(&from_block_number(1u32)),
@@ -218,7 +234,10 @@ mod tests {
 			None,
 		).0;
 		assert!(r.is_ok());
-		let r = executor().call::<_, NeverNativeValue, fn() -> _>(
+
+		let fm = t.execute_with(TransactionPayment::next_fee_multiplier);
+
+		let r = executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"BlockBuilder_apply_extrinsic",
 			&vec![].and(&xt()),
@@ -227,8 +246,8 @@ mod tests {
 		).0;
 		assert!(r.is_ok());
 
-		runtime_io::with_externalities(&mut t, || {
-			assert_eq!(Balances::total_balance(&alice()), 42 * DOLLARS - transfer_fee(&xt()));
+		t.execute_with(|| {
+			assert_eq!(Balances::total_balance(&alice()), 42 * DOLLARS - transfer_fee(&xt(), fm));
 			assert_eq!(Balances::total_balance(&bob()), 69 * DOLLARS);
 		});
 	}
@@ -246,7 +265,7 @@ mod tests {
 			<system::BlockHash<Runtime>>::hashed_key_for(0) => vec![0u8; 32]
 		], map![]));
 
-		let r = executor().call::<_, NeverNativeValue, fn() -> _>(
+		let r = executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"Core_initialize_block",
 			&vec![].and(&from_block_number(1u32)),
@@ -254,7 +273,10 @@ mod tests {
 			None,
 		).0;
 		assert!(r.is_ok());
-		let r = executor().call::<_, NeverNativeValue, fn() -> _>(
+
+		let fm = t.execute_with(TransactionPayment::next_fee_multiplier);
+
+		let r = executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"BlockBuilder_apply_extrinsic",
 			&vec![].and(&xt()),
@@ -263,8 +285,8 @@ mod tests {
 		).0;
 		assert!(r.is_ok());
 
-		runtime_io::with_externalities(&mut t, || {
-			assert_eq!(Balances::total_balance(&alice()), 42 * DOLLARS - transfer_fee(&xt()));
+		t.execute_with(|| {
+			assert_eq!(Balances::total_balance(&alice()), 42 * DOLLARS - transfer_fee(&xt(), fm));
 			assert_eq!(Balances::total_balance(&bob()), 69 * DOLLARS);
 		});
 	}
@@ -304,7 +326,7 @@ mod tests {
 		};
 
 		// execute the block to get the real header.
-		executor().call::<_, NeverNativeValue, fn() -> _>(
+		executor_call::<NeverNativeValue, fn() -> _>(
 			env,
 			"Core_initialize_block",
 			&header.encode(),
@@ -313,7 +335,7 @@ mod tests {
 		).0.unwrap();
 
 		for i in extrinsics.iter() {
-			executor().call::<_, NeverNativeValue, fn() -> _>(
+			executor_call::<NeverNativeValue, fn() -> _>(
 				env,
 				"BlockBuilder_apply_extrinsic",
 				&i.encode(),
@@ -322,7 +344,7 @@ mod tests {
 			).0.unwrap();
 		}
 
-		let header = match executor().call::<_, NeverNativeValue, fn() -> _>(
+		let header = match executor_call::<NeverNativeValue, fn() -> _>(
 			env,
 			"BlockBuilder_finalize_block",
 			&[0u8;0],
@@ -426,7 +448,10 @@ mod tests {
 
 		let (block1, block2) = blocks();
 
-		executor().call::<_, NeverNativeValue, fn() -> _>(
+		let mut alice_last_known_balance: Balance = Default::default();
+		let mut fm = t.execute_with(TransactionPayment::next_fee_multiplier);
+
+		executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"Core_execute_block",
 			&block1.0,
@@ -434,13 +459,21 @@ mod tests {
 			None,
 		).0.unwrap();
 
-		runtime_io::with_externalities(&mut t, || {
-			assert_eq!(Balances::total_balance(&alice()), 42 * DOLLARS - transfer_fee(&xt()));
+		t.execute_with(|| {
+			assert_eq!(Balances::total_balance(&alice()), 42 * DOLLARS - transfer_fee(&xt(), fm));
 			assert_eq!(Balances::total_balance(&bob()), 169 * DOLLARS);
+			alice_last_known_balance = Balances::total_balance(&alice());
 			let events = vec![
 				EventRecord {
 					phase: Phase::ApplyExtrinsic(0),
-					event: Event::system(system::Event::ExtrinsicSuccess),
+					event: Event::system(system::Event::ExtrinsicSuccess(
+						DispatchInfo { weight: 10000, class: DispatchClass::Operational, pays_fee: true }
+					)),
+					topics: vec![],
+				},
+				EventRecord {
+					phase: Phase::ApplyExtrinsic(1),
+					event: Event::treasury(treasury::RawEvent::Deposit(1984800000000)),
 					topics: vec![],
 				},
 				EventRecord {
@@ -449,19 +482,24 @@ mod tests {
 						alice().into(),
 						bob().into(),
 						69 * DOLLARS,
-						1 * CENTS
+						1 * CENTS,
 					)),
 					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::ApplyExtrinsic(1),
-					event: Event::system(system::Event::ExtrinsicSuccess),
+					event: Event::system(system::Event::ExtrinsicSuccess(
+						DispatchInfo { weight: 1000000, class: DispatchClass::Normal, pays_fee: true }
+					)),
 					topics: vec![],
 				},
 			];
 			assert_eq!(System::events(), events);
 		});
-		executor().call::<_, NeverNativeValue, fn() -> _>(
+
+		fm = t.execute_with(TransactionPayment::next_fee_multiplier);
+
+		executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"Core_execute_block",
 			&block2.0,
@@ -469,23 +507,26 @@ mod tests {
 			None,
 		).0.unwrap();
 
-		runtime_io::with_externalities(&mut t, || {
-			// NOTE: fees differ slightly in tests that execute more than one block due to the
-			// weight update. Hence, using `assert_eq_error_rate`.
-			assert_eq_error_rate!(
+		t.execute_with(|| {
+			assert_eq!(
 				Balances::total_balance(&alice()),
-				32 * DOLLARS - 2 * transfer_fee(&xt()),
-				10_000
+				alice_last_known_balance - 10 * DOLLARS - transfer_fee(&xt(), fm),
 			);
-			assert_eq_error_rate!(
+			assert_eq!(
 				Balances::total_balance(&bob()),
-				179 * DOLLARS - transfer_fee(&xt()),
-				10_000
+				179 * DOLLARS - transfer_fee(&xt(), fm),
 			);
 			let events = vec![
 				EventRecord {
 					phase: Phase::ApplyExtrinsic(0),
-					event: Event::system(system::Event::ExtrinsicSuccess),
+					event: Event::system(system::Event::ExtrinsicSuccess(
+						DispatchInfo { weight: 10000, class: DispatchClass::Operational, pays_fee: true }
+					)),
+					topics: vec![],
+				},
+				EventRecord {
+					phase: Phase::ApplyExtrinsic(1),
+					event: Event::treasury(treasury::RawEvent::Deposit(1984780231392)),
 					topics: vec![],
 				},
 				EventRecord {
@@ -502,7 +543,14 @@ mod tests {
 				},
 				EventRecord {
 					phase: Phase::ApplyExtrinsic(1),
-					event: Event::system(system::Event::ExtrinsicSuccess),
+					event: Event::system(system::Event::ExtrinsicSuccess(
+						DispatchInfo { weight: 1000000, class: DispatchClass::Normal, pays_fee: true }
+					)),
+					topics: vec![],
+				},
+				EventRecord {
+					phase: Phase::ApplyExtrinsic(2),
+					event: Event::treasury(treasury::RawEvent::Deposit(1984780231392)),
 					topics: vec![],
 				},
 				EventRecord {
@@ -519,7 +567,9 @@ mod tests {
 				},
 				EventRecord {
 					phase: Phase::ApplyExtrinsic(2),
-					event: Event::system(system::Event::ExtrinsicSuccess),
+					event: Event::system(system::Event::ExtrinsicSuccess(
+						DispatchInfo { weight: 1000000, class: DispatchClass::Normal, pays_fee: true }
+					)),
 					topics: vec![],
 				},
 			];
@@ -533,7 +583,10 @@ mod tests {
 
 		let (block1, block2) = blocks();
 
-		executor().call::<_, NeverNativeValue, fn() -> _>(
+		let mut alice_last_known_balance: Balance = Default::default();
+		let mut fm = t.execute_with(TransactionPayment::next_fee_multiplier);
+
+		executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"Core_execute_block",
 			&block1.0,
@@ -541,12 +594,15 @@ mod tests {
 			None,
 		).0.unwrap();
 
-		runtime_io::with_externalities(&mut t, || {
-			assert_eq!(Balances::total_balance(&alice()), 42 * DOLLARS - transfer_fee(&xt()));
+		t.execute_with(|| {
+			assert_eq!(Balances::total_balance(&alice()), 42 * DOLLARS - transfer_fee(&xt(), fm));
 			assert_eq!(Balances::total_balance(&bob()), 169 * DOLLARS);
+			alice_last_known_balance = Balances::total_balance(&alice());
 		});
 
-		executor().call::<_, NeverNativeValue, fn() -> _>(
+		fm = t.execute_with(TransactionPayment::next_fee_multiplier);
+
+		executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"Core_execute_block",
 			&block2.0,
@@ -554,16 +610,14 @@ mod tests {
 			None,
 		).0.unwrap();
 
-		runtime_io::with_externalities(&mut t, || {
-			assert_eq_error_rate!(
+		t.execute_with(|| {
+			assert_eq!(
 				Balances::total_balance(&alice()),
-				32 * DOLLARS - 2 * transfer_fee(&xt()),
-				10_000
+				alice_last_known_balance - 10 * DOLLARS - transfer_fee(&xt(), fm),
 			);
-			assert_eq_error_rate!(
+			assert_eq!(
 				Balances::total_balance(&bob()),
-				179 * DOLLARS - 1 * transfer_fee(&xt()),
-				10_000
+				179 * DOLLARS - 1 * transfer_fee(&xt(), fm),
 			);
 		});
 	}
@@ -708,7 +762,7 @@ mod tests {
 
 		let mut t = new_test_ext(COMPACT_CODE, false);
 
-		executor().call::<_, NeverNativeValue, fn() -> _>(
+		executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"Core_execute_block",
 			&b.0,
@@ -716,7 +770,7 @@ mod tests {
 			None,
 		).0.unwrap();
 
-		runtime_io::with_externalities(&mut t, || {
+		t.execute_with(|| {
 			// Verify that the contract constructor worked well and code of TRANSFER contract is actually deployed.
 			assert_eq!(
 				&contracts::ContractInfoOf::<Runtime>::get(addr)
@@ -732,9 +786,9 @@ mod tests {
 	fn wasm_big_block_import_fails() {
 		let mut t = new_test_ext(COMPACT_CODE, false);
 
-		set_heap_pages(&mut t, 4);
+		set_heap_pages(&mut t.ext(), 4);
 
-		let result = executor().call::<_, NeverNativeValue, fn() -> _>(
+		let result = executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"Core_execute_block",
 			&block_with_size(42, 0, 120_000).0,
@@ -748,7 +802,7 @@ mod tests {
 	fn native_big_block_import_succeeds() {
 		let mut t = new_test_ext(COMPACT_CODE, false);
 
-		executor().call::<_, NeverNativeValue, fn() -> _>(
+		executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"Core_execute_block",
 			&block_with_size(42, 0, 120_000).0,
@@ -762,7 +816,7 @@ mod tests {
 		let mut t = new_test_ext(COMPACT_CODE, false);
 
 		assert!(
-			executor().call::<_, NeverNativeValue, fn() -> _>(
+			executor_call::<NeverNativeValue, fn() -> _>(
 				&mut t,
 				"Core_execute_block",
 				&block_with_size(42, 0, 120_000).0,
@@ -785,7 +839,7 @@ mod tests {
 			<system::BlockHash<Runtime>>::hashed_key_for(0) => vec![0u8; 32]
 		], map![]));
 
-		let r = executor().call::<_, NeverNativeValue, fn() -> _>(
+		let r = executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"Core_initialize_block",
 			&vec![].and(&from_block_number(1u32)),
@@ -793,14 +847,14 @@ mod tests {
 			None,
 		).0;
 		assert!(r.is_ok());
-		let r = executor().call::<_, NeverNativeValue, fn() -> _>(
+		let r = executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"BlockBuilder_apply_extrinsic",
 			&vec![].and(&xt()),
 			false,
 			None,
 		).0.unwrap().into_encoded();
-		let r = ApplyResult::decode(&mut &r[..]).unwrap();
+		let r = ApplyExtrinsicResult::decode(&mut &r[..]).unwrap();
 		assert_eq!(r, Err(InvalidTransaction::Payment.into()));
 	}
 
@@ -817,7 +871,7 @@ mod tests {
 			<system::BlockHash<Runtime>>::hashed_key_for(0) => vec![0u8; 32]
 		], map![]));
 
-		let r = executor().call::<_, NeverNativeValue, fn() -> _>(
+		let r = executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"Core_initialize_block",
 			&vec![].and(&from_block_number(1u32)),
@@ -825,20 +879,21 @@ mod tests {
 			None,
 		).0;
 		assert!(r.is_ok());
-		let r = executor().call::<_, NeverNativeValue, fn() -> _>(
+		let fm = t.execute_with(TransactionPayment::next_fee_multiplier);
+		let r = executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"BlockBuilder_apply_extrinsic",
 			&vec![].and(&xt()),
 			false,
 			None,
 		).0.unwrap().into_encoded();
-		ApplyResult::decode(&mut &r[..])
+		ApplyExtrinsicResult::decode(&mut &r[..])
 			.unwrap()
 			.expect("Extrinsic could be applied")
 			.expect("Extrinsic did not fail");
 
-		runtime_io::with_externalities(&mut t, || {
-			assert_eq!(Balances::total_balance(&alice()), 42 * DOLLARS - 1 * transfer_fee(&xt()));
+		t.execute_with(|| {
+			assert_eq!(Balances::total_balance(&alice()), 42 * DOLLARS - 1 * transfer_fee(&xt(), fm));
 			assert_eq!(Balances::total_balance(&bob()), 69 * DOLLARS);
 		});
 	}
@@ -850,7 +905,7 @@ mod tests {
 		let block = Block::decode(&mut &block_data[..]).unwrap();
 
 		let mut t = new_test_ext(COMPACT_CODE, true);
-		executor().call::<_, NeverNativeValue, fn() -> _>(
+		executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"Core_execute_block",
 			&block.encode(),
@@ -858,7 +913,7 @@ mod tests {
 			None,
 		).0.unwrap();
 
-		assert!(t.storage_changes_root(GENESIS_HASH.into()).unwrap().is_some());
+		assert!(t.ext().storage_changes_root(GENESIS_HASH.into()).unwrap().is_some());
 	}
 
 	#[test]
@@ -866,7 +921,7 @@ mod tests {
 		let block1 = changes_trie_block();
 
 		let mut t = new_test_ext(COMPACT_CODE, true);
-		executor().call::<_, NeverNativeValue, fn() -> _>(
+		executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"Core_execute_block",
 			&block1.0,
@@ -874,7 +929,7 @@ mod tests {
 			None,
 		).0.unwrap();
 
-		assert!(t.storage_changes_root(GENESIS_HASH.into()).unwrap().is_some());
+		assert!(t.ext().storage_changes_root(GENESIS_HASH.into()).unwrap().is_some());
 	}
 
 	#[test]
@@ -884,20 +939,21 @@ mod tests {
 		let client = TestClientBuilder::new().build();
 		let block1 = changes_trie_block();
 		let block_data = block1.0;
-		let block = stafi_primitives::Block::decode(&mut &block_data[..]).unwrap();
+		let block = node_primitives::Block::decode(&mut &block_data[..]).unwrap();
 
 		client.import(BlockOrigin::Own, block).unwrap();
 	}
 
 
 	#[test]
-	fn weight_multiplier_increases_and_decreases_on_big_weight() {
+	fn fee_multiplier_increases_and_decreases_on_big_weight() {
 		let mut t = new_test_ext(COMPACT_CODE, false);
 
-		let mut prev_multiplier = WeightMultiplier::default();
+		// initial fee multiplier must be zero
+		let mut prev_multiplier = Fixed64::from_parts(0);
 
-		runtime_io::with_externalities(&mut t, || {
-			assert_eq!(System::next_weight_multiplier(), prev_multiplier);
+		t.execute_with(|| {
+			assert_eq!(TransactionPayment::next_fee_multiplier(), prev_multiplier);
 		});
 
 		let mut tt = new_test_ext(COMPACT_CODE, false);
@@ -939,7 +995,7 @@ mod tests {
 		println!("++ Block 1 size: {} / Block 2 size {}", block1.0.encode().len(), block2.0.encode().len());
 
 		// execute a big block.
-		executor().call::<_, NeverNativeValue, fn() -> _>(
+		executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"Core_execute_block",
 			&block1.0,
@@ -948,15 +1004,15 @@ mod tests {
 		).0.unwrap();
 
 		// weight multiplier is increased for next block.
-		runtime_io::with_externalities(&mut t, || {
-			let fm = System::next_weight_multiplier();
+		t.execute_with(|| {
+			let fm = TransactionPayment::next_fee_multiplier();
 			println!("After a big block: {:?} -> {:?}", prev_multiplier, fm);
 			assert!(fm > prev_multiplier);
 			prev_multiplier = fm;
 		});
 
 		// execute a big block.
-		executor().call::<_, NeverNativeValue, fn() -> _>(
+		executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"Core_execute_block",
 			&block2.0,
@@ -965,8 +1021,8 @@ mod tests {
 		).0.unwrap();
 
 		// weight multiplier is increased for next block.
-		runtime_io::with_externalities(&mut t, || {
-			let fm = System::next_weight_multiplier();
+		t.execute_with(|| {
+			let fm = TransactionPayment::next_fee_multiplier();
 			println!("After a small block: {:?} -> {:?}", prev_multiplier, fm);
 			assert!(fm < prev_multiplier);
 		});
@@ -979,7 +1035,7 @@ mod tests {
 		// weight of transfer call as of now: 1_000_000
 		// if weight of the cheapest weight would be 10^7, this would be 10^9, which is:
 		//   - 1 MILLICENTS in substrate node.
-		//   - 1 milldot based on current polkadot runtime.
+		//   - 1 milli-dot based on current polkadot runtime.
 		// (this baed on assigning 0.1 CENT to the cheapest tx with `weight = 100`)
 		let mut t = TestExternalities::<Blake2Hasher>::new_with_code(COMPACT_CODE, (map![
 			<balances::FreeBalance<Runtime>>::hashed_key_for(alice()) => {
@@ -1001,7 +1057,7 @@ mod tests {
 			function: Call::Balances(default_transfer_call()),
 		});
 
-		let r = executor().call::<_, NeverNativeValue, fn() -> _>(
+		let r = executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"Core_initialize_block",
 			&vec![].and(&from_block_number(1u32)),
@@ -1010,7 +1066,7 @@ mod tests {
 		).0;
 
 		assert!(r.is_ok());
-		let r = executor().call::<_, NeverNativeValue, fn() -> _>(
+		let r = executor_call::<NeverNativeValue, fn() -> _>(
 			&mut t,
 			"BlockBuilder_apply_extrinsic",
 			&vec![].and(&xt.clone()),
@@ -1019,7 +1075,7 @@ mod tests {
 		).0;
 		assert!(r.is_ok());
 
-		runtime_io::with_externalities(&mut t, || {
+		t.execute_with(|| {
 			assert_eq!(Balances::total_balance(&bob()), (10 + 69) * DOLLARS);
 			// Components deducted from alice's balances:
 			// - Weight fee
@@ -1034,7 +1090,7 @@ mod tests {
 			balance_alice -= length_fee;
 
 			let weight = default_transfer_call().get_dispatch_info().weight;
-			let weight_fee = WeightToFee::convert(weight);
+			let weight_fee = LinearWeightToFee::<WeightFeeCoefficient>::convert(weight);
 
 			// we know that weight to fee multiplier is effect-less in block 1.
 			assert_eq!(weight_fee as Balance, MILLICENTS);
@@ -1053,6 +1109,7 @@ mod tests {
 	fn block_weight_capacity_report() {
 		// Just report how many transfer calls you could fit into a block. The number should at least
 		// be a few hundred (250 at the time of writing but can change over time). Runs until panic.
+		use node_primitives::Index;
 
 		// execution ext.
 		let mut t = new_test_ext(COMPACT_CODE, false);
@@ -1094,7 +1151,7 @@ mod tests {
 				len / 1024 / 1024,
 			);
 
-			let r = executor().call::<_, NeverNativeValue, fn() -> _>(
+			let r = executor_call::<NeverNativeValue, fn() -> _>(
 				&mut t,
 				"Core_execute_block",
 				&block.0,
@@ -1119,6 +1176,7 @@ mod tests {
 		// Just report how big a block can get. Executes until panic. Should be ignored unless if
 		// manually inspected. The number should at least be a few megabytes (5 at the time of
 		// writing but can change over time).
+		use node_primitives::Index;
 
 		// execution ext.
 		let mut t = new_test_ext(COMPACT_CODE, false);
@@ -1157,7 +1215,7 @@ mod tests {
 				len / 1024 / 1024,
 			);
 
-			let r = executor().call::<_, NeverNativeValue, fn() -> _>(
+			let r = executor_call::<NeverNativeValue, fn() -> _>(
 				&mut t,
 				"Core_execute_block",
 				&block.0,
@@ -1172,23 +1230,6 @@ mod tests {
 			nonce += 1;
 			time += 10;
 			block_number += 1;
-		}
-	}
-
-	#[cfg(feature = "benchmarks")]
-	mod benches {
-		use super::*;
-		use test::Bencher;
-
-		#[bench]
-		fn wasm_execute_block(b: &mut Bencher) {
-			let (block1, block2) = blocks();
-
-			b.iter(|| {
-				let mut t = new_test_ext(COMPACT_CODE, false);
-				WasmExecutor::new().call(&mut t, "Core_execute_block", &block1.0).unwrap();
-				WasmExecutor::new().call(&mut t, "Core_execute_block", &block2.0).unwrap();
-			});
 		}
 	}
 }

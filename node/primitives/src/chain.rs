@@ -2,10 +2,11 @@ use parity_codec::{Encode, Decode};
 use rstd::prelude::*;
 #[cfg(feature = "std")]
 use serde::{Serialize, Deserialize};
+use sr_primitives::RuntimeDebug;
 
 
-#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
-#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug)]
 pub enum ChainType {
 	TEZOS,
 	COSMOS,
@@ -13,8 +14,8 @@ pub enum ChainType {
 }
 
 
-#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
-#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug)]
 pub enum Symbol {
 	XTZ,
 	ATOM,

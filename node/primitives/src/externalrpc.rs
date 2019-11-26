@@ -1,11 +1,11 @@
 use parity_codec::{Encode, Decode};
 use rstd::prelude::*;
+use sr_primitives::RuntimeDebug;
 
 pub type TxHashType = Vec<u8>;
 pub type BabeIdType = Vec<u8>;
 
-#[cfg_attr(feature = "std", derive(Debug))]
-#[derive(Encode, Decode, Clone, PartialEq)]
+#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
 pub struct VerifiedData {
 	// transaction hash
 	pub tx_hash: TxHashType,
@@ -17,8 +17,7 @@ pub struct VerifiedData {
 	pub babe_num: u8,
 }
 
-#[cfg_attr(feature = "std", derive(Debug))]
-#[derive(Encode, Decode, Clone, PartialEq)]
+#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
 pub struct OcVerifiedData<AccountId> {
 	// transaction hash
 	pub tx_hash: TxHashType,

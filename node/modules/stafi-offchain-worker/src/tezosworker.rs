@@ -1,10 +1,6 @@
 //#![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate sr_std as rstd;
-extern crate srml_support as support;
-extern crate srml_system as system;
-extern crate srml_babe as babe;
-extern crate srml_timestamp as timestamp;
 extern crate sr_io as runtime_io;
 
 use support::{decl_module, decl_storage, decl_event, ensure};
@@ -12,7 +8,7 @@ use rstd::prelude::*;
 use rstd::vec::Vec;
 //use rstd::result::Result;
 use system::{ensure_signed, ensure_root};
-use stafi_primitives::{OcVerifiedData, VerifyStatus, TxHashType, HostData, XtzStakeData, Balance};
+use node_primitives::{OcVerifiedData, VerifyStatus, TxHashType, HostData, XtzStakeData, Balance};
 use sr_primitives::traits::{Convert, SaturatedConversion};
 
 use app_crypto::{KeyTypeId, RuntimeAppPublic};
@@ -24,7 +20,7 @@ pub mod tezos;
 
 /// only for debug
 fn debug(msg: &str) {
-	runtime_io::print_utf8(msg.as_bytes());
+	runtime_io::misc::print_utf8(msg.as_bytes());
 }
 
 pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"stez");

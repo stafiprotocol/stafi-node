@@ -48,9 +48,10 @@ extern crate substrate_primitives as primitives;
 // for substrate runtime module lib
 // Needed for type-safe access to storage DB.
 #[macro_use]
-extern crate srml_support as runtime_support;
-extern crate srml_balances as balances;
-extern crate srml_system as system;
+extern crate frame_support as runtime_support;
+extern crate pallet_balances as balances;
+extern crate frame_system as system;
+
 
 // use system::GenesisConfig as BalancesConfig;
 use codec::{Codec, Decode, Encode};
@@ -59,7 +60,7 @@ use rstd::prelude::*;
 use rstd::result::Result as StdResult;
 use runtime_primitives::traits::Hash;
 use runtime_support::dispatch::Result;
-use runtime_support::{traits::Currency};
+use runtime_support::{traits::{Currency, ExistenceRequirement}};
 use substrate_primitives::crypto::{UncheckedFrom, UncheckedInto};
 
 use system::ensure_signed;
@@ -442,7 +443,7 @@ impl<T: Trait> Module<T> {
         let multi_addr: T::AccountId = T::MultiSig::multi_sig_addr_for(account_id);
         let origin: T::AccountId = account_id.clone();
 
-        <balances::Module<T> as Currency<_>>::transfer(&origin, &multi_addr, value)?;
+        <balances::Module<T> as Currency<_>>::transfer(&origin, &multi_addr, value, ExistenceRequirement::AllowDeath)?;
 
         // 1
         let len = Self::multi_sig_list_len_for(account_id);
@@ -508,7 +509,7 @@ impl<T: Trait> Module<T> {
                 // let to: balances::Address<T> = balances::address::Address::Id(t.to);
                 // let origin = system::RawOrigin::Signed(addr.clone()).into();
                 // <balances::Module<T>>::transfer(origin, &t.to, t.value)?;
-                <balances::Module<T> as Currency<_>>::transfer(&addr, &t.to, t.value)?;
+                <balances::Module<T> as Currency<_>>::transfer(&addr, &t.to, t.value, ExistenceRequirement::AllowDeath)?;
                 Ok(())
             }
         }

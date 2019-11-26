@@ -22,10 +22,11 @@
 // rjson
 #![feature(core_intrinsics)]
 
-use rstd::prelude::*;
-use runtime_primitives::{
-	generic, traits::{Verify, BlakeTwo256}, OpaqueExtrinsic, AnySignature
+use sr_primitives::{
+	generic, traits::{Verify, BlakeTwo256, IdentifyAccount}, OpaqueExtrinsic, MultiSignature
 };
+
+use rstd::prelude::*;
 
 #[cfg(feature = "std")]
 use serde::{Serialize, Deserialize};
@@ -36,14 +37,13 @@ use parity_codec::{Encode, Decode};
 pub type BlockNumber = u32;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
-pub type Signature = AnySignature;
+pub type Signature = MultiSignature;
 
 /// Some way of identifying an account on the chain. We intentionally make it equivalent
 /// to the public key of our transaction signing scheme.
-pub type AccountId = <Signature as Verify>::Signer;
+pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 
-/// The type for looking up accounts. We don't expect more than 4 billion of them, but you
-/// never know...
+/// The type for looking up accounts. We don't expect more than 4 billion of them.
 pub type AccountIndex = u32;
 
 /// Balance of an account.
@@ -58,7 +58,9 @@ pub type Index = u32;
 /// A hash of some data used by the chain.
 pub type Hash = primitives::H256;
 
-/// A timestamp: seconds since the unix epoch.
+/// A timestamp: milliseconds since the unix epoch.
+/// `u64` is enough to represent a duration of half a billion years, when the
+/// time scale is milliseconds.
 pub type Timestamp = u64;
 
 /// Digest item type.
@@ -66,12 +68,10 @@ pub type DigestItem = generic::DigestItem<Hash>;
 /// Header type.
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 /// Block type.
-pub type Block = generic::Block<Header, UncheckedExtrinsic>;
+pub type Block = generic::Block<Header, OpaqueExtrinsic>;
 /// Block ID.
 pub type BlockId = generic::BlockId<Block>;
 
-/// Opaque, encoded, unchecked extrinsic.
-pub type UncheckedExtrinsic = OpaqueExtrinsic;
 
 /// A result of execution of a contract.
 #[derive(Eq, PartialEq, Encode, Decode)]
@@ -93,27 +93,7 @@ pub enum ContractExecResult {
 }
 
 
-client::decl_runtime_apis! {
-	/// The API to query account account nonce (aka index).
-	pub trait AccountNonceApi {
-		/// Get current account nonce of given `AccountId`.
-		fn account_nonce(account: AccountId) -> Index;
-	}
-
-	/// The API to interact with contracts without using executive.
-	pub trait ContractsApi {
-		/// Perform a call from a specified account to a given contract.
-		///
-		/// See the contracts' `call` dispatchable function for more details.
-		fn call(
-			origin: AccountId,
-			dest: AccountId,
-			value: Balance,
-			gas_limit: u64,
-			input_data: Vec<u8>,
-		) -> ContractExecResult;
-	}
-
+sr_api::decl_runtime_apis! {
 	pub trait MultisigAddrApi {
 		fn multisig_addr() -> Vec<MultisigAddr>;
 	}
