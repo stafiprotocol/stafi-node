@@ -1,6 +1,3 @@
-extern crate paint_system as system;
-extern crate paint_balances as balances;
-extern crate paint_support as support;
 extern crate randomness_collective_flip as random;
 
 use support::{decl_module, decl_storage, decl_event, ensure, dispatch::Result, traits::Randomness};

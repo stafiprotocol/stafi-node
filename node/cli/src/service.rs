@@ -114,9 +114,9 @@ macro_rules! new_full_start {
 /// concrete types instead.
 macro_rules! new_full {
 	($config:expr, $with_startup_data: expr) => {{
-		use futures::sync::mpsc;
+		use futures01::sync::mpsc;
 		use network::DhtEvent;
-		use futures03::{
+		use futures::{
 			compat::Stream01CompatExt,
 			stream::StreamExt,
 			future::{FutureExt, TryFutureExt},

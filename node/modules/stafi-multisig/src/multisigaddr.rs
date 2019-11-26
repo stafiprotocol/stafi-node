@@ -1,5 +1,5 @@
-extern crate paint_support as support;
-extern crate paint_system as system;
+extern crate frame_support as support;
+extern crate frame_system as system;
 
 use support::{decl_module, decl_storage, decl_event, dispatch::Result, dispatch::Vec};
 use system::ensure_root;

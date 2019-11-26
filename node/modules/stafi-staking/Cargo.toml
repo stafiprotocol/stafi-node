@@ -9,12 +9,12 @@ serde = { version = "1.0", default_features = false }
 parity-codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 sr-std = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 sr-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-paint-support = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-paint-system = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-paint-balances = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-session = { package = "paint-session", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-im-online = { package = "paint-im-online", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-randomness-collective-flip = { package = "paint-randomness-collective-flip", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+support = { package = "frame-support", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+system = { package = "frame-system", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+balances = { package = "pallet-balances", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+session = { package = "pallet-session", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+im-online = { package = "pallet-im-online", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+randomness-collective-flip = { package = "pallet-randomness-collective-flip", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 
 node-primitives = { path = "../../primitives", default-features = false }
 token-balances = { package = "tokenbalances", path = "../tokenbalances", default-features = false }
@@ -31,9 +31,9 @@ std = [
     "parity-codec/std",
     "sr-std/std",
     "sr-primitives/std",
-    "paint-support/std",
-    "paint-system/std",
-    "paint-balances/std",
+    "support/std",
+    "system/std",
+    "balances/std",
     "session/std",
     "im-online/std",
     "node-primitives/std",

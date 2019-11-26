@@ -1,8 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 extern crate session;
-extern crate paint_balances as balances;
-extern crate paint_support as support;
-extern crate paint_system as system;
 
 use hex_literal::hex;
 use im_online;

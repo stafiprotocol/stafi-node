@@ -1,8 +1,5 @@
 #![allow(unused_imports)]
 
-extern crate paint_support as support;
-extern crate paint_system as system;
-extern crate paint_balances as balances;
 extern crate sr_primitives as runtime_primitives;
 extern crate randomness_collective_flip as random;
 
@@ -21,7 +18,6 @@ use serde::{Serialize, Deserialize};
 use parity_codec::{Encode, Decode};
 use runtime_primitives::traits::Hash;
 use node_primitives::{Balance, BondTokenLockType, BondTokenLockStatus, Symbol, CustomRedeemData}; 
-use paint_timestamp as timestamp;
 
 
 pub trait Trait: timestamp::Trait {
