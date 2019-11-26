@@ -6,6 +6,7 @@ use sr_std::prelude::*;
 use sr_std::{
 	convert::{TryInto},
 };
+use sr_std::str;
 use sr_primitives::traits::{Hash, CheckedAdd};
 use parity_codec::{Encode};
 
@@ -81,8 +82,8 @@ decl_module! {
 			let all_stake_count = Self::all_stake_count();
         	let new_all_stake_count = all_stake_count.checked_add(1).ok_or("Overflow adding a new stake")?;
 
-			// TODO: pub_key generate from
-			let _from: Vec<u8> = Vec::new();
+			// pub_key generate from
+			let from = Self::pkh_from_pk(pub_key.clone());
 			
 			let nonce = <Nonce>::get();
 			let random_seed = <random::Module<T>>::random_seed();
@@ -96,7 +97,7 @@ decl_module! {
 				stake_amount: stake_amount,
 				tx_hash: tx_hash.clone(),
 				block_hash: block_hash.clone(),
-				stake_account: pub_key,
+				stake_account: from,
 				sig: sig
 			};
 
@@ -130,17 +131,20 @@ decl_event!(
 impl<T: Trait> Module<T> {
 
 	fn check_sig(tx_hash: Vec<u8>, pub_key: Vec<u8>, sig: Vec<u8>) -> Result {
-		// if !stafi_crypto::tez::verify::verify_with_ed(&tx_hash, &sig, &pub_key) {
-		// 	return Err("");
-		// }
+		if !stafi_crypto::tez::verify::verify_with_ed(&tx_hash, &sig, &pub_key) {
+			return Err("");
+		}
 
 		Ok(())
 	}
 
-	// #[cfg(not(feature = "std"))]
-	// fn check_sig(tx_hash: Vec<u8>, pub_key: Vec<u8>, sig: Vec<u8>) -> Result {
-	// 	Ok(())
-	// }
+	fn pkh_from_pk(pub_key: Vec<u8>) -> Vec<u8> {
+		let edpk_str = str::from_utf8(&pub_key).unwrap();
+		let raw_pk_with_prefix = stafi_crypto::tez::base58::from_check(&edpk_str).unwrap();
+        let pkh = stafi_crypto::tez::generator::pkh_from_rawpk(&raw_pk_with_prefix[4..]);
+
+		pkh
+	}
 
 	fn handle_init() {
 		let mut tmp_datas: Vec<XtzStakeData<T::AccountId, T::Hash, Balance>> = Vec::new();
