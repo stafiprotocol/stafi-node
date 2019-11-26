@@ -1,15 +1,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-extern crate paint_support as support;
-extern crate paint_system as system;
-extern crate paint_balances as balances;
 extern crate sr_primitives as runtime_primitives;
 
 use support::{decl_module, decl_storage, decl_event, dispatch::Result, Parameter, dispatch::Vec};
 use system::ensure_signed;
 use parity_codec::{Codec, Encode, Decode};
 use sr_primitives::traits::MaybeSerialize;
-use paint_timestamp as timestamp;
 use node_primitives::{Symbol}; 
 
 pub mod bondtoken;

@@ -34,16 +34,19 @@ mod tests {
 	use super::Executor;
 	use {balances, contracts, indices, system, timestamp};
 	use codec::{Encode, Decode, Joiner};
-	use runtime_support::{Hashable, StorageValue, StorageMap, traits::Currency};
+	use runtime_support::{
+		Hashable, StorageValue, StorageMap,
+		traits::Currency,
+		weights::{GetDispatchInfo, DispatchInfo, DispatchClass},
+	};
 	use state_machine::TestExternalities as CoreTestExternalities;
 	use primitives::{
 		Blake2Hasher, NeverNativeValue, NativeOrEncoded, map,
 		traits::{CodeExecutor, Externalities}, storage::well_known_keys,
 	};
 	use sr_primitives::{
-		Fixed64,
-		traits::{Header as HeaderT, Hash as HashT, Convert}, ApplyResult,
-		transaction_validity::InvalidTransaction, weights::GetDispatchInfo,
+		Fixed64, traits::{Header as HeaderT, Hash as HashT, Convert}, ApplyExtrinsicResult,
+		transaction_validity::InvalidTransaction,
 	};
 	use contracts::ContractAddressFor;
 	use substrate_executor::{NativeExecutor, WasmExecutionMethod};
@@ -170,7 +173,7 @@ mod tests {
 			true,
 			None,
 		).0.unwrap();
-		let r = ApplyResult::decode(&mut &v.as_encoded()[..]).unwrap();
+		let r = ApplyExtrinsicResult::decode(&mut &v.as_encoded()[..]).unwrap();
 		assert_eq!(r, Err(InvalidTransaction::Payment.into()));
 	}
 
@@ -206,7 +209,7 @@ mod tests {
 			true,
 			None,
 		).0.unwrap();
-		let r = ApplyResult::decode(&mut &v.as_encoded()[..]).unwrap();
+		let r = ApplyExtrinsicResult::decode(&mut &v.as_encoded()[..]).unwrap();
 		assert_eq!(r, Err(InvalidTransaction::Payment.into()));
 	}
 
@@ -463,7 +466,9 @@ mod tests {
 			let events = vec![
 				EventRecord {
 					phase: Phase::ApplyExtrinsic(0),
-					event: Event::system(system::Event::ExtrinsicSuccess),
+					event: Event::system(system::Event::ExtrinsicSuccess(
+						DispatchInfo { weight: 10000, class: DispatchClass::Operational, pays_fee: true }
+					)),
 					topics: vec![],
 				},
 				EventRecord {
@@ -483,7 +488,9 @@ mod tests {
 				},
 				EventRecord {
 					phase: Phase::ApplyExtrinsic(1),
-					event: Event::system(system::Event::ExtrinsicSuccess),
+					event: Event::system(system::Event::ExtrinsicSuccess(
+						DispatchInfo { weight: 1000000, class: DispatchClass::Normal, pays_fee: true }
+					)),
 					topics: vec![],
 				},
 			];
@@ -512,7 +519,9 @@ mod tests {
 			let events = vec![
 				EventRecord {
 					phase: Phase::ApplyExtrinsic(0),
-					event: Event::system(system::Event::ExtrinsicSuccess),
+					event: Event::system(system::Event::ExtrinsicSuccess(
+						DispatchInfo { weight: 10000, class: DispatchClass::Operational, pays_fee: true }
+					)),
 					topics: vec![],
 				},
 				EventRecord {
@@ -534,7 +543,9 @@ mod tests {
 				},
 				EventRecord {
 					phase: Phase::ApplyExtrinsic(1),
-					event: Event::system(system::Event::ExtrinsicSuccess),
+					event: Event::system(system::Event::ExtrinsicSuccess(
+						DispatchInfo { weight: 1000000, class: DispatchClass::Normal, pays_fee: true }
+					)),
 					topics: vec![],
 				},
 				EventRecord {
@@ -556,7 +567,9 @@ mod tests {
 				},
 				EventRecord {
 					phase: Phase::ApplyExtrinsic(2),
-					event: Event::system(system::Event::ExtrinsicSuccess),
+					event: Event::system(system::Event::ExtrinsicSuccess(
+						DispatchInfo { weight: 1000000, class: DispatchClass::Normal, pays_fee: true }
+					)),
 					topics: vec![],
 				},
 			];
@@ -841,7 +854,7 @@ mod tests {
 			false,
 			None,
 		).0.unwrap().into_encoded();
-		let r = ApplyResult::decode(&mut &r[..]).unwrap();
+		let r = ApplyExtrinsicResult::decode(&mut &r[..]).unwrap();
 		assert_eq!(r, Err(InvalidTransaction::Payment.into()));
 	}
 
@@ -874,7 +887,7 @@ mod tests {
 			false,
 			None,
 		).0.unwrap().into_encoded();
-		ApplyResult::decode(&mut &r[..])
+		ApplyExtrinsicResult::decode(&mut &r[..])
 			.unwrap()
 			.expect("Extrinsic could be applied")
 			.expect("Extrinsic did not fail");
@@ -1017,11 +1030,11 @@ mod tests {
 
 	#[test]
 	fn transaction_fee_is_correct_ultimate() {
-		// This uses the exact values of stafi-node.
+		// This uses the exact values of substrate-node.
 		//
 		// weight of transfer call as of now: 1_000_000
 		// if weight of the cheapest weight would be 10^7, this would be 10^9, which is:
-		//   - 1 MILLICENTS in stafi node.
+		//   - 1 MILLICENTS in substrate node.
 		//   - 1 milli-dot based on current polkadot runtime.
 		// (this baed on assigning 0.1 CENT to the cheapest tx with `weight = 100`)
 		let mut t = TestExternalities::<Blake2Hasher>::new_with_code(COMPACT_CODE, (map![

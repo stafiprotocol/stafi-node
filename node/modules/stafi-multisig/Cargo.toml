@@ -12,9 +12,9 @@ substrate-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchai
 sr-std = { git = "https://github.com/stafiprotocol/stafi-blockchain", default_features = false }
 sr-io = { git = "https://github.com/stafiprotocol/stafi-blockchain", default_features = false }
 sr-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain", default_features = false }
-paint-support = { git = "https://github.com/stafiprotocol/stafi-blockchain", default_features = false }
-paint-system = { git = "https://github.com/stafiprotocol/stafi-blockchain", default_features = false }
-paint-balances = { git = "https://github.com/stafiprotocol/stafi-blockchain", default_features = false }
+frame-support = { package = "frame-support", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+frame-system = { package = "frame-system", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+pallet-balances = { package = "pallet-balances", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 
 node-primitives = { path = "../../primitives", default-features = false }
 
@@ -28,8 +28,8 @@ std=[
     "sr-std/std",
     "sr-io/std",
     "sr-primitives/std",
-    "paint-support/std",
-    "paint-system/std",
-    "paint-balances/std",
+    "frame-support/std",
+    "frame-system/std",
+    "pallet-balances/std",
     "node-primitives/std",
 ]

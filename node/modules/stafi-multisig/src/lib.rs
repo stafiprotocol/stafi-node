@@ -48,9 +48,10 @@ extern crate substrate_primitives as primitives;
 // for substrate runtime module lib
 // Needed for type-safe access to storage DB.
 #[macro_use]
-extern crate paint_support as runtime_support;
-extern crate paint_balances as balances;
-extern crate paint_system as system;
+extern crate frame_support as runtime_support;
+extern crate pallet_balances as balances;
+extern crate frame_system as system;
+
 
 // use system::GenesisConfig as BalancesConfig;
 use codec::{Codec, Decode, Encode};
