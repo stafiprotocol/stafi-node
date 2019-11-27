@@ -74,7 +74,7 @@ decl_module! {
 			// ensure!(block_hash, "Stake amount must be greater than 0");
 
 			// TODO: pub_key verify sig
-			Self::check_sig(tx_hash.clone(), pub_key.clone(), sig.clone())?;
+			// Self::check_sig(tx_hash.clone(), pub_key.clone(), sig.clone())?; 
 			
 			let owned_stake_count = Self::owned_stake_count(&sender);
         	let new_owned_stake_count = owned_stake_count.checked_add(1).ok_or("Overflow adding a new owned stake")?;

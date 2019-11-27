@@ -17,7 +17,7 @@ use serde::{Serialize, Deserialize};
 
 use parity_codec::{Encode, Decode};
 use runtime_primitives::traits::Hash;
-use node_primitives::{Balance, BondTokenLockType, BondTokenLockStatus, Symbol, CustomRedeemData}; 
+use node_primitives::{BlockNumber, Balance, BondTokenLockType, BondTokenLockStatus, Symbol, CustomRedeemData}; 
 
 
 pub trait Trait: timestamp::Trait {
@@ -33,6 +33,7 @@ pub struct BondToken<Moment, AccountId, Hash> {
 	balance: Balance,
 	capital_amount: Balance,
 	rewards_amount: Balance,
+	last_reward_block_num: BlockNumber,
 	issue_time: Moment,
 	stake_id: Hash,
 	stake_address: Vec<u8>,
@@ -50,6 +51,14 @@ pub struct LockBondData<Moment, Hash> {
 	status: BondTokenLockStatus
 }
 
+#[derive(PartialEq, Eq, Clone, Encode, Decode, Default)]
+#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
+pub struct BondReward {
+	block_num: BlockNumber,
+	total_reward: Balance,
+	total_balance: Balance
+}
+
 decl_storage! {
 	trait Store for Module<T: Trait> as BondToken {
 		pub BondTokens get(bond_token): map T::Hash => BondToken<T::Moment, T::AccountId, T::Hash>;
@@ -64,6 +73,10 @@ decl_storage! {
 
 		pub LockBondToken get(get_lock_bond_token): map T::Hash => LockBondData<T::Moment, T::Hash>;
 		pub RedeemRecords get(redeem_records): map (T::AccountId, T::Hash) => Option<CustomRedeemData<T::AccountId, T::Hash>>;
+
+		pub BondRewardsArray get(bond_reward_by_index): map u64 => BondReward;
+        pub BondRewardsCount get(bond_rewards_count): u64;
+		pub BondRewardsIndex: map BlockNumber => u64;
 
 		CreateNonce: u64;
 		LockNonce: u64;
@@ -207,13 +220,15 @@ impl<T: Trait> Module<T> {
 		ensure!(!<BondTokens<T>>::exists(&bond_id), "Bond token already exists");
 
 		let now = <timestamp::Module<T>>::get();
+		let block_num: BlockNumber = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
 		let bond_token = BondToken {
 			id: bond_id,
+			account_id: sender.clone(),
 			symbol: symbol,
 			balance: amount,
 			capital_amount: amount,
 			rewards_amount: 0,
-			account_id: sender.clone(),
+			last_reward_block_num: block_num,
 			issue_time: now,
 			stake_id: stake_id,
 			stake_address: stake_address,
