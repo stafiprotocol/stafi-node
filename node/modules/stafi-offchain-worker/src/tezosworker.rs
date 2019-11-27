@@ -60,7 +60,7 @@ decl_module! {
 		fn set_stake_data(origin, sd: XtzStakeData<T::AccountId, T::Hash, Balance>) {
 			let _who = ensure_signed(origin)?;
 
-			let mut data: Vec<XtzStakeData<T::AccountId, T::Hash, Balance>> = Vec::new();
+			let mut data: Vec<XtzStakeData<T::AccountId, T::Hash, Balance>> = <StakeData<T>>::get();
 			data.push(sd);
 			<StakeData<T>>::put(data);
 		}
@@ -110,44 +110,17 @@ decl_module! {
 			BlockDuration::put(duration);
 		}
 
-		fn on_finalize() {
-		    //let bn = <system::Module<T>>::block_number().saturated_into::<u64>();
-            //runtime_io::print_num(bn);
-
-			let mut response_list: Vec<(TxHashType, Vec<OcVerifiedData<AuthorityId>>)> = Vec::new();
-			for (k, v) in NodeResponse::enumerate() {
-				let txhash = k;
-				let status = VerifyStatus::create(Verified::get(txhash.clone()).0);
-				if status != VerifyStatus::Confirmed && status != VerifyStatus::NotFoundTx && status != VerifyStatus::Rollback && status != VerifyStatus::NotFoundBlock {
-					response_list.push((txhash, v));
-					if response_list.len() > 100 {
-						break
-					}
-				}
-			}
-
-			for (k, v) in response_list {
-				let mut ts = 0;
-				let txhash = k;
-
-				let new_status = Self::get_new_status(v.clone(), &mut ts);
-				if new_status != VerifyStatus::UnVerified {
-					let status = new_status as i8;
-					let (s, t) = Verified::get(txhash.clone());
-					if s != status && t != ts {
-						Verified::insert(txhash.clone(), (status, ts));
-						let mut vb = VerifiedBak::get();
-						vb.push((txhash, status, ts));
-						VerifiedBak::put(vb);
-					}
-				}
-			}
-		}
+        fn on_finalize() {
+            Self::finalizer()
+        }
 
 		fn offchain_worker(now: T::BlockNumber) {
-			debug("in offchain worker");
-
-            Self::offchain(now);
+            if runtime_io::offchain::is_validator() {
+                debug("in offchain worker");
+				Self::offchain(now);
+			} else {
+			    debug("the node isn't a validator");
+			}
 		}
 	}
 }
@@ -333,20 +306,78 @@ impl<T: Trait> Module<T> {
                 return (authority_index as u32, Some(key.clone()));
             }
         }
-        /*
-        for (authority_index, key) in authorities.into_iter()
-            .enumerate()
-            .filter_map(|(index, authority)| {
-                local_keys.binary_search(&authority)
-                    .ok()
-                    .map(|location| (index as u32, &local_keys[location]))
-            })
-            {
-                return (authority_index, Some(key.clone()));
-            }
-        */
 
         (0, None)
+    }
+}
+
+#[allow(deprecated)]
+impl<T: Trait> support::unsigned::ValidateUnsigned for Module<T> {
+    type Call = Call<T>;
+
+    fn validate_unsigned(call: &Self::Call) -> TransactionValidity {
+        //debug("in validate_unsigned");
+        if let Call::set_node_response(txhash, verified, signature) = call {
+
+            let index = verified.authority_index;
+            let keys = Self::get_babe_list();
+            if keys.len() as u32 <= index {
+                return InvalidTransaction::BadProof.into();
+            }
+            let key = &keys[index as usize];
+            let signature_valid = verified.using_encoded(|encoded_verified| {
+                key.verify(&encoded_verified, &signature)
+            });
+            if !signature_valid {
+                return InvalidTransaction::BadProof.into();
+            }
+
+            Ok(ValidTransaction {
+                priority: TransactionPriority::max_value(),
+                requires: vec![],
+                provides: vec![txhash.to_vec()],
+                longevity: TransactionLongevity::max_value(),
+                propagate: true,
+            })
+        } else {
+            InvalidTransaction::Call.into()
+        }
+
+    }
+}
+impl<T: Trait> Module<T> {
+    fn finalizer() {
+        //let bn = <system::Module<T>>::block_number().saturated_into::<u64>();
+        //runtime_io::print_num(bn);
+
+        let mut response_list: Vec<(TxHashType, Vec<OcVerifiedData<AuthorityId>>)> = Vec::new();
+        for (k, v) in NodeResponse::enumerate() {
+            let txhash = k;
+            let status = VerifyStatus::create(Verified::get(txhash.clone()).0);
+            if status != VerifyStatus::Confirmed && status != VerifyStatus::NotFoundTx && status != VerifyStatus::Rollback && status != VerifyStatus::NotFoundBlock {
+                response_list.push((txhash, v));
+                if response_list.len() > 100 {
+                    break
+                }
+            }
+        }
+
+        for (k, v) in response_list {
+            let mut ts = 0;
+            let txhash = k;
+
+            let new_status = Self::get_new_status(v.clone(), &mut ts);
+            if new_status != VerifyStatus::UnVerified {
+                let status = new_status as i8;
+                let (s, t) = Verified::get(txhash.clone());
+                if s != status && t != ts {
+                    Verified::insert(txhash.clone(), (status, ts));
+                    let mut vb = VerifiedBak::get();
+                    vb.push((txhash, status, ts));
+                    VerifiedBak::put(vb);
+                }
+            }
+        }
     }
 
     fn get_new_status(vd: Vec<OcVerifiedData<AuthorityId>>, ts: &mut u64) -> VerifyStatus {
@@ -397,61 +428,6 @@ impl<T: Trait> Module<T> {
     }
 }
 
-#[allow(deprecated)]
-impl<T: Trait> support::unsigned::ValidateUnsigned for Module<T> {
-    type Call = Call<T>;
-
-    fn validate_unsigned(call: &Self::Call) -> TransactionValidity {
-        //debug("in validate_unsigned");
-        if let Call::set_node_response(txhash, verified, signature) = call {
-
-            let index = verified.authority_index;
-            let keys = Self::get_babe_list();
-            if keys.len() as u32 <= index {
-                return InvalidTransaction::BadProof.into();
-            }
-            let key = &keys[index as usize];
-            let signature_valid = verified.using_encoded(|encoded_verified| {
-                key.verify(&encoded_verified, &signature)
-            });
-            if !signature_valid {
-                return InvalidTransaction::BadProof.into();
-            }
-
-            Ok(ValidTransaction {
-                priority: TransactionPriority::max_value(),
-                requires: vec![],
-                provides: vec![txhash.to_vec()],
-                longevity: TransactionLongevity::max_value(),
-                propagate: true,
-            })
-        } else {
-            InvalidTransaction::Call.into()
-        }
-
-    }
-}
-/*
-impl<T: Trait> session::OneSessionHandler<T::AccountId> for Module<T> {
-    type Key = AuthorityId;
-
-    fn on_genesis_session<'a, I: 'a>(validators: I)
-        where I: Iterator<Item=(&'a T::AccountId, AuthorityId)>
-    {
-
-    }
-
-    fn on_new_session<'a, I: 'a>(_changed: bool, validators: I, queued_validators: I)
-        where I: Iterator<Item=(&'a T::AccountId, AuthorityId)>
-    {
-
-    }
-
-    fn on_disabled(i: usize) {
-
-    }
-}
-*/
 decl_event!(
     pub enum Event<T>
     where
