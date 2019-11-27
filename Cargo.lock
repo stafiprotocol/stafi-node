@@ -4518,7 +4518,7 @@ dependencies = [
 [[package]]
 name = "rust-crypto"
 version = "0.2.36"
-source = "git+https://github.com/BurningSea/rust-crypto#3a2b0b04cba5a2449260197e3d27aa5c082e08a0"
+source = "git+https://github.com/BurningSea/rust-crypto#a387770110cd0bf317b4139e18a995e25be28d5b"
 dependencies = [
  "base64 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "gcc 0.3.55 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5025,7 +5025,7 @@ dependencies = [
 [[package]]
 name = "sr-std"
 version = "2.0.0"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain#2ac4dd8a7e116c40a80bf443d942da7163cad8ca"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain#7b606850d10902029d4c8df00eb84ebc4f6002e5"
 
 [[package]]
 name = "sr-version"
