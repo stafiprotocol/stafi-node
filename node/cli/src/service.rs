@@ -262,15 +262,14 @@ macro_rules! new_full {
 			let rpc_http = format!("http://{}",rpc_http_addr.unwrap().to_string());
 			let _reg_tezos = inherent_data_providers.register_provider(stafi_externalrpc::tezosrpc::InherentDataProvider::new(rpc_http, SLOT_DURATION as u64, babe_id.clone())).unwrap();
 
-			let babe_pair = service.keystore().read().key_pair_by_type::<sr25519::Pair>(&babe_ids[0], KeyTypeId(*b"babe")).unwrap();
+			/*let babe_pair = service.keystore().read().key_pair_by_type::<sr25519::Pair>(&babe_ids[0], KeyTypeId(*b"babe")).unwrap();
 			service
 				.keystore()
 				.write()
 				.insert_ephemeral_pair::<primitives::sr25519::Pair>(
 					&babe_pair,
 					stafi_runtime::offchaincb_crypto::KEY_TYPE,
-				);
-				//.expect("save keypair error");
+				);*/
 		}
 		println!("my babe id is : {:}", babe_id);
 

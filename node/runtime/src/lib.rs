@@ -58,6 +58,7 @@ use transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 use contracts_rpc_runtime_api::ContractExecResult;
 use system::offchain::TransactionSubmitter;
 use inherents::{InherentData, CheckInherentsResult};
+use babe_primitives::AuthorityId as BabeId;
 
 #[cfg(any(feature = "std", test))]
 pub use sr_primitives::BuildStorage;
@@ -546,71 +547,13 @@ impl bondToken::Trait for Runtime {
 impl tezosrpc::Trait for Runtime {	
 }
 
-pub mod offchaincb_crypto {
-	pub use crate::tezosworker::KEY_TYPE;
-	use substrate_primitives::sr25519;
-	app_crypto::app_crypto!(sr25519, KEY_TYPE);
-
-	impl From<Signature> for super::Signature {
-		fn from(a: Signature) -> Self {
-			sr25519::Signature::from(a).into()
-		}
-	}
-}
-/// We need to define the Transaction signer for that using the Key definition
-type OffchainCbAccount = offchaincb_crypto::Public;
-type SubmitTransactionOc = TransactionSubmitter<OffchainCbAccount, Runtime, UncheckedExtrinsic>;
+type SubmitTransactionOc = TransactionSubmitter<BabeId, Runtime, UncheckedExtrinsic>;
 
 impl tezosworker::Trait for Runtime {
-	type Call = Call;
 	type Event = Event;
-	//type AuthorityId = OracleId;
+	type Call = Call;
 	type SubmitTransaction = SubmitTransactionOc;
-	type KeyType = OffchainCbAccount;
 }
-
-impl IdentifyAccount for offchaincb_crypto::Public {
-    type AccountId = Self;
-    fn into_account(self) -> Self { self }
-}
-
-/// Lastly we also need to implement the CreateTransaction signer for the runtime
-/// only use in submitSignedTransaction
-// impl system::offchain::CreateTransaction<Runtime, UncheckedExtrinsic> for Runtime {
-// 	type Signature = Signature;
-
-// 	fn create_transaction<F: system::offchain::Signer<AccountId, Self::Signature>>(
-// 		call: Call,
-// 		account: AccountId,
-// 		index: Index,
-// 	) -> Option<(
-// 		Call,
-// 		<UncheckedExtrinsic as runtime_primitives::traits::Extrinsic>::SignaturePayload,
-// 	)> {
-// 		let period = 1 << 8;
-// 		let current_block = System::block_number().saturated_into::<u64>();
-// 		let tip = 0;
-// 		let extra: SignedExtra = (
-// 			system::CheckVersion::<Runtime>::new(),
-// 			system::CheckGenesis::<Runtime>::new(),
-// 			system::CheckEra::<Runtime>::from(generic::Era::mortal(period, current_block)),
-// 			system::CheckNonce::<Runtime>::from(index),
-// 			system::CheckWeight::<Runtime>::new(),
-// 			balances::TakeFees::<Runtime>::from(tip),
-// 			Default::default(),
-// 		);
-// 		let raw_payload = SignedPayload::new(call, extra).ok()?;
-// 		let signature = F::sign(account.clone(), &raw_payload)?;
-// 		let address = Indices::unlookup(account.clone());
-//         let (call, extra, _) = raw_payload.deconstruct();
-//         sr_io::print_hex(&account.encode().to_vec());
-// 		//let b:Vec<u8> = account.encode().to_vec();
-// 		//let a:Vec<u8> = Decode::decode(&mut &b[..]).unwrap();
-// 		//sr_io::print_utf8(&a);
-//         sr_io::print_utf8(b"create_transaction ok");
-// 		Some((call, (address, signature, extra)))
-// 	}
-// }
 
 construct_runtime!(
 	pub enum Runtime where
@@ -652,7 +595,7 @@ construct_runtime!(
 		//StafiIrisnetRpc: irisnetrpc::{Module, Call, Storage, Inherent},
 		StafiTezosRpc: tezosrpc::{Module, Call, Storage, Inherent},
 		MultisigAddress: multisigAddr::{Module, Call, Storage, Event, Config},
-		StafiTezosWorker: tezosworker::{Module, Call, Storage, Event<T>},
+		StafiTezosWorker: tezosworker::{Module, Call, Storage, Event<T>, ValidateUnsigned},
 	}
 );
 

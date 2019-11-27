@@ -7,13 +7,15 @@ use rstd::result::Result;
 use rstd::vec::Vec;
 use node_primitives::{rjson, VerifyStatus};
 use node_primitives::rjson::{JsonValue, JsonArray, JsonObject};
+use log::info;
 
 pub const BUFFER_LEN: usize = 40960;
 pub const BUF_LEN: usize = 2048;
 
 /// only for debug
 fn debug(msg: &str) {
-    runtime_io::misc::print_utf8(msg.as_bytes());
+    //runtime_io::misc::print_utf8(msg.as_bytes());
+    info!("{}", msg);
 }
 
 enum RequestError {
@@ -21,7 +23,6 @@ enum RequestError {
     BadRequest,
     IoError,
     Invalid,
-    Failed,
     Deadline,
     InvalidBlockId,
     ReadBodyError,
@@ -100,10 +101,6 @@ fn http_request_get(
         HttpRequestStatus::Finished(num) => {
             runtime_io::misc::print_num(num as u64);
             return Err(RequestError::BadRequest);
-        }
-        _ => {
-            debug("request failed");
-            return Err(RequestError::Failed);
         }
     }
 

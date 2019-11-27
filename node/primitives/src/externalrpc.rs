@@ -4,6 +4,7 @@ use sr_primitives::RuntimeDebug;
 
 pub type TxHashType = Vec<u8>;
 pub type BabeIdType = Vec<u8>;
+pub type AuthIndex = u32;
 
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
 pub struct VerifiedData {
@@ -18,15 +19,16 @@ pub struct VerifiedData {
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
-pub struct OcVerifiedData<AccountId> {
+pub struct OcVerifiedData<AuthorityId> {
 	// transaction hash
 	pub tx_hash: TxHashType,
 	// time
 	pub timestamp: u64,
 	// status
 	pub status: i8,
-	pub babe_id: AccountId,
+	pub babe_id: AuthorityId,
 	pub babe_num: u8,
+	pub authority_index: AuthIndex,
 }
 
 #[cfg_attr(feature = "std", derive(Debug))]

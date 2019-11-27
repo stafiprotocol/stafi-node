@@ -7,57 +7,45 @@ use support::{decl_module, decl_storage, decl_event, ensure};
 use rstd::prelude::*;
 use rstd::vec::Vec;
 //use rstd::result::Result;
-use system::{ensure_signed, ensure_root};
-use node_primitives::{OcVerifiedData, VerifyStatus, TxHashType, HostData, XtzStakeData, Balance};
-use sr_primitives::traits::{Convert, SaturatedConversion};
+use system::{ensure_signed, ensure_root, ensure_none};
+use node_primitives::{OcVerifiedData, VerifyStatus, TxHashType, HostData, XtzStakeData, Balance, AuthIndex};
+use sr_primitives::traits::{SaturatedConversion};
+use sr_primitives::transaction_validity::{
+    TransactionValidity, ValidTransaction, InvalidTransaction,
+    TransactionPriority, TransactionLongevity,
+};
 
-use app_crypto::{KeyTypeId, RuntimeAppPublic};
-use system::offchain::SubmitSignedTransaction;
-//use babe::AuthorityId;
+use app_crypto::{RuntimeAppPublic};
+use babe_primitives::AuthorityId;
 use stafi_staking::xtzstaking;
+use codec::{Encode};
+use log::info;
 
 pub mod tezos;
 
 /// only for debug
 fn debug(msg: &str) {
-	runtime_io::misc::print_utf8(msg.as_bytes());
+	info!("{}", msg);
 }
 
-pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"stez");
+//pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"stez");
 pub const TEZOS_BLOCK_CONFIRMED: u8 = 3;
 pub const TEZOS_BLOCK_DURATION: u64 = 60000;
-pub const TEZOS_RPC_HOST: &'static [u8] = b"https://tezos-test-rpc.wetez.io";
+pub const TEZOS_RPC_HOST: &'static [u8] = b"https://rpc.tezrpc.me";
 
-pub mod sr25519 {
-	mod app_sr25519 {
-		use app_crypto::{app_crypto, sr25519};
-		app_crypto!(sr25519, super::super::KEY_TYPE);
-
-		impl From<Signature> for sr_primitives::AnySignature {
-			fn from(sig: Signature) -> Self {
-				sr25519::Signature::from(sig).into()
-			}
-		}
-	}
-
-	// pub type AuthoritySignature = app_sr25519::Signature;
-
-	// pub type Public = app_sr25519::Public;
-}
+use system::offchain::SubmitUnsignedTransaction;
 
 pub trait Trait: system::Trait + babe::Trait + timestamp::Trait + session::Trait + xtzstaking::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
-    //type AuthorityId: Member + Parameter + RuntimeAppPublic + Default + Ord;
     type Call: From<Call<Self>>;
-	type SubmitTransaction: SubmitSignedTransaction<Self, <Self as Trait>::Call>;
-	type KeyType: RuntimeAppPublic + From<Self::AccountId> + Into<Self::AccountId> + Clone;
+	type SubmitTransaction: SubmitUnsignedTransaction<Self, <Self as Trait>::Call>;
 }
 
 decl_storage! {
 	trait Store for Module<T: Trait> as TezosWorker {
 		pub Verified get(verified): map TxHashType => (i8, u64);
 		VerifiedBak get(verified_bak): Vec<(TxHashType, i8, u64)>;
-		pub NodeResponse get(node_response): linked_map TxHashType => Vec<OcVerifiedData<T::AccountId>>;
+		pub NodeResponse get(node_response): linked_map TxHashType => Vec<OcVerifiedData<AuthorityId>>;
 		RpcHost get(rpc_host): Vec<HostData>;
 		BlocksConfirmed get(blocks_confirmed): Option<u8>;
 		BlockDuration get(block_duration): Option<u64>;
@@ -77,16 +65,17 @@ decl_module! {
 			<StakeData<T>>::put(data);
 		}
 
-		fn set_node_response(origin, txhash: TxHashType, v_data: OcVerifiedData<T::AccountId>) {
-			let who = ensure_signed(origin)?;
+		fn set_node_response(origin, txhash: TxHashType, v_data: OcVerifiedData<AuthorityId>,
+		            _signature: <AuthorityId as RuntimeAppPublic>::Signature) {
 
-            ensure!(who == v_data.babe_id, "babe account unmatched");
-            let w = <T as session::Trait>::ValidatorIdOf::convert(who.clone());
-            ensure!(w.is_some(), "not a babe account");
+			let _who = ensure_none(origin)?;
 
-			let mut vd: Vec<OcVerifiedData<T::AccountId>> = <NodeResponse<T>>::get(&txhash).into_iter().filter(|x| x.babe_id != who).collect();
+			let authorities = Self::get_babe_list();
+			ensure!(authorities.len() as u32 > v_data.authority_index, "bad authorities");
+			let authority = &authorities[v_data.authority_index as usize];
+            let mut vd: Vec<OcVerifiedData<AuthorityId>> = NodeResponse::get(&txhash).into_iter().filter(|x| x.babe_id != *authority).collect();
 			vd.push(v_data);
-			<NodeResponse<T>>::insert(txhash, vd);
+			NodeResponse::insert(txhash, vd);
 		}
 
 		fn add_rpc_host(origin, host:Vec<u8>) {
@@ -125,8 +114,8 @@ decl_module! {
 		    //let bn = <system::Module<T>>::block_number().saturated_into::<u64>();
             //runtime_io::print_num(bn);
 
-			let mut response_list: Vec<(TxHashType, Vec<OcVerifiedData<T::AccountId>>)> = Vec::new();
-			for (k, v) in <NodeResponse<T>>::enumerate() {
+			let mut response_list: Vec<(TxHashType, Vec<OcVerifiedData<AuthorityId>>)> = Vec::new();
+			for (k, v) in NodeResponse::enumerate() {
 				let txhash = k;
 				let status = VerifyStatus::create(Verified::get(txhash.clone()).0);
 				if status != VerifyStatus::Confirmed && status != VerifyStatus::NotFoundTx && status != VerifyStatus::Rollback && status != VerifyStatus::NotFoundBlock {
@@ -164,9 +153,9 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
-    //fn get_babe_list() -> Vec<AuthorityId> {
-    //    <babe::Module<T>>::authorities().iter().map(|x| x.0.clone().into()).collect::<Vec<AuthorityId>>()
-    //}
+    fn get_babe_list() -> Vec<AuthorityId> {
+        <babe::Module<T>>::authorities().iter().map(|x| x.0.clone()).collect::<Vec<AuthorityId>>()
+    }
 
     fn get_babe_num() -> usize {
         return <babe::Module<T>>::authorities().len();
@@ -184,14 +173,6 @@ impl<T: Trait> Module<T> {
         u64::from_be_bytes(a)
     }
 
-    fn submit_call(call: Call<T>, account: T::AccountId) {
-        let ret = T::SubmitTransaction::sign_and_submit(call, account);
-        match ret {
-            Ok(_) => debug("submit ok"),
-            Err(_) => debug("submit failed"),
-        }
-    }
-
     fn offchain(now: T::BlockNumber) {
         let bn = now.saturated_into::<u64>();
 
@@ -205,15 +186,17 @@ impl<T: Trait> Module<T> {
         let blocks_confirmed = Self::blocks_confirmed().unwrap_or(TEZOS_BLOCK_CONFIRMED);
         let block_duration = Self::block_duration().unwrap_or(TEZOS_BLOCK_DURATION);
 
-        let key = Self::authority_id();
-        if key.is_none() {
+        let (authority_index, authority) = Self::authority_id();
+        if authority.is_none() {
             debug("no authority_id");
             return
         }
+        let authority = authority.unwrap();
 
         for xsd in <xtzstaking::Module<T>>::transfer_init_data_records() {
         //for xsd in Self::stake_data() {
-        //for i in 0..1 {
+        //for _i in 0..1 {
+            //for test
             //let blockhash: Vec<u8> = "BKsxzJMXPxxJWRZcsgWG8AAegXNp2uUuUmMr8gzQcoEiGnNeCA6".as_bytes().to_vec();
             //let txhash: Vec<u8> = "onv7i9LSacMXjhTdpgzmY4q6PxiZ18TZPq7KrRBRUVX7XJicSDi".as_bytes().to_vec();
             //let from = "tz1SYq214SCBy9naR6cvycQsYcUGpBqQAE8d".as_bytes().to_vec();
@@ -234,7 +217,7 @@ impl<T: Trait> Module<T> {
 
             if enum_status == VerifyStatus::Confirmed || enum_status == VerifyStatus::NotFoundTx || enum_status == VerifyStatus::Rollback || enum_status == VerifyStatus::NotFoundBlock || enum_status == VerifyStatus::TxNotMatch {
                 //runtime_io::print_utf8(&format!("{:}'s status is {:}.", txhash, enum_status as i8).into_bytes());
-                debug("tx status set");
+                debug("the status of tx has set");
                 continue;
             }
 
@@ -244,10 +227,10 @@ impl<T: Trait> Module<T> {
                 continue;
             }
 
-            let nodes_response = <NodeResponse<T>>::get(txhash.clone());
+            let nodes_response = NodeResponse::get(txhash.clone());
             let mut node_status_set = false;
             for node_response in nodes_response {
-                if key.clone().unwrap() == node_response.babe_id {
+                if authority.clone() == node_response.babe_id {
                     let status = VerifyStatus::create(node_response.status);
                     if status != VerifyStatus::UnVerified {
                         node_status_set = true;
@@ -257,24 +240,25 @@ impl<T: Trait> Module<T> {
             }
 
             if node_status_set {
-                debug("node_status_set");
+                debug("the status of node has set");
                 continue;
             }
 
-            let v = tezos::get_value(&txhash.clone()).unwrap_or((0 as u64).to_be_bytes().to_vec());
+            let mut key:Vec<u8> = txhash.clone();
+            key.extend(&authority_index.to_be_bytes().to_vec());
+            let v = tezos::get_value(&key).unwrap_or((0 as u64).to_be_bytes().to_vec());
             let ts = Self::vec8_to_u64(v);
             //runtime_io::print_num(ts);
             if ts > 0 {
-                debug("already send request");
+                debug("the node has already send request");
                 if Self::get_now() - ts > 2 * 60 * 1000 { //2 minutes
-                    tezos::set_value(&txhash.clone(), &(0 as u64).to_be_bytes());
+                    tezos::set_value(&key, &(0 as u64).to_be_bytes());
                 }
 
                 continue;
             }
 
-
-            tezos::set_value(&txhash.clone(), &Self::get_now().to_be_bytes());
+            tezos::set_value(&key, &Self::get_now().to_be_bytes());
 
             let mut new_status = VerifyStatus::Verified;
             let mut level: i64 = 0;
@@ -302,15 +286,32 @@ impl<T: Trait> Module<T> {
                 tx_hash: txhash.clone(),
                 timestamp: Self::get_now(),
                 status: new_status as i8,
-                babe_id: key.clone().unwrap(),
+                babe_id: authority.clone(),
                 babe_num: Self::get_babe_num() as u8,
+                authority_index,
             };
 
             debug("set_node_response ...");
-            let call = Call::set_node_response(txhash.clone(), verified_data);
-            Self::submit_call(call, key.clone().unwrap().into());
 
-            tezos::set_value(&txhash.clone(), &(0 as u64).to_be_bytes());
+            let signature = match authority.clone().sign(&verified_data.encode()) {
+                Some(sig) => sig,
+                None => {
+                    debug("signature error");
+                    break;
+                }
+            };
+
+            let call = Call::set_node_response(txhash.clone(), verified_data, signature);
+            let ret = T::SubmitTransaction::submit_unsigned(call);
+            match ret {
+                Ok(_) => debug("submit ok"),
+                Err(_) => debug("submit failed"),
+            }
+
+            //let call = Call::set_node_response(txhash.clone(), verified_data);
+            //Self::submit_call(call, key.clone().unwrap() as IdentifyAccount<AccountId=T::AccountId>);
+
+            tezos::set_value(&key, &(0 as u64).to_be_bytes());
 
             break;
         }
@@ -319,23 +320,36 @@ impl<T: Trait> Module<T> {
     pub fn remove_verified(txhash: TxHashType) {
         if Verified::exists(&txhash) {
             Verified::remove(&txhash);
-            <NodeResponse<T>>::remove(&txhash);
+            NodeResponse::remove(&txhash);
         }
     }
 
-    fn authority_id() -> Option<T::AccountId> {
-        let local_keys = T::KeyType::all().iter().map(
-            |i| (*i).clone().into()
-        ).collect::<Vec<T::AccountId>>();
+    fn authority_id() -> (AuthIndex, Option<AuthorityId>) {
+        let authorities = Self::get_babe_list();
+        let local_keys = AuthorityId::all();
 
-        if local_keys.len() > 0 {
-            Some(local_keys[0].clone())
-        } else {
-            None
+        for (authority_index, key) in authorities.into_iter().enumerate() {
+            if local_keys.contains(&key) {
+                return (authority_index as u32, Some(key.clone()));
+            }
         }
+        /*
+        for (authority_index, key) in authorities.into_iter()
+            .enumerate()
+            .filter_map(|(index, authority)| {
+                local_keys.binary_search(&authority)
+                    .ok()
+                    .map(|location| (index as u32, &local_keys[location]))
+            })
+            {
+                return (authority_index, Some(key.clone()));
+            }
+        */
+
+        (0, None)
     }
 
-    fn get_new_status(vd: Vec<OcVerifiedData<T::AccountId>>, ts: &mut u64) -> VerifyStatus {
+    fn get_new_status(vd: Vec<OcVerifiedData<AuthorityId>>, ts: &mut u64) -> VerifyStatus {
         let mut verified_counter = 0;
         let mut confirmed_counter = 0;
         let mut notfoundtx_counter = 0;
@@ -383,6 +397,61 @@ impl<T: Trait> Module<T> {
     }
 }
 
+#[allow(deprecated)]
+impl<T: Trait> support::unsigned::ValidateUnsigned for Module<T> {
+    type Call = Call<T>;
+
+    fn validate_unsigned(call: &Self::Call) -> TransactionValidity {
+        //debug("in validate_unsigned");
+        if let Call::set_node_response(txhash, verified, signature) = call {
+
+            let index = verified.authority_index;
+            let keys = Self::get_babe_list();
+            if keys.len() as u32 <= index {
+                return InvalidTransaction::BadProof.into();
+            }
+            let key = &keys[index as usize];
+            let signature_valid = verified.using_encoded(|encoded_verified| {
+                key.verify(&encoded_verified, &signature)
+            });
+            if !signature_valid {
+                return InvalidTransaction::BadProof.into();
+            }
+
+            Ok(ValidTransaction {
+                priority: TransactionPriority::max_value(),
+                requires: vec![],
+                provides: vec![txhash.to_vec()],
+                longevity: TransactionLongevity::max_value(),
+                propagate: true,
+            })
+        } else {
+            InvalidTransaction::Call.into()
+        }
+
+    }
+}
+/*
+impl<T: Trait> session::OneSessionHandler<T::AccountId> for Module<T> {
+    type Key = AuthorityId;
+
+    fn on_genesis_session<'a, I: 'a>(validators: I)
+        where I: Iterator<Item=(&'a T::AccountId, AuthorityId)>
+    {
+
+    }
+
+    fn on_new_session<'a, I: 'a>(_changed: bool, validators: I, queued_validators: I)
+        where I: Iterator<Item=(&'a T::AccountId, AuthorityId)>
+    {
+
+    }
+
+    fn on_disabled(i: usize) {
+
+    }
+}
+*/
 decl_event!(
     pub enum Event<T>
     where
