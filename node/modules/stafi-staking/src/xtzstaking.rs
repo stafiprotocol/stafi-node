@@ -147,6 +147,21 @@ impl<T: Trait> Module<T> {
 
 			if let Some(mut xtz_stake_data) = Self::stake_records(hash) {
 
+				let account_id = &xtz_stake_data.initiator;
+
+				xtz_stake_data.stage = XtzStakeStage::Completed;
+				<StakeRecords<T>>::insert(hash, xtz_stake_data.clone());
+
+				bondtoken::Module::<T>::create_bond_token(
+					account_id.clone(),
+					Symbol::XTZ,
+					xtz_stake_data.stake_amount,
+					xtz_stake_data.id,
+					xtz_stake_data.multi_sig_address
+				).expect("Error adding xtz bond token");
+
+				<TransferInitDataMapRecords<T>>::remove(key);
+
 				if xtz_stake_data.stage == XtzStakeStage::Completed {
 					<TransferInitDataMapRecords<T>>::remove(key);
 					<tezosworker::Module<T>>::remove_verified(xtz_stake_data.tx_hash);
@@ -158,18 +173,18 @@ impl<T: Trait> Module<T> {
 				
 				match enum_status {
 					VerifyStatus::Confirmed => {
-						let account_id = &xtz_stake_data.initiator;
+						// let account_id = &xtz_stake_data.initiator;
 
-						xtz_stake_data.stage = XtzStakeStage::Completed;
-						<StakeRecords<T>>::insert(hash, xtz_stake_data.clone());
+						// xtz_stake_data.stage = XtzStakeStage::Completed;
+						// <StakeRecords<T>>::insert(hash, xtz_stake_data.clone());
 
-						bondtoken::Module::<T>::create_bond_token(
-							account_id.clone(),
-							Symbol::XTZ,
-							xtz_stake_data.stake_amount,
-							xtz_stake_data.id,
-							xtz_stake_data.multi_sig_address
-						).expect("Error adding xtz bond token");
+						// bondtoken::Module::<T>::create_bond_token(
+						// 	account_id.clone(),
+						// 	Symbol::XTZ,
+						// 	xtz_stake_data.stake_amount,
+						// 	xtz_stake_data.id,
+						// 	xtz_stake_data.multi_sig_address
+						// ).expect("Error adding xtz bond token");
 
 						// TODO: Add restrictive conditions to issue FIS token
 						let free_balance = <balances::Module<T>>::free_balance(account_id.clone());
@@ -196,7 +211,9 @@ impl<T: Trait> Module<T> {
 						<TransferInitDataMapRecords<T>>::remove(key);
 						<tezosworker::Module<T>>::remove_verified(xtz_stake_data.tx_hash);
 					}
-					_ => tmp_datas.push(xtz_stake_data),
+					_ => {
+						// tmp_datas.push(xtz_stake_data);
+					}
 				}
 
 			}

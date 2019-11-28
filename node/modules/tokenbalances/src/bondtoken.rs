@@ -68,15 +68,15 @@ decl_storage! {
 		pub SymbolBondTokensArray get(symbol_bond_by_index): map (Symbol, u64) => T::Hash;
         pub SymbolBondTokensCount get(symbol_bond_count): map Symbol => u64;
 
-		pub OwnedBondTokensArray get(bond_of_owner_by_index): map (T::AccountId, u64) => T::Hash;
-        pub OwnedBondTokensCount get(owned_bond_count): map T::AccountId => u64;
+		pub OwnedBondTokensArray get(bond_of_owner_by_index): map (T::AccountId, Symbol, u64) => T::Hash;
+        pub OwnedBondTokensCount get(owned_bond_count): map (T::AccountId, Symbol) => u64;
 
 		pub LockBondToken get(get_lock_bond_token): map T::Hash => LockBondData<T::Moment, T::Hash>;
 		pub RedeemRecords get(redeem_records): map (T::AccountId, T::Hash) => Option<CustomRedeemData<T::AccountId, T::Hash>>;
 
-		pub BondRewardsArray get(bond_reward_by_index): map u64 => BondReward;
-        pub BondRewardsCount get(bond_rewards_count): u64;
-		pub BondRewardsIndex: map BlockNumber => u64;
+		pub BondRewardsArray get(bond_reward_by_index): map (Symbol, u64) => BondReward;
+        pub BondRewardsCount get(bond_rewards_count): map Symbol => u64;
+		pub BondRewardsIndex get(bond_rewards_index): map (Symbol, BlockNumber) => u64;
 
 		CreateNonce: u64;
 		LockNonce: u64;
@@ -88,26 +88,27 @@ decl_module! {
 		fn deposit_event() = default;
 
 		fn on_finalize(n: T::BlockNumber) {
-			if let Some(value) = n.try_into().ok() {
-				if value % 30 == 0 {
-					let total_rewards: Balance = 14321;
-					if total_rewards > 0 {
-						let symbol = Symbol::XTZ;
-						let total_balance = Self::total_bond_token_balance(symbol);
+			let block_num: BlockNumber = n.try_into().ok().unwrap() as BlockNumber;
 
-						let count = Self::symbol_bond_count(symbol);
-						for i in 0..count {
-							let bond_id = <SymbolBondTokensArray<T>>::get((symbol, i));
-							let bond_token = <BondTokens<T>>::get(bond_id.clone());
-							if bond_token.balance == 0 {
-								continue;
-							}
-							let rewards_amount = ((total_rewards as f64) * (bond_token.balance as f64 / total_balance as f64)).round() as Balance;
-							Self::distribute_bond_rewards(bond_id.clone(), rewards_amount).ok();
-						}
-					}
+			if block_num % 50 == 0 {
+				let total_rewards: Balance = 14321;
+				let symbol = Symbol::XTZ;
+				if total_rewards > 0 {
+					let bond_reward = BondReward {
+						block_num: block_num,
+						total_reward: total_rewards,
+						total_balance: Self::total_bond_token_balance(symbol)
+					};
+
+					let bond_rewards_count = Self::bond_rewards_count(symbol);
+					let new_bond_rewards_count = bond_rewards_count + 1;
+
+					BondRewardsArray::insert((symbol, bond_rewards_count), bond_reward);
+					BondRewardsCount::insert(symbol, new_bond_rewards_count);
+					BondRewardsIndex::insert((symbol, block_num), bond_rewards_count);
 				}
 			}
+
 		}
 
 		pub fn transfer_bond_token(origin, bond_id: T::Hash, to: T::AccountId, amount: Balance) -> Result {
@@ -125,6 +126,53 @@ decl_module! {
 
 			bond_token.balance -= amount;
 			<BondTokens<T>>::insert(bond_id, bond_token.clone());
+
+			Ok(())
+		}
+
+		pub fn claim_bond_reward(origin, symbol: Symbol) -> Result {
+			let sender = ensure_signed(origin)?;
+			
+			let owned_bond_count = Self::owned_bond_count((sender.clone(), symbol));
+			ensure!(owned_bond_count > 0, "You do not own any bond token");
+
+			let bond_rewards_count = Self::bond_rewards_count(symbol);
+			ensure!(bond_rewards_count > 0, "There is no bond reward");
+
+			for i in 0..owned_bond_count {
+				let bond_id = Self::bond_of_owner_by_index((sender.clone(), symbol, i));
+				let mut bond_token = <BondTokens<T>>::get(bond_id.clone());
+				if bond_token.balance == 0 {
+					continue;
+				}
+
+				let mut begin = 0;
+				if bond_token.last_reward_block_num > 0 {
+					begin = Self::bond_rewards_index((symbol, bond_token.last_reward_block_num)) + 1;
+				}
+
+				if begin >= bond_rewards_count {
+					continue;
+				}
+				
+				let mut total_rewards_amount = 0;
+				let mut last_reward_block_num = 0;
+				for j in begin..bond_rewards_count {
+					let bond_reward = Self::bond_reward_by_index((symbol, j));
+					let rewards_amount = ((bond_reward.total_reward as f64) * (bond_token.balance as f64 / bond_reward.total_balance as f64)).floor() as Balance;
+					total_rewards_amount += rewards_amount;
+					last_reward_block_num = bond_reward.block_num;
+				}
+
+				if total_rewards_amount > 0 {
+					Self::distribute_bond_rewards(bond_id.clone(), total_rewards_amount, last_reward_block_num).ok();
+				} else {
+					bond_token.last_reward_block_num = last_reward_block_num;
+					<BondTokens<T>>::insert(bond_id.clone(), bond_token.clone());
+				}
+			}
+
+			Self::deposit_event(RawEvent::ClaimBondReward(sender, symbol));
 
 			Ok(())
 		}
@@ -188,6 +236,7 @@ decl_module! {
 decl_event!(
 	pub enum Event<T> where AccountId = <T as system::Trait>::AccountId, Hash = <T as system::Trait>::Hash {
 		RedeemBondToken(AccountId, Hash),
+		ClaimBondReward(AccountId, Symbol),
 	}
 );
 
@@ -207,7 +256,7 @@ impl<T: Trait> Module<T> {
     }
 
 	fn mint(sender: T::AccountId, symbol: Symbol, amount: Balance, stake_id: T::Hash, stake_address: Vec<u8>) -> Result {
-		let owned_bond_count = Self::owned_bond_count(&sender);
+		let owned_bond_count = Self::owned_bond_count((sender.clone(), symbol));
         let new_owned_bond_count = owned_bond_count.checked_add(1).ok_or("Overflow adding a new owned bond token")?;
 
 		let symbol_bond_count = Self::symbol_bond_count(symbol);
@@ -220,7 +269,7 @@ impl<T: Trait> Module<T> {
 		ensure!(!<BondTokens<T>>::exists(&bond_id), "Bond token already exists");
 
 		let now = <timestamp::Module<T>>::get();
-		let block_num: BlockNumber = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
+		// let block_num: BlockNumber = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
 		let bond_token = BondToken {
 			id: bond_id,
 			account_id: sender.clone(),
@@ -228,7 +277,7 @@ impl<T: Trait> Module<T> {
 			balance: amount,
 			capital_amount: amount,
 			rewards_amount: 0,
-			last_reward_block_num: block_num,
+			last_reward_block_num: 0,
 			issue_time: now,
 			stake_id: stake_id,
 			stake_address: stake_address,
@@ -236,8 +285,8 @@ impl<T: Trait> Module<T> {
 		};
 		<BondTokens<T>>::insert(bond_id, bond_token);
 
-		<OwnedBondTokensArray<T>>::insert((sender.clone(), owned_bond_count), &bond_id);
-        <OwnedBondTokensCount<T>>::insert(&sender, new_owned_bond_count);
+		<OwnedBondTokensArray<T>>::insert((sender.clone(), symbol, owned_bond_count), &bond_id);
+        <OwnedBondTokensCount<T>>::insert((sender.clone(), symbol), new_owned_bond_count);
 
 		<SymbolBondTokensArray<T>>::insert((symbol, symbol_bond_count), &bond_id);
         <SymbolBondTokensCount>::insert(&symbol, new_symbol_bond_count);
@@ -298,7 +347,7 @@ impl<T: Trait> Module<T> {
 		Ok(())
     }
 
-	pub fn distribute_bond_rewards(bond_id: T::Hash, rewards_amount: Balance) -> Result {
+	pub fn distribute_bond_rewards(bond_id: T::Hash, rewards_amount: Balance, last_reward_block_num: BlockNumber) -> Result {
 		ensure!(rewards_amount > 0, "The number to transfer must be greater than 0");
 
 		let key = bond_id;
@@ -315,6 +364,7 @@ impl<T: Trait> Module<T> {
 		
 		bond_token.balance = balance_value;
 		bond_token.rewards_amount = rewards_value;
+		bond_token.last_reward_block_num = last_reward_block_num;
 		<BondTokens<T>>::insert(key, bond_token.clone());
 
 		<TotalBondTokenBalance>::insert(bond_token.symbol, new_total_balance);
