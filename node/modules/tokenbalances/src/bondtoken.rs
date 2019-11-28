@@ -160,8 +160,8 @@ decl_module! {
 		}
 
 		// Custom redeem
-		pub fn custom_redeem_batch(origin, stake_address: Vec<u8>, amount: Balance, original_account_id: Vec<u8>) -> Result {
-			let sender = ensure_signed(origin)?;
+		pub fn custom_redeem_batch(origin, _stake_address: Vec<u8>, amount: Balance, _original_account_id: Vec<u8>) -> Result {
+			let _sender = ensure_signed(origin)?;
 
 			ensure!(amount > 0, "The amount to lock must be greater than 0");
 

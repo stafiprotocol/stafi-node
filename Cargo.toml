@@ -12,6 +12,7 @@ members = [
 	"node/modules/stafi-fund",
 	"node/modules/stafi-multisig",
 	"node/modules/stafi-staking",
+	"node/modules/stafi-staking-storage",
 	"node/modules/tokenbalances",
 ]
 

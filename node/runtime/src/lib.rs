@@ -547,6 +547,9 @@ impl bondToken::Trait for Runtime {
 impl tezosrpc::Trait for Runtime {	
 }
 
+impl stafi_staking_storage::Trait for Runtime {	
+}
+
 type SubmitTransactionOc = TransactionSubmitter<BabeId, Runtime, UncheckedExtrinsic>;
 
 impl tezosworker::Trait for Runtime {
@@ -596,6 +599,7 @@ construct_runtime!(
 		StafiTezosRpc: tezosrpc::{Module, Call, Storage, Inherent},
 		MultisigAddress: multisigAddr::{Module, Call, Storage, Event, Config},
 		StafiTezosWorker: tezosworker::{Module, Call, Storage, Event<T>, ValidateUnsigned},
+		StakingStorage: stafi_staking_storage::{Module, Call, Storage},
 	}
 );
 

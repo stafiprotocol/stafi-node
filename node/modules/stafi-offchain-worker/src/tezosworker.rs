@@ -17,7 +17,6 @@ use sr_primitives::transaction_validity::{
 
 use app_crypto::{RuntimeAppPublic};
 use babe_primitives::AuthorityId;
-use stafi_staking::xtzstaking;
 use codec::{Encode};
 use log::info;
 
@@ -35,7 +34,7 @@ pub const TEZOS_RPC_HOST: &'static [u8] = b"https://rpc.tezrpc.me";
 
 use system::offchain::SubmitUnsignedTransaction;
 
-pub trait Trait: system::Trait + babe::Trait + timestamp::Trait + session::Trait + xtzstaking::Trait {
+pub trait Trait: system::Trait + babe::Trait + timestamp::Trait + session::Trait + stafi_staking_storage::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
     type Call: From<Call<Self>>;
 	type SubmitTransaction: SubmitUnsignedTransaction<Self, <Self as Trait>::Call>;
@@ -166,7 +165,7 @@ impl<T: Trait> Module<T> {
         }
         let authority = authority.unwrap();
 
-        for xsd in <xtzstaking::Module<T>>::transfer_init_data_records() {
+        for xsd in <stafi_staking_storage::Module<T>>::xtz_transfer_init_data_records() {
         //for xsd in Self::stake_data() {
         //for _i in 0..1 {
             //for test

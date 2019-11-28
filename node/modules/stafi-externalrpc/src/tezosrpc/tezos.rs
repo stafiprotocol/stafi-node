@@ -21,8 +21,6 @@ use node_primitives::{AccountId, Hash, Balance, XtzStakeData, VerifiedData, Veri
 
 use babe_primitives::{AuthorityId, BabeAuthorityWeight};
 
-use log::info;
-
 pub const INHERENT_IDENTIFIER: InherentIdentifier = *b"tezosrpc";
 pub const RPC_REQUEST_INTERVAL: u64 = 60000; //1 minute
 pub const TEZOS_TXHASH_LEN: u8 = 51;

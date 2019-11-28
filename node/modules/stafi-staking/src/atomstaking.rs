@@ -12,11 +12,10 @@ use parity_codec::{Encode};
 use node_primitives::{Balance, VerifyStatus, AtomStakeStage, ChainType, Symbol, constants::currency::*};
 use node_primitives::AtomStakeData as CustomStakeData;
 use token_balances::bondtoken;
-use stafi_externalrpc::tezosrpc;
 use stafi_multisig::multisigaddr;
 
 
-pub trait Trait: system::Trait + balances::Trait + bondtoken::Trait + tezosrpc::Trait + multisigaddr::Trait {
+pub trait Trait: system::Trait + balances::Trait + bondtoken::Trait + multisigaddr::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -77,7 +76,6 @@ decl_module! {
 			// ensure!(block_hash, "Stake amount must be greater than 0");
 
 			// TODO: pub_key verify sig
-			// Self::check_sig(tx_hash.clone(), pub_key.clone(), sig.clone())?;
 			
 			let owned_stake_count = Self::owned_stake_count(&sender);
         	let new_owned_stake_count = owned_stake_count.checked_add(1).ok_or("Overflow adding a new owned stake")?;
@@ -136,51 +134,51 @@ impl<T: Trait> Module<T> {
 	fn handle_init() {
 		let mut tmp_datas: Vec<CustomStakeData<T::AccountId, T::Hash, Balance>> = Vec::new();
 
-        for (key, hash) in <TransferInitDataMapRecords<T>>::enumerate() {
-			if tmp_datas.len() >= 50 {
-				break;
-			}
+        // for (key, hash) in <TransferInitDataMapRecords<T>>::enumerate() {
+		// 	if tmp_datas.len() >= 50 {
+		// 		break;
+		// 	}
 
-			if let Some(mut stake_data) = Self::stake_records(hash) {
+		// 	if let Some(mut stake_data) = Self::stake_records(hash) {
 
-				if stake_data.stage == AtomStakeStage::Completed {
-					<TransferInitDataMapRecords<T>>::remove(key);
-					<tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
-					continue;
-				}
+		// 		if stake_data.stage == AtomStakeStage::Completed {
+		// 			<TransferInitDataMapRecords<T>>::remove(key);
+		// 			<tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
+		// 			continue;
+		// 		}
 
-				let (status, _) = <tezosrpc::Module<T>>::verified(&stake_data.tx_hash);
-				let enum_status = VerifyStatus::create(status);
+		// 		let (status, _) = <tezosrpc::Module<T>>::verified(&stake_data.tx_hash);
+		// 		let enum_status = VerifyStatus::create(status);
 				
-				match enum_status {
-					VerifyStatus::Confirmed => {
-						let account_id = &stake_data.initiator;
+		// 		match enum_status {
+		// 			VerifyStatus::Confirmed => {
+		// 				let account_id = &stake_data.initiator;
 
-						stake_data.stage = AtomStakeStage::TransferSuccess;
-						<StakeRecords<T>>::insert(hash, stake_data.clone());
+		// 				stake_data.stage = AtomStakeStage::TransferSuccess;
+		// 				<StakeRecords<T>>::insert(hash, stake_data.clone());
 
-						<TransferSuccessDataMapRecords<T>>::insert(key, hash.clone());
-						let mut success_list = Self::transfer_success_data_records();
-						success_list.push(stake_data.clone());
-						<TransferSuccessDataRecords<T>>::put(success_list);
+		// 				<TransferSuccessDataMapRecords<T>>::insert(key, hash.clone());
+		// 				let mut success_list = Self::transfer_success_data_records();
+		// 				success_list.push(stake_data.clone());
+		// 				<TransferSuccessDataRecords<T>>::put(success_list);
 
-						<TransferInitDataMapRecords<T>>::remove(key);
-						<tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
-					}
-					VerifyStatus::NotFoundBlock | VerifyStatus::TxNotMatch => {
-						<TransferInitCheckRecords>::remove(&stake_data.tx_hash);
-						<TransferInitDataMapRecords<T>>::remove(key);
-						<tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
-					}
-					VerifyStatus::Rollback | VerifyStatus::NotFoundTx => {
-						<TransferInitDataMapRecords<T>>::remove(key);
-						<tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
-					}
-					_ => tmp_datas.push(stake_data),
-				}
+		// 				<TransferInitDataMapRecords<T>>::remove(key);
+		// 				<tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
+		// 			}
+		// 			VerifyStatus::NotFoundBlock | VerifyStatus::TxNotMatch => {
+		// 				<TransferInitCheckRecords>::remove(&stake_data.tx_hash);
+		// 				<TransferInitDataMapRecords<T>>::remove(key);
+		// 				<tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
+		// 			}
+		// 			VerifyStatus::Rollback | VerifyStatus::NotFoundTx => {
+		// 				<TransferInitDataMapRecords<T>>::remove(key);
+		// 				<tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
+		// 			}
+		// 			_ => tmp_datas.push(stake_data),
+		// 		}
 
-			}
-		}
+		// 	}
+		// }
 
 		<TransferInitDataRecords<T>>::put(tmp_datas);
     }
@@ -189,63 +187,63 @@ impl<T: Trait> Module<T> {
 	fn handle_transfer_success() {
 		let mut tmp_datas: Vec<CustomStakeData<T::AccountId, T::Hash, Balance>> = Vec::new();
 
-        for (key, hash) in <TransferSuccessDataMapRecords<T>>::enumerate() {
-			if tmp_datas.len() >= 50 {
-				break;
-			}
+        // for (key, hash) in <TransferSuccessDataMapRecords<T>>::enumerate() {
+		// 	if tmp_datas.len() >= 50 {
+		// 		break;
+		// 	}
 
-			if let Some(mut stake_data) = Self::stake_records(hash) {
+		// 	if let Some(mut stake_data) = Self::stake_records(hash) {
 
-				if stake_data.stage == AtomStakeStage::Completed {
-					<TransferSuccessDataMapRecords<T>>::remove(key);
-					// <tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
-					continue;
-				}
+		// 		if stake_data.stage == AtomStakeStage::Completed {
+		// 			<TransferSuccessDataMapRecords<T>>::remove(key);
+		// 			// <tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
+		// 			continue;
+		// 		}
 
-				let (status, _) = <tezosrpc::Module<T>>::verified(&stake_data.tx_hash);
-				let enum_status = VerifyStatus::create(status);
+		// 		let (status, _) = <tezosrpc::Module<T>>::verified(&stake_data.tx_hash);
+		// 		let enum_status = VerifyStatus::create(status);
 				
-				match enum_status {
-					VerifyStatus::Confirmed => {
-						let account_id = &stake_data.initiator;
+		// 		match enum_status {
+		// 			VerifyStatus::Confirmed => {
+		// 				let account_id = &stake_data.initiator;
 
-						stake_data.stage = AtomStakeStage::Completed;
-						<StakeRecords<T>>::insert(hash, stake_data.clone());
+		// 				stake_data.stage = AtomStakeStage::Completed;
+		// 				<StakeRecords<T>>::insert(hash, stake_data.clone());
 
-						bondtoken::Module::<T>::create_bond_token(
-							account_id.clone(),
-							Symbol::ATOM,
-							stake_data.stake_amount,
-							stake_data.id,
-							stake_data.multi_sig_address
-						).expect("Error adding xtz bond token");
+		// 				bondtoken::Module::<T>::create_bond_token(
+		// 					account_id.clone(),
+		// 					Symbol::ATOM,
+		// 					stake_data.stake_amount,
+		// 					stake_data.id,
+		// 					stake_data.multi_sig_address
+		// 				).expect("Error adding xtz bond token");
 
-						// // TODO: Add restrictive conditions to issue FIS token
-						// let free_balance = <balances::Module<T>>::free_balance(account_id.clone());
-						// let add_value: Balance = 100 * DOLLARS;
-						// if let Some(value) = add_value.try_into().ok() {
-						// 	// check
-						// 	match free_balance.checked_add(&value) {
-						// 		Some(total_value) => {
-						// 			balances::FreeBalance::<T>::insert(&account_id.clone(), total_value)
-						// 		},
-						// 		None => (),
-						// 	};
-						// }
+		// 				// // TODO: Add restrictive conditions to issue FIS token
+		// 				// let free_balance = <balances::Module<T>>::free_balance(account_id.clone());
+		// 				// let add_value: Balance = 100 * DOLLARS;
+		// 				// if let Some(value) = add_value.try_into().ok() {
+		// 				// 	// check
+		// 				// 	match free_balance.checked_add(&value) {
+		// 				// 		Some(total_value) => {
+		// 				// 			balances::FreeBalance::<T>::insert(&account_id.clone(), total_value)
+		// 				// 		},
+		// 				// 		None => (),
+		// 				// 	};
+		// 				// }
 
-						<TransferSuccessDataMapRecords<T>>::remove(key);
-						// <tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
-					}
-					VerifyStatus::NotFoundBlock | VerifyStatus::TxNotMatch => {
-						// <TransferInitCheckRecords>::remove(&stake_data.tx_hash);
-						// <TransferInitDataMapRecords<T>>::remove(key);
-						// <tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
-					}
-					_ => tmp_datas.push(stake_data),
-				}
+		// 				<TransferSuccessDataMapRecords<T>>::remove(key);
+		// 				// <tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
+		// 			}
+		// 			VerifyStatus::NotFoundBlock | VerifyStatus::TxNotMatch => {
+		// 				// <TransferInitCheckRecords>::remove(&stake_data.tx_hash);
+		// 				// <TransferInitDataMapRecords<T>>::remove(key);
+		// 				// <tezosrpc::Module<T>>::remove_verified(stake_data.tx_hash);
+		// 			}
+		// 			_ => tmp_datas.push(stake_data),
+		// 		}
 
-			}
-		}
+		// 	}
+		// }
 
 		<TransferInitDataRecords<T>>::put(tmp_datas);
     }

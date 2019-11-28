@@ -12,11 +12,11 @@ use parity_codec::{Encode};
 
 use node_primitives::{Balance, VerifyStatus, XtzStakeStage, XtzStakeData, ChainType, Symbol, constants::currency::*};
 use token_balances::bondtoken;
-use stafi_externalrpc::tezosrpc;
+use stafi_offchain_worker::tezosworker;
 use stafi_multisig::multisigaddr;
 use log::info;
 
-pub trait Trait: system::Trait + balances::Trait + bondtoken::Trait + tezosrpc::Trait + multisigaddr::Trait {
+pub trait Trait: system::Trait + balances::Trait + bondtoken::Trait + tezosworker::Trait + multisigaddr::Trait + stafi_staking_storage::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -33,7 +33,6 @@ decl_storage! {
 		pub OwnedStakeRecordsArray get(stake_of_owner_by_index): map (T::AccountId, u64) => T::Hash;
         pub OwnedStakeRecordsCount get(owned_stake_count): map T::AccountId => u64;
 
-		pub TransferInitDataRecords get(transfer_init_data_records): Vec<XtzStakeData<T::AccountId, T::Hash, Balance>>;
 		pub TransferInitCheckRecords get(transfer_init_check_records): map Vec<u8> => bool;
 		pub TransferInitDataMapRecords get(transfer_init_data_map_records): linked_map u64 => T::Hash;
 
@@ -130,14 +129,6 @@ decl_event!(
 
 impl<T: Trait> Module<T> {
 
-	fn check_sig(tx_hash: Vec<u8>, pub_key: Vec<u8>, sig: Vec<u8>) -> Result {
-		if !stafi_crypto::tez::verify::verify_with_ed(&tx_hash, &sig, &pub_key) {
-			return Err("");
-		}
-
-		Ok(())
-	}
-
 	fn pkh_from_pk(pub_key: Vec<u8>) -> Vec<u8> {
 		let edpk_str = str::from_utf8(&pub_key).unwrap();
 		let raw_pk_with_prefix = stafi_crypto::tez::base58::from_check(&edpk_str).unwrap();
@@ -158,11 +149,11 @@ impl<T: Trait> Module<T> {
 
 				if xtz_stake_data.stage == XtzStakeStage::Completed {
 					<TransferInitDataMapRecords<T>>::remove(key);
-					<tezosrpc::Module<T>>::remove_verified(xtz_stake_data.tx_hash);
+					<tezosworker::Module<T>>::remove_verified(xtz_stake_data.tx_hash);
 					continue;
 				}
 
-				let (status, _) = <tezosrpc::Module<T>>::verified(&xtz_stake_data.tx_hash);
+				let (status, _) = <tezosworker::Module<T>>::verified(&xtz_stake_data.tx_hash);
 				let enum_status = VerifyStatus::create(status);
 				
 				match enum_status {
@@ -194,16 +185,16 @@ impl<T: Trait> Module<T> {
 						}
 
 						<TransferInitDataMapRecords<T>>::remove(key);
-						<tezosrpc::Module<T>>::remove_verified(xtz_stake_data.tx_hash);
+						<tezosworker::Module<T>>::remove_verified(xtz_stake_data.tx_hash);
 					}
 					VerifyStatus::NotFoundBlock | VerifyStatus::TxNotMatch => {
 						<TransferInitCheckRecords>::remove(&xtz_stake_data.tx_hash);
 						<TransferInitDataMapRecords<T>>::remove(key);
-						<tezosrpc::Module<T>>::remove_verified(xtz_stake_data.tx_hash);
+						<tezosworker::Module<T>>::remove_verified(xtz_stake_data.tx_hash);
 					}
 					VerifyStatus::Rollback | VerifyStatus::NotFoundTx => {
 						<TransferInitDataMapRecords<T>>::remove(key);
-						<tezosrpc::Module<T>>::remove_verified(xtz_stake_data.tx_hash);
+						<tezosworker::Module<T>>::remove_verified(xtz_stake_data.tx_hash);
 					}
 					_ => tmp_datas.push(xtz_stake_data),
 				}
@@ -211,7 +202,7 @@ impl<T: Trait> Module<T> {
 			}
 		}
 
-		<TransferInitDataRecords<T>>::put(tmp_datas);
+		<stafi_staking_storage::Module<T>>::put_xtz_transfer_init_data_records(tmp_datas);
     }
 
 }

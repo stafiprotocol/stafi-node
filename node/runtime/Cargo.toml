@@ -70,7 +70,7 @@ stafi-multisig = { path = "../modules/stafi-multisig", default-features = false 
 stafi-fund = { path = "../modules/stafi-fund", default-features = false }
 stafi-externalrpc = { path = "../modules/stafi-externalrpc", default-features = false }
 stafi-offchain-worker = { path = "../modules/stafi-offchain-worker", default-features = false }
-
+stafi-staking-storage = { path = "../modules/stafi-staking-storage", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { package = "substrate-wasm-builder-runner", git = "https://github.com/stafiprotocol/stafi-blockchain", version = "1.0.4" }
@@ -135,4 +135,5 @@ std = [
 	"stafi-fund/std",
 	"stafi-externalrpc/std",
 	"stafi-offchain-worker/std",
+	"stafi-staking-storage/std",
 ]
