@@ -66,15 +66,15 @@ decl_module! {
 
             ensure!(!<TransferInitCheckRecords>::exists(tx_hash.clone()), "This tx_hash exist");
 
-			ensure!(<multisigaddr::Module<T>>::check_multisig_address(ChainType::TEZOS, multi_sig_address.clone()), "Multi sig address is illegal");
+			// ensure!(<multisigaddr::Module<T>>::check_multisig_address(ChainType::TEZOS, multi_sig_address.clone()), "Multi sig address is illegal");
 
 			// TODO: Check tx hash
 			// ensure!(tx_hash, "Stake amount must be greater than 0");
 			// TODO: Check block hash
 			// ensure!(block_hash, "Stake amount must be greater than 0");
 
-			// TODO: pub_key verify sig
-			// Self::check_sig(tx_hash.clone(), pub_key.clone(), sig.clone())?; 
+			// pub_key verify sig
+			// ensure!(stafi_crypto::tez::verify::verify_with_ed(&tx_hash, &sig, &pub_key), "Verify signature failed");
 			
 			let owned_stake_count = Self::owned_stake_count(&sender);
         	let new_owned_stake_count = owned_stake_count.checked_add(1).ok_or("Overflow adding a new owned stake")?;

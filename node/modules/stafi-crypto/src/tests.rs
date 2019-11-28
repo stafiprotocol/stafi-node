@@ -69,4 +69,14 @@ mod tests {
         let (message, _) = preprocess(test_data.to_vec());
         assert!(verify(&message, &signature_data.sig, &pk[4..]));
     }
+
+
+    #[test]
+    fn test_tez_verify_with_ed() {
+        let test_data = "op5bpKCL9Mo7bz2EGGsScpo3Ky1JzWAs4CmPGMAzNgRcBoyBkFk".as_bytes().to_vec();
+        let edpk = "edpkvQQhHzGoFf2zSESp1Kh57sFhbhtA16XAGXqjAYse75BC9RdoXW".as_bytes().to_vec();
+        let sk = "edskRsv7N9pK9tmpK9hPaLzGFACWY14aY27oCJxdeXyZ98ipfgknFMheswsWc88WZBmCWa1dfB3NyhUqfa8MWPvpiLK2UHKpA6";
+        let signature_data = sign(test_data.clone(), sk);
+        assert!(verify_with_ed(&test_data, &signature_data.edsig, &edpk));
+    }
 }

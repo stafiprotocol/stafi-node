@@ -17,6 +17,7 @@ extern crate crypto;
 extern crate sr_std;
 
 use super::base58;
+use super::sign;
 use crypto::ed25519;
 use sr_std::str;
 
@@ -25,7 +26,8 @@ pub fn verify_with_ed(data: &[u8], edsig: &[u8], edpk: &[u8]) -> bool {
     let edsig_bytes = base58::from_check(&edsig_str).unwrap();
     let edpk_str = str::from_utf8(edpk).unwrap();
     let pk = base58::from_check(&edpk_str).unwrap();
-    verify(data, &edsig_bytes[5..], &pk[4..])
+    let (message, _) = sign::preprocess(data.to_vec());
+    verify(&message, &edsig_bytes[5..], &pk[4..])
 }
 
 pub fn verify(data: &[u8], sig: &[u8], pk: &[u8]) -> bool {
