@@ -194,8 +194,6 @@ impl ProvideInherentData for InherentDataProvider {
 	}
 
 	fn provide_inherent_data(&self, inherent_data: &mut InherentData) -> Result<(), inherents::Error> {	
-		info!("inherent {}.", 12345);
-
 		use std::time::SystemTime;
 		let mut now_millis:u64 = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64;
 		let verify_in_batch = false;
@@ -233,7 +231,7 @@ impl ProvideInherentData for InherentDataProvider {
 
 		let babe_num = &babe_authorities.len();
 
-		let stake_data_key = get_hexkey(b"XtzStaking TransferInitDataRecords");
+		let stake_data_key = get_hexkey(b"TezosRpc StakeData");
 		let stake_data_str = get_value_from_storage(stake_data_key, self.node_rpc_host.clone());
 		if stake_data_str == "null" {
 			sr_io::misc::print_utf8(b"stake_data is null.");

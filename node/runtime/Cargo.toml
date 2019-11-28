@@ -62,12 +62,14 @@ treasury = { package = "pallet-treasury", git = "https://github.com/stafiprotoco
 utility = { package = "frame-utility", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 transaction-payment = { package = "pallet-transaction-payment", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 transaction-payment-rpc-runtime-api = { package = "pallet-transaction-payment-rpc-runtime-api", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+app-crypto = { package = "substrate-application-crypto", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 
 stafi-staking = { path = "../modules/stafi-staking", default-features = false }
 tokenbalances = { path = "../modules/tokenbalances", default-features = false }
 stafi-multisig = { path = "../modules/stafi-multisig", default-features = false }
 stafi-fund = { path = "../modules/stafi-fund", default-features = false }
 stafi-externalrpc = { path = "../modules/stafi-externalrpc", default-features = false }
+stafi-offchain-worker = { path = "../modules/stafi-offchain-worker", default-features = false }
 
 
 [build-dependencies]
@@ -132,4 +134,5 @@ std = [
 	"stafi-multisig/std",
 	"stafi-fund/std",
 	"stafi-externalrpc/std",
+	"stafi-offchain-worker/std",
 ]

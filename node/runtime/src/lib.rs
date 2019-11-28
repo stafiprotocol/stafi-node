@@ -24,7 +24,8 @@ use stafi_staking::atomstaking as atomStaking;
 use stafi_staking::xtzstaking as xtzStaking;
 use tokenbalances;
 use tokenbalances::bondtoken as bondToken;
-use stafi_externalrpc::{irisnetrpc, tezosrpc};
+use stafi_externalrpc::{ tezosrpc };
+use stafi_offchain_worker::{tezosworker};
 use stafi_fund;
 use stafi_multisig::multisigaddr as multisigAddr;
 
@@ -57,6 +58,7 @@ use transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 use contracts_rpc_runtime_api::ContractExecResult;
 use system::offchain::TransactionSubmitter;
 use inherents::{InherentData, CheckInherentsResult};
+use babe_primitives::AuthorityId as BabeId;
 
 #[cfg(any(feature = "std", test))]
 pub use sr_primitives::BuildStorage;
@@ -539,10 +541,18 @@ impl bondToken::Trait for Runtime {
 	type Event = Event;
 }
 
-impl irisnetrpc::Trait for Runtime {	
-}
+//impl irisnetrpc::Trait for Runtime {
+//}
 
 impl tezosrpc::Trait for Runtime {	
+}
+
+type SubmitTransactionOc = TransactionSubmitter<BabeId, Runtime, UncheckedExtrinsic>;
+
+impl tezosworker::Trait for Runtime {
+	type Event = Event;
+	type Call = Call;
+	type SubmitTransaction = SubmitTransactionOc;
 }
 
 construct_runtime!(
@@ -582,9 +592,10 @@ construct_runtime!(
 		BondToken: bondToken::{Module, Call, Storage, Event<T>},
 		Stafifund: stafi_fund::{Module, Call, Storage, Event<T>},
 		MultiSig: stafi_multisig::{Module, Call, Storage, Event<T>},
-		StafiIrisnetRpc: irisnetrpc::{Module, Call, Storage, Inherent},
+		//StafiIrisnetRpc: irisnetrpc::{Module, Call, Storage, Inherent},
 		StafiTezosRpc: tezosrpc::{Module, Call, Storage, Inherent},
 		MultisigAddress: multisigAddr::{Module, Call, Storage, Event, Config},
+		StafiTezosWorker: tezosworker::{Module, Call, Storage, Event<T>, ValidateUnsigned},
 	}
 );
 

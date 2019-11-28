@@ -19,6 +19,8 @@
 // #![warn(missing_docs)]
 
 #![cfg_attr(not(feature = "std"), no_std)]
+// rjson
+#![feature(core_intrinsics)]
 
 use sr_primitives::{
 	generic, traits::{Verify, BlakeTwo256, IdentifyAccount}, OpaqueExtrinsic, MultiSignature
@@ -108,7 +110,7 @@ pub mod stafistaking;
 pub use stafistaking::{XtzStakeData, XtzStakeStage, AtomStakeData, AtomStakeStage};
 
 pub mod externalrpc;
-pub use externalrpc::{VerifiedData, VerifyStatus, TxHashType, BabeIdType, HostData};
+pub use externalrpc::{VerifiedData, OcVerifiedData, VerifyStatus, TxHashType, BabeIdType, HostData, AuthIndex};
 
 pub mod tokenbalances;
 pub use tokenbalances::{BondTokenLockType, BondTokenLockStatus, CustomRedeemData};
@@ -118,3 +120,6 @@ pub use multisig::{MultisigAddr};
 
 pub mod chain;
 pub use chain::{ChainType, StakeTokenType, Symbol};
+
+pub mod rjson;
+
