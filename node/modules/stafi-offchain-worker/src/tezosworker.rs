@@ -35,7 +35,7 @@ pub const TEZOS_WAIT_DURATION: u64 = 120000;
 
 use system::offchain::SubmitUnsignedTransaction;
 
-pub trait Trait: system::Trait + babe::Trait + timestamp::Trait + session::Trait + stafi_staking_storage::Trait {
+pub trait Trait: system::Trait + babe::Trait + timestamp::Trait + stafi_staking_storage::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
     type Call: From<Call<Self>>;
 	type SubmitTransaction: SubmitUnsignedTransaction<Self, <Self as Trait>::Call>;
@@ -74,8 +74,9 @@ decl_module! {
 			let _who = ensure_none(origin)?;
 
 			let mut vd: Vec<OcVerifiedData<AuthorityId>> = NodeResponse::get(&txhash).into_iter().filter(|x| x.babe_id != v_data.babe_id).collect();
-			vd.push(v_data);
-			NodeResponse::insert(txhash, vd);
+			vd.push(v_data.clone());
+			NodeResponse::insert(txhash.clone(), vd);
+			Self::deposit_event(RawEvent::AddNodeResponse(txhash, v_data.babe_id));
 		}
 
         fn add_auth_account(origin, account: <T::Lookup as StaticLookup>::Source) {
@@ -84,17 +85,21 @@ decl_module! {
             let new = T::Lookup::lookup(account)?;
             let mut accounts: Vec<T::AccountId> = <AuthAccount<T>>::get();
             if !accounts.contains(&new) {
-                accounts.push(new);
+                accounts.push(new.clone());
                 <AuthAccount<T>>::put(accounts);
+
+                Self::deposit_event(RawEvent::AddAuthority(new));
             }
         }
 
         fn remove_auth_account(origin, account: <T::Lookup as StaticLookup>::Source) {
-            let _who = ensure_root(origin)?;
+            let _who = ensure_signed(origin)?;
 
             let new = T::Lookup::lookup(account)?;
             let accounts: Vec<T::AccountId> = <AuthAccount<T>>::get().into_iter().filter(|x| *x != new).collect();
             <AuthAccount<T>>::put(accounts);
+
+            Self::deposit_event(RawEvent::RemoveAuthority(new));
         }
 
         fn set_min_authority_number(origin, min: u8) {
@@ -312,9 +317,13 @@ impl<T: Trait> Module<T> {
             }
 
             let last_timestamp = Verified::get(txhash.clone()).1;
-            if enum_status == VerifyStatus::Verified && last_timestamp + blocks_confirmed as u64 * block_duration > Self::get_now() {
-                info!("status of {:} is Verified and last_timestamp + blocks_confirmed * block_duration > now_millis.", core::str::from_utf8(&txhash).unwrap());
-                continue;
+            if enum_status == VerifyStatus::Verified {
+                if last_timestamp + blocks_confirmed as u64 * block_duration > Self::get_now() {
+                    info!("the status of {:} is Verified and last_timestamp + blocks_confirmed * block_duration > now_millis.", core::str::from_utf8(&txhash).unwrap());
+                    continue;
+                } else {
+                    info!("the status of tx {:} has set to {:}", core::str::from_utf8(&txhash).unwrap(), VerifyStatus::Verified as i8);
+                }
             }
 
             let nodes_response = NodeResponse::get(txhash.clone());
@@ -322,7 +331,7 @@ impl<T: Trait> Module<T> {
             for node_response in nodes_response {
                 if authority.clone() == node_response.babe_id {
                     let status = VerifyStatus::create(node_response.status);
-                    if status != VerifyStatus::UnVerified {
+                    if status != VerifyStatus::UnVerified && status != VerifyStatus::Verified {
                         node_status_set = true;
                     }
                     break;
@@ -464,6 +473,8 @@ impl<T: Trait> Module<T> {
                 let (s, t) = Verified::get(txhash.clone());
                 if s != status && t != ts {
                     Verified::insert(txhash.clone(), (status, ts));
+                    Self::deposit_event(RawEvent::AddVerified(txhash.clone(), status));
+
                     let mut vb = VerifiedBak::get();
                     vb.push((txhash, status, ts));
                     VerifiedBak::put(vb);
@@ -522,8 +533,18 @@ impl<T: Trait> Module<T> {
     pub fn remove_verified(txhash: TxHashType) {
         if Verified::exists(&txhash) {
             Verified::remove(&txhash);
+            Self::deposit_event(RawEvent::RemoveVerified(txhash.clone()));
             NodeResponse::remove(&txhash);
+            Self::deposit_event(RawEvent::RemoveNodeResponse(txhash));
         }
+    }
+}
+
+impl<T: Trait> Module<T> {
+    // event
+    /// Deposit one of this module's events.
+    fn deposit_event(event: Event<T>) {
+        <system::Module<T>>::deposit_event(<T as Trait>::Event::from(event).into());
     }
 }
 
@@ -532,6 +553,11 @@ decl_event!(
     where
         <T as system::Trait>::AccountId,
     {
-        SetAuthority(AccountId),
+        AddAuthority(AccountId),
+        RemoveAuthority(AccountId),
+        AddNodeResponse(TxHashType, AuthorityId),
+        RemoveNodeResponse(TxHashType),
+        AddVerified(TxHashType, i8),
+        RemoveVerified(TxHashType),
     }
 );
