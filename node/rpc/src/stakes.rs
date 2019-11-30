@@ -22,8 +22,9 @@ use client::blockchain::HeaderBackend;
 use jsonrpc_core::{Result, Error, ErrorCode};
 use jsonrpc_derive::rpc;
 use node_primitives::{
-	Block, BlockId, AccountId, Hash, StakesApi, XtzStakeStage
+	Block, BlockId, AccountId, Hash, XtzStakeStage
 };
+pub use node_primitives::StakesApi;
 use codec::{Encode, Decode};
 use sr_primitives::traits;
 use hex;

@@ -229,7 +229,7 @@ pub fn testnet_genesis(
 			addrs: [
 				MultisigAddr {
 					chain_type: ChainType::TEZOS,
-					multisig_addr: "345".as_bytes().to_vec()
+					multisig_addr: "tz1RYze45x9NpyvYyLN6z1tHoSPv6A4LpFrf".as_bytes().to_vec()
 				},
 				MultisigAddr {
 					chain_type: ChainType::COSMOS,

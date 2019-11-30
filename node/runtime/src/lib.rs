@@ -36,7 +36,7 @@ use support::{
 	traits::{SplitTwoWays, Currency, Randomness},
 };
 use primitives::u32_trait::{_1, _2, _3, _4};
-use node_primitives::{AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Signature, MultisigAddr, XtzStakeData};
+use node_primitives::{AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Signature, MultisigAddr, XtzStakeData, ChainType};
 
 use sr_api::impl_runtime_apis;
 use sr_primitives::{Permill, Perbill, ApplyExtrinsicResult, impl_opaque_keys, generic, create_runtime_str};
@@ -724,18 +724,23 @@ impl_runtime_apis! {
 	}
 
 	impl node_primitives::MultisigAddrApi<Block> for Runtime {
-		fn multisig_addr() -> Vec<MultisigAddr> {
-			// MultisigAddress::multisig_addr()
-			
-			Vec::new()
+		fn multisig_addr(chainType: ChainType) -> Vec<MultisigAddr> {
+			MultisigAddress::multisig_addr_list(chainType)
 		}
 	}
 
 	impl node_primitives::StakesApi<Block> for Runtime {
-		fn get_stake_hash(_account: AccountId) -> Vec<Hash> {
-			// XtzStaking::stake_data_hash_records(account)
+		fn get_stake_hash(account: AccountId) -> Vec<Hash> {
+			let mut hashs: Vec<Hash> = Vec::new();
 
-			Vec::new()
+			let count = XtzStaking::owned_stake_count(account.clone());
+			if count > 0 {
+				for i in 0..count {
+					hashs.push(XtzStaking::stake_of_owner_by_index((account.clone(), i)));
+				}
+			}
+
+			hashs
 		}
 
 		fn get_stake_data(hash: Hash) -> Option<XtzStakeData<AccountId, Hash, Balance>> {
