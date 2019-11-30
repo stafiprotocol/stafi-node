@@ -1,0 +1,45 @@
+[package]
+name = "stafi-offchain-worker"
+version = "0.1.0"
+authors = ["Raymond <technical@stafi.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
+
+sr-std = { git = "https://github.com/stafiprotocol/stafi-blockchain", default_features = false }
+sr-io = { git = "https://github.com/stafiprotocol/stafi-blockchain", default_features = false }
+support = { git = "https://github.com/stafiprotocol/stafi-blockchain", package = "frame-support", default-features = false }
+system = { git = "https://github.com/stafiprotocol/stafi-blockchain", package = "frame-system", default-features = false }
+babe = { git = "https://github.com/stafiprotocol/stafi-blockchain", package = "pallet-babe", default-features = false }
+timestamp = { git = "https://github.com/stafiprotocol/stafi-blockchain", package = "pallet-timestamp", default-features = false }
+indices = { package = "pallet-indices", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+session = { package = "pallet-session", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+sr-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain", package = "sr-primitives", default-features = false }
+app-crypto = { git = "https://github.com/stafiprotocol/stafi-blockchain", package = "substrate-application-crypto", default-features = false }
+substrate-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain", package = "substrate-primitives", default-features = false }
+babe-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain", package = "substrate-consensus-babe-primitives", default-features = false }
+
+node-primitives = { path = "../../primitives", default-features = false }
+stafi-staking-storage = { path = "../stafi-staking-storage", default-features = false }
+
+log = "0.4"
+#blake2-rfc = { version = "0.2.18", default-features = false, optional = true }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+	"sr-std/std",
+	"sr-io/std",
+	"support/std",
+	"system/std",
+	"babe/std",
+	"timestamp/std",
+    "sr-primitives/std",
+    "app-crypto/std",
+	"substrate-primitives/std",
+	#"blake2-rfc",
+]

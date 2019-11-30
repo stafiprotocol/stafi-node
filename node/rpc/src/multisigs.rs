@@ -22,8 +22,9 @@ use client::blockchain::HeaderBackend;
 use jsonrpc_core::{Result, Error, ErrorCode};
 use jsonrpc_derive::rpc;
 use node_primitives::{
-	Block, BlockId, MultisigAddrApi, ChainType
+	Block, BlockId, ChainType
 };
+pub use node_primitives::MultisigAddrApi;
 use codec::{Encode, Decode};
 use sr_primitives::traits;
 use hex;
@@ -42,7 +43,7 @@ pub struct RpcMultisigAddr {
 #[rpc]
 pub trait MultisigsApi {
 	#[rpc(name = "multisig_getaddr")]
-	fn get_addr(&self) -> Result<Vec<RpcMultisigAddr>>;
+	fn get_addr(&self, chainType: ChainType) -> Result<Vec<RpcMultisigAddr>>;
 }
 
 pub struct Multisigs<C> {
@@ -64,12 +65,12 @@ where
 	C: Send + Sync + 'static,
 	C::Api: MultisigAddrApi<Block>,
 {
-	fn get_addr(&self) -> Result<Vec<RpcMultisigAddr>> {
+	fn get_addr(&self, chainType: ChainType) -> Result<Vec<RpcMultisigAddr>> {
 		let api = self.client.runtime_api();
 		let best = self.client.info().best_hash;
 		let at = BlockId::hash(best);
 
-		let addrs = api.multisig_addr(&at).map_err(|e| Error {
+		let addrs = api.multisig_addr(&at, chainType).map_err(|e| Error {
 			code: ErrorCode::ServerError(RUNTIME_ERROR),
 			message: "Unable to query multisig address.".into(),
 			data: Some(format!("{:?}", e).into()),

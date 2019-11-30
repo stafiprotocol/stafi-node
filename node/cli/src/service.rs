@@ -253,7 +253,7 @@ macro_rules! new_full {
 			},
 		}
 
-		let _reg = inherent_data_providers.register_provider(stafi_externalrpc::irisnetrpc::InherentDataProvider::new(String::from("https://lcd.testnet.irisnet.org/"), String::from("http://127.0.0.1:9933"), SLOT_DURATION as u64)).unwrap();
+		//let _reg = inherent_data_providers.register_provider(stafi_externalrpc::irisnetrpc::InherentDataProvider::new(String::from("https://lcd.testnet.irisnet.org/"), String::from("http://127.0.0.1:9933"), SLOT_DURATION as u64)).unwrap();
 		
 		let babe_ids = service.keystore().read().public_keys_by_type::<sr25519::Public>(KeyTypeId(*b"babe")).unwrap_or_default();
 		let mut babe_id = "".to_string();
@@ -261,6 +261,15 @@ macro_rules! new_full {
 			babe_id = babe_ids[0].to_string();
 			let rpc_http = format!("http://{}",rpc_http_addr.unwrap().to_string());
 			let _reg_tezos = inherent_data_providers.register_provider(stafi_externalrpc::tezosrpc::InherentDataProvider::new(rpc_http, SLOT_DURATION as u64, babe_id.clone())).unwrap();
+
+			/*let babe_pair = service.keystore().read().key_pair_by_type::<sr25519::Pair>(&babe_ids[0], KeyTypeId(*b"babe")).unwrap();
+			service
+				.keystore()
+				.write()
+				.insert_ephemeral_pair::<primitives::sr25519::Pair>(
+					&babe_pair,
+					stafi_runtime::offchaincb_crypto::KEY_TYPE,
+				);*/
 		}
 		println!("my babe id is : {:}", babe_id);
 

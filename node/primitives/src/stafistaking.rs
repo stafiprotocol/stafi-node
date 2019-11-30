@@ -14,8 +14,14 @@ pub enum XtzStakeStage {
 	Completed,
 }
 
+impl Default for XtzStakeStage {
+	fn default() -> XtzStakeStage {
+		XtzStakeStage::Init
+	}
+}
+
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
+#[derive(Encode, Decode, Clone, PartialEq, Default, RuntimeDebug)]
 pub struct XtzStakeData<AccountId, Hash, Balance> {
 	// stake identifier id
 	pub id: Hash,
@@ -50,8 +56,14 @@ pub enum AtomStakeStage {
 	Completed,
 }
 
+impl Default for AtomStakeStage {
+	fn default() -> AtomStakeStage {
+		AtomStakeStage::Init
+	}
+}
+
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
-#[derive(Encode, Decode, Clone, PartialEq)]
+#[derive(Encode, Decode, Clone, PartialEq, Default)]
 pub struct AtomStakeData<AccountId, Hash, Balance> {
 	// stake identifier id
 	pub id: Hash,
@@ -75,7 +87,7 @@ pub struct AtomStakeData<AccountId, Hash, Balance> {
 
 
 #[cfg_attr(feature = "std", derive(Debug))]
-#[derive(Encode, Decode, Clone, PartialEq)]
+#[derive(Encode, Decode, Clone, PartialEq, Default)]
 pub struct StakeDropAct<BlockNumber, Balance> {
 	pub begin: BlockNumber,
 	pub end: BlockNumber,

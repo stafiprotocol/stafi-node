@@ -13,23 +13,30 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
-extern crate crypto;
-extern crate sr_std;
 
-use super::base58;
-use super::sign;
-use crypto::ed25519;
-use sr_std::str;
+#![cfg_attr(not(feature = "std"), no_std)]
 
-pub fn verify_with_ed(data: &[u8], edsig: &[u8], edpk: &[u8]) -> bool {
-    let edsig_str = str::from_utf8(edsig).unwrap();
-    let edsig_bytes = base58::from_check(&edsig_str).unwrap();
-    let edpk_str = str::from_utf8(edpk).unwrap();
-    let pk = base58::from_check(&edpk_str).unwrap();
-    let (message, _) = sign::preprocess(data.to_vec());
-    verify(&message, &edsig_bytes[5..], &pk[4..])
+use support::{decl_module, decl_storage};
+use node_primitives::{Balance, XtzStakeData};
+use sr_std::prelude::*;
+
+pub trait Trait: system::Trait {}
+
+// This module's storage items.
+decl_storage! {
+	trait Store for Module<T: Trait> as StakingStorage {
+		pub XtzTransferInitDataRecords get(xtz_transfer_init_data_records): Vec<XtzStakeData<T::AccountId, T::Hash, Balance>>;
+	}
 }
 
-pub fn verify(data: &[u8], sig: &[u8], pk: &[u8]) -> bool {
-    ed25519::verify(data, pk, sig)
+decl_module! {
+    pub struct Module<T: Trait> for enum Call where origin: T::Origin {}
+}
+
+impl<T: Trait> Module<T> {
+
+	pub fn put_xtz_transfer_init_data_records(datas: Vec<XtzStakeData<T::AccountId, T::Hash, Balance>>) {
+		<XtzTransferInitDataRecords<T>>::put(datas);
+    }
+
 }

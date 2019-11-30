@@ -24,7 +24,8 @@ use stafi_staking::atomstaking as atomStaking;
 use stafi_staking::xtzstaking as xtzStaking;
 use tokenbalances;
 use tokenbalances::bondtoken as bondToken;
-use stafi_externalrpc::{irisnetrpc, tezosrpc};
+use stafi_externalrpc::{ tezosrpc };
+use stafi_offchain_worker::{tezosworker};
 use stafi_fund;
 use stafi_multisig::multisigaddr as multisigAddr;
 
@@ -35,7 +36,7 @@ use support::{
 	traits::{SplitTwoWays, Currency, Randomness},
 };
 use primitives::u32_trait::{_1, _2, _3, _4};
-use node_primitives::{AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Signature, MultisigAddr, XtzStakeData};
+use node_primitives::{AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Signature, MultisigAddr, XtzStakeData, ChainType};
 
 use sr_api::impl_runtime_apis;
 use sr_primitives::{Permill, Perbill, ApplyExtrinsicResult, impl_opaque_keys, generic, create_runtime_str};
@@ -57,6 +58,7 @@ use transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 use contracts_rpc_runtime_api::ContractExecResult;
 use system::offchain::TransactionSubmitter;
 use inherents::{InherentData, CheckInherentsResult};
+use babe_primitives::AuthorityId as BabeId;
 
 #[cfg(any(feature = "std", test))]
 pub use sr_primitives::BuildStorage;
@@ -539,10 +541,21 @@ impl bondToken::Trait for Runtime {
 	type Event = Event;
 }
 
-impl irisnetrpc::Trait for Runtime {	
-}
+//impl irisnetrpc::Trait for Runtime {
+//}
 
 impl tezosrpc::Trait for Runtime {	
+}
+
+impl stafi_staking_storage::Trait for Runtime {	
+}
+
+type SubmitTransactionOc = TransactionSubmitter<BabeId, Runtime, UncheckedExtrinsic>;
+
+impl tezosworker::Trait for Runtime {
+	type Event = Event;
+	type Call = Call;
+	type SubmitTransaction = SubmitTransactionOc;
 }
 
 construct_runtime!(
@@ -582,9 +595,11 @@ construct_runtime!(
 		BondToken: bondToken::{Module, Call, Storage, Event<T>},
 		Stafifund: stafi_fund::{Module, Call, Storage, Event<T>},
 		MultiSig: stafi_multisig::{Module, Call, Storage, Event<T>},
-		StafiIrisnetRpc: irisnetrpc::{Module, Call, Storage, Inherent},
+		//StafiIrisnetRpc: irisnetrpc::{Module, Call, Storage, Inherent},
 		StafiTezosRpc: tezosrpc::{Module, Call, Storage, Inherent},
 		MultisigAddress: multisigAddr::{Module, Call, Storage, Event, Config},
+		StafiTezosWorker: tezosworker::{Module, Call, Storage, Event<T>, ValidateUnsigned},
+		StakingStorage: stafi_staking_storage::{Module, Call, Storage},
 	}
 );
 
@@ -709,18 +724,23 @@ impl_runtime_apis! {
 	}
 
 	impl node_primitives::MultisigAddrApi<Block> for Runtime {
-		fn multisig_addr() -> Vec<MultisigAddr> {
-			// MultisigAddress::multisig_addr()
-			
-			Vec::new()
+		fn multisig_addr(chainType: ChainType) -> Vec<MultisigAddr> {
+			MultisigAddress::multisig_addr_list(chainType)
 		}
 	}
 
 	impl node_primitives::StakesApi<Block> for Runtime {
-		fn get_stake_hash(_account: AccountId) -> Vec<Hash> {
-			// XtzStaking::stake_data_hash_records(account)
+		fn get_stake_hash(account: AccountId) -> Vec<Hash> {
+			let mut hashs: Vec<Hash> = Vec::new();
 
-			Vec::new()
+			let count = XtzStaking::owned_stake_count(account.clone());
+			if count > 0 {
+				for i in 0..count {
+					hashs.push(XtzStaking::stake_of_owner_by_index((account.clone(), i)));
+				}
+			}
+
+			hashs
 		}
 
 		fn get_stake_data(hash: Hash) -> Option<XtzStakeData<AccountId, Hash, Balance>> {

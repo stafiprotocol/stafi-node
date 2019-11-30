@@ -18,7 +18,8 @@ randomness-collective-flip = { package = "pallet-randomness-collective-flip", gi
 
 node-primitives = { path = "../../primitives", default-features = false }
 token-balances = { package = "tokenbalances", path = "../tokenbalances", default-features = false }
-stafi-externalrpc = { path = "../stafi-externalrpc", default-features = false }
+stafi-offchain-worker = { path = "../stafi-offchain-worker", default-features = false }
+stafi-staking-storage = { path = "../stafi-staking-storage", default-features = false }
 stafi-crypto = { path = "../stafi-crypto", default-features = false }
 stafi-multisig = { path = "../stafi-multisig", default-features = false }
 
@@ -38,7 +39,6 @@ std = [
     "im-online/std",
     "node-primitives/std",
     "token-balances/std",
-    "stafi-externalrpc/std",
     "stafi-multisig/std",
     "randomness-collective-flip/std",
     "stafi-crypto/std",

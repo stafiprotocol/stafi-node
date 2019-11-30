@@ -1,0 +1,25 @@
+[package]
+name = "stafi-staking-storage"
+version = "0.1.0"
+authors = ["Tore <technical@stafi.io>"]
+edition = "2018"
+
+[dependencies]
+parity-codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
+sr-std = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+support = { package = "frame-support", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+system = { package = "frame-system", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+
+node-primitives = { path = "../../primitives", default-features = false }
+
+log = "0.4"
+
+[features]
+default = ["std"]
+std = [
+    "parity-codec/std",
+    "sr-std/std",
+    "support/std",
+    "system/std",
+    "node-primitives/std",
+]

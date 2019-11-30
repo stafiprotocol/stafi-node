@@ -47,8 +47,8 @@ pub fn create<C, P, M>(client: Arc<C>, pool: Arc<Pool<P>>) -> jsonrpc_core::IoHa
 	C::Api: frame_system_rpc::AccountNonceApi<Block, AccountId, Index>,
 	C::Api: pallet_contracts_rpc::ContractsRuntimeApi<Block, AccountId, Balance>,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance, UncheckedExtrinsic>,
-	// C::Api: multisigs::MultisigsApi,
-	// C::Api: stakes::StakesRpcApi,
+	C::Api: multisigs::MultisigAddrApi<Block>,
+	C::Api: stakes::StakesApi<Block>,
 	P: ChainApi + Sync + Send + 'static,
 	M: jsonrpc_core::Metadata + Default,
 {
@@ -66,14 +66,14 @@ pub fn create<C, P, M>(client: Arc<C>, pool: Arc<Pool<P>>) -> jsonrpc_core::IoHa
 		ContractsApi::to_delegate(Contracts::new(client.clone()))
 	);
 	io.extend_with(
-		TransactionPaymentApi::to_delegate(TransactionPayment::new(client))
+		TransactionPaymentApi::to_delegate(TransactionPayment::new(client.clone()))
 	);
-	// io.extend_with(
-	// 	MultisigsApi::to_delegate(Multisigs::new(client.clone()))
-	// );
-	// io.extend_with(
-	// 	StakesRpcApi::to_delegate(Stakes::new(client))
-	// );
+	io.extend_with(
+		MultisigsApi::to_delegate(Multisigs::new(client.clone()))
+	);
+	io.extend_with(
+		StakesRpcApi::to_delegate(Stakes::new(client))
+	);
 	io
 }
 

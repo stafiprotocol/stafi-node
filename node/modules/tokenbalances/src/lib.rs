@@ -13,7 +13,7 @@ pub mod bondtoken;
 pub type SymbolString = &'static [u8];
 pub type DescString = SymbolString;
 
-pub trait Trait: balances::Trait+timestamp::Trait {
+pub trait Trait: balances::Trait {
 	const STAFI_SYMBOL: SymbolString;
     const STAFI_TOKEN_DESC: DescString;
 	type TokenBalance: Parameter + Codec + Default + Copy + MaybeSerialize + From<Self::BlockNumber>;
