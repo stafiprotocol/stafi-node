@@ -9,7 +9,7 @@ use rstd::vec::Vec;
 //use rstd::result::Result;
 use system::{ensure_signed, ensure_root, ensure_none};
 use node_primitives::{OcVerifiedData, VerifyStatus, TxHashType, HostData, XtzStakeData, Balance, AuthIndex};
-use sr_primitives::traits::{SaturatedConversion};
+use sr_primitives::traits::{SaturatedConversion, StaticLookup};
 use sr_primitives::transaction_validity::{
     TransactionValidity, ValidTransaction, InvalidTransaction,
     TransactionPriority, TransactionLongevity,
@@ -27,14 +27,15 @@ fn debug(msg: &str) {
 	info!("{}", msg);
 }
 
-//pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"stez");
 pub const TEZOS_BLOCK_CONFIRMED: u8 = 3;
 pub const TEZOS_BLOCK_DURATION: u64 = 60000;
 pub const TEZOS_RPC_HOST: &'static [u8] = b"https://rpc.tezrpc.me";
+pub const OFFCHAIN_MIN_AUTH: u8 = 1;
+pub const TEZOS_WAIT_DURATION: u64 = 120000;
 
 use system::offchain::SubmitUnsignedTransaction;
 
-pub trait Trait: system::Trait + babe::Trait + timestamp::Trait + session::Trait + stafi_staking_storage::Trait {
+pub trait Trait: system::Trait + babe::Trait + timestamp::Trait + stafi_staking_storage::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
     type Call: From<Call<Self>>;
 	type SubmitTransaction: SubmitUnsignedTransaction<Self, <Self as Trait>::Call>;
@@ -48,6 +49,9 @@ decl_storage! {
 		RpcHost get(rpc_host): Vec<HostData>;
 		BlocksConfirmed get(blocks_confirmed): Option<u8>;
 		BlockDuration get(block_duration): Option<u64>;
+		WaitDuration get(wait_duration): Option<u64>;
+        AuthAccount get(auth_account) : Vec<T::AccountId>;
+        MinAuthorityNumber get(min_authority_number): Option<u8>;
 
 		//for test
 		StakeData get(stake_data): Vec<XtzStakeData<T::AccountId, T::Hash, Balance>>;
@@ -69,16 +73,44 @@ decl_module! {
 
 			let _who = ensure_none(origin)?;
 
-			let authorities = Self::get_babe_list();
-			ensure!(authorities.len() as u32 > v_data.authority_index, "bad authorities");
-			let authority = &authorities[v_data.authority_index as usize];
-            let mut vd: Vec<OcVerifiedData<AuthorityId>> = NodeResponse::get(&txhash).into_iter().filter(|x| x.babe_id != *authority).collect();
-			vd.push(v_data);
-			NodeResponse::insert(txhash, vd);
+			let mut vd: Vec<OcVerifiedData<AuthorityId>> = NodeResponse::get(&txhash).into_iter().filter(|x| x.babe_id != v_data.babe_id).collect();
+			vd.push(v_data.clone());
+			NodeResponse::insert(txhash.clone(), vd);
+			Self::deposit_event(RawEvent::AddNodeResponse(txhash, v_data.babe_id));
 		}
 
+        fn add_auth_account(origin, account: <T::Lookup as StaticLookup>::Source) {
+            let _who = ensure_root(origin)?;
+
+            let new = T::Lookup::lookup(account)?;
+            let mut accounts: Vec<T::AccountId> = <AuthAccount<T>>::get();
+            if !accounts.contains(&new) {
+                accounts.push(new.clone());
+                <AuthAccount<T>>::put(accounts);
+
+                Self::deposit_event(RawEvent::AddAuthority(new));
+            }
+        }
+
+        fn remove_auth_account(origin, account: <T::Lookup as StaticLookup>::Source) {
+            let _who = ensure_signed(origin)?;
+
+            let new = T::Lookup::lookup(account)?;
+            let accounts: Vec<T::AccountId> = <AuthAccount<T>>::get().into_iter().filter(|x| *x != new).collect();
+            <AuthAccount<T>>::put(accounts);
+
+            Self::deposit_event(RawEvent::RemoveAuthority(new));
+        }
+
+        fn set_min_authority_number(origin, min: u8) {
+            let _who = ensure_root(origin)?;
+
+            ensure!(min>0, "bad min authority number");
+            MinAuthorityNumber::put(min);
+        }
+
 		fn add_rpc_host(origin, host:Vec<u8>) {
-			let _who = ensure_signed(origin)?;
+			let _who = ensure_root(origin)?;
 
 			let host_data = HostData {
 				host: host,
@@ -109,6 +141,12 @@ decl_module! {
 			BlockDuration::put(duration);
 		}
 
+        fn set_wait_duration(origin, duration:u64) {
+			let _who = ensure_root(origin)?;
+
+			WaitDuration::put(duration);
+		}
+
         fn on_finalize() {
             Self::finalizer()
         }
@@ -129,20 +167,49 @@ impl<T: Trait> Module<T> {
         <babe::Module<T>>::authorities().iter().map(|x| x.0.clone()).collect::<Vec<AuthorityId>>()
     }
 
-    fn get_babe_num() -> usize {
-        return <babe::Module<T>>::authorities().len();
+    fn get_babe_num() -> u8 {
+        if <AuthAccount<T>>::get().len() == 0 {
+            return <babe::Module<T>>::authorities().len() as u8;
+        }
+
+        let mut count:u8 = 0;
+        Self::get_babe_list().iter().for_each(|key|
+            if Self::is_auth_account(&key) {
+                count += 1;
+            }
+        );
+
+        count
+    }
+
+    fn is_auth_account(key: &AuthorityId) -> bool {
+        if <AuthAccount<T>>::get().len() == 0 {
+            return true;
+        }
+
+        <AuthAccount<T>>::get().iter().any(|x| x.encode() == key.encode())
+    }
+
+    fn authority_id() -> Option<(AuthIndex, AuthorityId)> {
+        let authorities = Self::get_babe_list();
+        let local_keys = AuthorityId::all();
+
+        for (authority_index, key) in authorities.into_iter().enumerate() {
+            if !Self::is_auth_account(&key) {
+                debug("the key is not in auth account list");
+                continue;
+            }
+
+            if local_keys.contains(&key) {
+                return Some((authority_index as u32, key.clone()));
+            }
+        }
+
+        None
     }
 
     fn get_now() -> u64 {
         return <timestamp::Module<T>>::now().saturated_into::<u64>();
-    }
-
-    fn vec8_to_u64(v: Vec<u8>) -> u64 {
-        let mut a: [u8; 8] = [0; 8];
-        for i in 0..8 {
-            a[i] = v[i];
-        }
-        u64::from_be_bytes(a)
     }
 
     fn offchain(now: T::BlockNumber) {
@@ -157,24 +224,81 @@ impl<T: Trait> Module<T> {
 
         let blocks_confirmed = Self::blocks_confirmed().unwrap_or(TEZOS_BLOCK_CONFIRMED);
         let block_duration = Self::block_duration().unwrap_or(TEZOS_BLOCK_DURATION);
+        let wait_duration = Self::wait_duration().unwrap_or(TEZOS_WAIT_DURATION);
+        let min_authority_number = Self::min_authority_number().unwrap_or(OFFCHAIN_MIN_AUTH);
 
-        let (authority_index, authority) = Self::authority_id();
-        if authority.is_none() {
-            debug("no authority_id");
-            return
+        let babe_num = Self::get_babe_num();
+        if babe_num < min_authority_number {
+            debug("babe num is less than minimum");
+            return;
         }
-        let authority = authority.unwrap();
+
+        let (authority_index, authority) = match Self::authority_id() {
+            Some((ai, au)) => (ai, au),
+            None => {
+                debug("local storage has no authority key");
+                return
+            },
+        };
+
+        //for test
+        /*struct MyStakeData {
+            block_hash: Vec<u8>,
+            tx_hash: Vec<u8>,
+            stake_account: Vec<u8>,
+            multi_sig_address: Vec<u8>,
+            stake_amount: u128,
+        };
+
+        let mut stake_data:Vec<MyStakeData> = Vec::new();
+        let xsd = MyStakeData {
+            block_hash: "BKsxzJMXPxxJWRZcsgWG8AAegXNp2uUuUmMr8gzQcoEiGnNeCA6".as_bytes().to_vec(),
+            tx_hash: "onv7i9LSacMXjhTdpgzmY4q6PxiZ18TZPq7KrRBRUVX7XJicSDi".as_bytes().to_vec(),
+            stake_account: "tz1SYq214SCBy9naR6cvycQsYcUGpBqQAE8d".as_bytes().to_vec(),
+            multi_sig_address: "tz1S4MTpEV356QcuzkjQUdyZdAy36gPwPWXa".as_bytes().to_vec(),
+            stake_amount: 710391,
+        };
+        stake_data.push(xsd);
+
+        let xsd = MyStakeData {
+            block_hash: "BL2ReFqekwvFVFNXKkjcNdW71ProJtH54zSM2nVKvmciHvRXxm8".as_bytes().to_vec(),
+            tx_hash: "op8BF61b4iFWpsVmHUYAyPCvKNCcBLGeCZyY3TnQ6NNcimBerdj".as_bytes().to_vec(),
+            stake_account: "tz1S4MTpEV356QcuzkjQUdyZdAy36gPwPWXa".as_bytes().to_vec(),
+            multi_sig_address: "KT1F1EfPahaN35gi6aCYB93xV5W6HgVEiZuQ".as_bytes().to_vec(),
+            stake_amount: 708971,
+        };
+        stake_data.push(xsd);
+
+        let xsd = MyStakeData {
+            block_hash: "BMYfb5aWPpgRcMVfcD2g1HRzEvS22Camsx36PYzwEdFTJGTqJCZ".as_bytes().to_vec(),
+            tx_hash: "oo24BA3DCP1KSBwDXAyz3bLVhP7btAZftQ59yR4HnX1Dpw7wQfj".as_bytes().to_vec(),
+            stake_account: "tz1SWEwaPZsou41ZBG5c4HCLdT2p8x6n8nHz".as_bytes().to_vec(),
+            multi_sig_address: "tz1VnRTCgVJkcTg51e2f9dtfxkMRnXeLwAv5".as_bytes().to_vec(),
+            stake_amount: 614074000,
+        };
+        stake_data.push(xsd);
+
+        let xsd = MyStakeData {
+            block_hash: "BLZr5LJhdyjtPtZh3J92Z34B1MW4hthGpQaQRMFbwyZZ9eVrfdc".as_bytes().to_vec(),
+            tx_hash: "opNBVDJddK5d6ykNDPQncKaPkbfchfPMSWrRVoSFtbX4dsnLW2Y".as_bytes().to_vec(),
+            stake_account: "tz1Wy5Ph1FkD1ypUjpFpsHLXLEXDAeCRkZce".as_bytes().to_vec(),
+            multi_sig_address: "KT1EvmJSSvvqMBafGqr7XD5T6PbedYssD47z".as_bytes().to_vec(),
+            stake_amount: 272299,
+        };
+        stake_data.push(xsd);
+
+        let xsd = MyStakeData {
+            block_hash: "BMRu3JGLTMPgFLwyQBKg1Wz6oQnvFtZMQ7vk6TxLnoAwznbK5Mk".as_bytes().to_vec(),
+            tx_hash: "oo1hcJRer2Hq3U6pmVXEgsYWhPvrfSKqibkbxxbYWzSHkLpdg77".as_bytes().to_vec(),
+            stake_account: "tz1e4N6UZzrjoxKbsJoLnxuBy6DfZu4voiTV".as_bytes().to_vec(),
+            multi_sig_address: "tz1YSGFfMeFBLaBati1AeWkMtDsrpjrkzvPx".as_bytes().to_vec(),
+            stake_amount: 225000000,
+        };
+        stake_data.push(xsd);*/
 
         for xsd in <stafi_staking_storage::Module<T>>::xtz_transfer_init_data_records() {
         //for xsd in Self::stake_data() {
-        //for _i in 0..1 {
-            //for test
-            //let blockhash: Vec<u8> = "BKsxzJMXPxxJWRZcsgWG8AAegXNp2uUuUmMr8gzQcoEiGnNeCA6".as_bytes().to_vec();
-            //let txhash: Vec<u8> = "onv7i9LSacMXjhTdpgzmY4q6PxiZ18TZPq7KrRBRUVX7XJicSDi".as_bytes().to_vec();
-            //let from = "tz1SYq214SCBy9naR6cvycQsYcUGpBqQAE8d".as_bytes().to_vec();
-            //let to = "tz1S4MTpEV356QcuzkjQUdyZdAy36gPwPWXa".as_bytes().to_vec();
-            //let amount = 710391;
-
+        //for xsd in stake_data {
             let blockhash = xsd.block_hash;
             let txhash = xsd.tx_hash;
             let from = xsd.stake_account;
@@ -183,20 +307,23 @@ impl<T: Trait> Module<T> {
 
             let enum_status = VerifyStatus::create(Verified::get(txhash.clone()).0);
             if enum_status == VerifyStatus::Error {
-                debug("error in reading verificaiton status.");
+                info!("error in reading verificaiton status {:}.", core::str::from_utf8(&txhash).unwrap());
                 continue;
             }
 
             if enum_status == VerifyStatus::Confirmed || enum_status == VerifyStatus::NotFoundTx || enum_status == VerifyStatus::Rollback || enum_status == VerifyStatus::NotFoundBlock || enum_status == VerifyStatus::TxNotMatch {
-                //runtime_io::print_utf8(&format!("{:}'s status is {:}.", txhash, enum_status as i8).into_bytes());
-                debug("the status of tx has set");
+                info!("the status of tx {:} has set to {:}", core::str::from_utf8(&txhash).unwrap(), enum_status as i8);
                 continue;
             }
 
             let last_timestamp = Verified::get(txhash.clone()).1;
-            if enum_status == VerifyStatus::Verified && last_timestamp + blocks_confirmed as u64 * block_duration > Self::get_now() {
-                debug("status is Verified and last_timestamp + blocks_confirmed * block_duration > now_millis.");
-                continue;
+            if enum_status == VerifyStatus::Verified {
+                if last_timestamp + blocks_confirmed as u64 * block_duration > Self::get_now() {
+                    info!("the status of {:} is Verified and last_timestamp + blocks_confirmed * block_duration > now_millis.", core::str::from_utf8(&txhash).unwrap());
+                    continue;
+                } else {
+                    info!("the status of tx {:} has set to {:}", core::str::from_utf8(&txhash).unwrap(), VerifyStatus::Verified as i8);
+                }
             }
 
             let nodes_response = NodeResponse::get(txhash.clone());
@@ -204,7 +331,7 @@ impl<T: Trait> Module<T> {
             for node_response in nodes_response {
                 if authority.clone() == node_response.babe_id {
                     let status = VerifyStatus::create(node_response.status);
-                    if status != VerifyStatus::UnVerified {
+                    if status != VerifyStatus::UnVerified && status != VerifyStatus::Verified {
                         node_status_set = true;
                     }
                     break;
@@ -212,18 +339,18 @@ impl<T: Trait> Module<T> {
             }
 
             if node_status_set {
-                debug("the status of node has set");
+                info!("the status of tx {:} for node {:?} has set", core::str::from_utf8(&txhash).unwrap(), &authority);
                 continue;
             }
 
             let mut key:Vec<u8> = txhash.clone();
-            key.extend(&authority_index.to_be_bytes().to_vec());
+            key.extend(&authority.encode());
             let v = tezos::get_value(&key).unwrap_or((0 as u64).to_be_bytes().to_vec());
-            let ts = Self::vec8_to_u64(v);
+            let ts = tezos::vec8_to_u64(v);
             //runtime_io::print_num(ts);
             if ts > 0 {
-                debug("the node has already send request");
-                if Self::get_now() - ts > 2 * 60 * 1000 { //2 minutes
+                info!("the node {:?} has already send request [tx:{:}]", &authority, core::str::from_utf8(&txhash).unwrap());
+                if Self::get_now() - ts > wait_duration {
                     tezos::set_value(&key, &(0 as u64).to_be_bytes());
                 }
 
@@ -259,16 +386,16 @@ impl<T: Trait> Module<T> {
                 timestamp: Self::get_now(),
                 status: new_status as i8,
                 babe_id: authority.clone(),
-                babe_num: Self::get_babe_num() as u8,
+                babe_num,
                 authority_index,
             };
 
-            debug("set_node_response ...");
+            info!("the node {:?} set response for {:}", &authority, core::str::from_utf8(&txhash).unwrap());
 
             let signature = match authority.clone().sign(&verified_data.encode()) {
                 Some(sig) => sig,
                 None => {
-                    debug("signature error");
+                    info!("{:?} signature error", &authority);
                     break;
                 }
             };
@@ -276,37 +403,14 @@ impl<T: Trait> Module<T> {
             let call = Call::set_node_response(txhash.clone(), verified_data, signature);
             let ret = T::SubmitTransaction::submit_unsigned(call);
             match ret {
-                Ok(_) => debug("submit ok"),
-                Err(_) => debug("submit failed"),
+                Ok(_) => info!("{:?} submit ok", &authority),
+                Err(_) => info!("{:?} submit failed", &authority),
             }
-
-            //let call = Call::set_node_response(txhash.clone(), verified_data);
-            //Self::submit_call(call, key.clone().unwrap() as IdentifyAccount<AccountId=T::AccountId>);
 
             tezos::set_value(&key, &(0 as u64).to_be_bytes());
 
             break;
         }
-    }
-
-    pub fn remove_verified(txhash: TxHashType) {
-        if Verified::exists(&txhash) {
-            Verified::remove(&txhash);
-            NodeResponse::remove(&txhash);
-        }
-    }
-
-    fn authority_id() -> (AuthIndex, Option<AuthorityId>) {
-        let authorities = Self::get_babe_list();
-        let local_keys = AuthorityId::all();
-
-        for (authority_index, key) in authorities.into_iter().enumerate() {
-            if local_keys.contains(&key) {
-                return (authority_index as u32, Some(key.clone()));
-            }
-        }
-
-        (0, None)
     }
 }
 
@@ -315,15 +419,13 @@ impl<T: Trait> support::unsigned::ValidateUnsigned for Module<T> {
     type Call = Call<T>;
 
     fn validate_unsigned(call: &Self::Call) -> TransactionValidity {
-        //debug("in validate_unsigned");
         if let Call::set_node_response(txhash, verified, signature) = call {
 
-            let index = verified.authority_index;
-            let keys = Self::get_babe_list();
-            if keys.len() as u32 <= index {
+            if *txhash != verified.tx_hash {
                 return InvalidTransaction::BadProof.into();
             }
-            let key = &keys[index as usize];
+
+            let key = &verified.babe_id;
             let signature_valid = verified.using_encoded(|encoded_verified| {
                 key.verify(&encoded_verified, &signature)
             });
@@ -371,6 +473,8 @@ impl<T: Trait> Module<T> {
                 let (s, t) = Verified::get(txhash.clone());
                 if s != status && t != ts {
                     Verified::insert(txhash.clone(), (status, ts));
+                    Self::deposit_event(RawEvent::AddVerified(txhash.clone(), status));
+
                     let mut vb = VerifiedBak::get();
                     vb.push((txhash, status, ts));
                     VerifiedBak::put(vb);
@@ -425,6 +529,23 @@ impl<T: Trait> Module<T> {
 
         return new_status;
     }
+
+    pub fn remove_verified(txhash: TxHashType) {
+        if Verified::exists(&txhash) {
+            Verified::remove(&txhash);
+            Self::deposit_event(RawEvent::RemoveVerified(txhash.clone()));
+            NodeResponse::remove(&txhash);
+            Self::deposit_event(RawEvent::RemoveNodeResponse(txhash));
+        }
+    }
+}
+
+impl<T: Trait> Module<T> {
+    // event
+    /// Deposit one of this module's events.
+    fn deposit_event(event: Event<T>) {
+        <system::Module<T>>::deposit_event(<T as Trait>::Event::from(event).into());
+    }
 }
 
 decl_event!(
@@ -432,6 +553,11 @@ decl_event!(
     where
         <T as system::Trait>::AccountId,
     {
-        SetAuthority(AccountId),
+        AddAuthority(AccountId),
+        RemoveAuthority(AccountId),
+        AddNodeResponse(TxHashType, AuthorityId),
+        RemoveNodeResponse(TxHashType),
+        AddVerified(TxHashType, i8),
+        RemoveVerified(TxHashType),
     }
 );

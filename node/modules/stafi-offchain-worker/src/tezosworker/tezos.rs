@@ -14,7 +14,6 @@ pub const BUF_LEN: usize = 2048;
 
 /// only for debug
 fn debug(msg: &str) {
-    //runtime_io::misc::print_utf8(msg.as_bytes());
     info!("{}", msg);
 }
 
@@ -53,7 +52,7 @@ fn request_tezos_buf(uri: &str) -> Result<[u8; BUFFER_LEN], RequestError> {
         match res {
             Ok(buf) => {
                 runtime_io::misc::print_utf8(b"request_tezos_value return");
-                return Ok(buf); //parse_result(buf, "onv7i9LSacMXjhTdpgzmY4q6PxiZ18TZPq7KrRBRUVX7XJicSDi");
+                return Ok(buf);
             }
             Err(err) => {
                 debug("request_tezos_value error");
@@ -81,9 +80,8 @@ fn http_request_get(
     uri: &str,
     header: Option<(&str, &str)>,
 ) -> Result<[u8; BUFFER_LEN], RequestError> {
-    // TODO: extract id, maybe use for other place
     let id: HttpRequestId = runtime_io::offchain::http_request_start("GET", uri, &[0]).unwrap();
-    let deadline = runtime_io::offchain::timestamp().add(Duration::from_millis(60_000));
+    let deadline = runtime_io::offchain::timestamp().add(Duration::from_millis(90_000));
 
     if let Some((name, value)) = header {
         match runtime_io::offchain::http_request_add_header(id, name, value) {
@@ -108,7 +106,6 @@ fn http_request_get(
     let mut offset : usize = 0;
 
     loop {
-        // set a fix len for result
         let mut buf = Vec::with_capacity(BUF_LEN as usize);
         buf.resize(BUF_LEN as usize, 0);
 
@@ -251,4 +248,12 @@ pub fn set_value(key: &[u8], value: &[u8]) {
 
 pub fn get_value(key: &[u8]) -> Option<Vec<u8>> {
     runtime_io::offchain::local_storage_get(StorageKind::PERSISTENT, key)
+}
+
+pub fn vec8_to_u64(v: Vec<u8>) -> u64 {
+    let mut a: [u8; 8] = [0; 8];
+    for i in 0..8 {
+        a[i] = v[i];
+    }
+    u64::from_be_bytes(a)
 }
