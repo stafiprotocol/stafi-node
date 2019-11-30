@@ -7,7 +7,7 @@ members = [
 	"node/executor",
 	"node/primitives",
 	"node/modules/stafi-crypto",
-	# "node/modules/bridge-tezos",
+	"node/modules/bridge-tezos",
 	"node/modules/stafi-externalrpc",
 	"node/modules/stafi-fund",
 	"node/modules/stafi-multisig",

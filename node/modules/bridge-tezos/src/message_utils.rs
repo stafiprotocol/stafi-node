@@ -257,7 +257,7 @@ pub fn write_address(address: &str) -> Result<String, String> {
  * @param {String} branch Branch hash.
  * @returns {String} Hex representation of the Base58-check branch hash.
  */
-pub fn write_branch(branch: String) -> String {
+pub fn write_branch(branch: &str) -> String {
     let hex_vec = base58::from_check(&branch).unwrap();
     return hex::encode(&hex_vec[2..]).to_string();
 }

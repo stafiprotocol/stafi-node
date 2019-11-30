@@ -14,17 +14,26 @@
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
 
+extern crate hex;
+
 use core::str;
 
+pub struct MultisigTransaction {
+    counter: u64, // counter, used to prevent replay attacks
+    amount: u64, // (mutez) amount to transfer
+    dest: String, // destination to transfer to
+    sig: Option<Vec<String>>, // sig list
+}
+
 pub struct Transaction {
-    source: String,
-    fee: u64,
-    counter: u64,
-    gas_limit: u64,
-    storage_limit: u64,
-    amount: u64,
-    destination: String,
-    parameters: Option<String>,
+    source: String, // pkh
+    fee: u64, // 150000
+    counter: u64, // account counter
+    gas_limit: u64, // 144382
+    storage_limit: u64, // 5392
+    amount: u64, // 0
+    destination: String, // contract address
+    parameters: Option<MultisigTransaction>,
 }
 
 static OPERATION_TYPES: &'static [&'static str] = &[
@@ -43,21 +52,25 @@ static OPERATION_TYPES: &'static [&'static str] = &[
 
 use crate::message_utils::*;
 
-pub fn write_transacion(transaction: Transaction) -> String {
-    let mut hex = write_int(
+pub fn write_transacion(branch: &str, transaction: Transaction) -> String {
+    let mut trans_hex = "".to_string();
+    
+    trans_hex += &write_branch(&branch);
+    
+    trans_hex += &write_int(
         OPERATION_TYPES
             .iter()
             .position(|&r| r == "transaction")
             .unwrap() as u64,
     );
 
-    hex += &write_address(&transaction.source).unwrap_or_default();
-    hex += &write_int(transaction.fee);
-    hex += &write_int(transaction.counter);
-    hex += &write_int(transaction.gas_limit);
-    hex += &write_int(transaction.storage_limit);
-    hex += &write_int(transaction.amount);
-    hex += &write_address(&transaction.destination).unwrap_or_default();
+    trans_hex += &write_address(&transaction.source).unwrap_or_default()[2..];
+    trans_hex += &write_int(transaction.fee);
+    trans_hex += &write_int(transaction.counter);
+    trans_hex += &write_int(transaction.gas_limit);
+    trans_hex += &write_int(transaction.storage_limit);
+    trans_hex += &write_int(transaction.amount);
+    trans_hex += &write_address(&transaction.destination).unwrap_or_default();
     //  * @param {number} counter - (nat) counter, used to prevent replay attacks
     //  * @param {number} amount - (mutez) amount to transfer
     //  * @param {string} dest - (contract unit) destination to transfer to
@@ -74,10 +87,23 @@ pub fn write_transacion(transaction: Transaction) -> String {
     //     }
     // const code = TezosLanguageUtil.normalizeMichelineWhiteSpace(JSON.stringify(transaction.parameters));
     // const result = TezosLanguageUtil.translateMichelineToHex(code);
-    // hex += 'ff' + ('0000000' + (result.length / 2).toString(16)).slice(-8) + result; // prefix byte length
+    // trans_hex += 'ff' + ('0000000' + (result.length / 2).toString(16)).slice(-8) + result; // prefix byte length
     if let Some(params) = transaction.parameters {
+        trans_hex += "ff";
+        // entrypoint == "default"
+        trans_hex += "00";
+        let result = write_multisig(&params);
+        trans_hex += &(format!("{:08x}", result.len() / 2) + &result);
     } else {
-        hex += "00";
+        trans_hex += "00";
     }
-    hex
+    trans_hex
+}
+
+fn write_multisig(multisig: &MultisigTransaction) -> String {
+    // 07070707{00/(signedInt, counter)01}05050707{00/(signedInt, amount)a301}{01{writeString, dest}0000000474657374}0200000000
+    let counter = write_signed_int(multisig.counter as i64);
+    let amount = write_signed_int(multisig.amount as i64);
+    let dest = write_address(&multisig.dest).unwrap_or_default();
+    format!("0707070700{}0505070700{}{}0200000000", counter, amount, dest)
 }
