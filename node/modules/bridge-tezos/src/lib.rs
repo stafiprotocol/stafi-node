@@ -19,3 +19,5 @@ pub mod node_writer;
 mod base128;
 mod message_utils;
 mod tezos_lang_utils;
+
+mod tests;
