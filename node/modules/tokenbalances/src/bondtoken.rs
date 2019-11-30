@@ -95,13 +95,14 @@ decl_module! {
 			let block_num_value: BlockNumber = block_num.try_into().ok().unwrap() as BlockNumber;
 
 			if block_num_value % BOND_REWARD_BLOCK_DURATION == 0 {
-				let total_rewards: Balance = 143;
 				let symbol = Symbol::XTZ;
-				if total_rewards > 0 {
+				let total_rewards: Balance = 10000000;
+				let total_balance = Self::total_bond_token_balance(symbol);
+				if total_rewards > 0 && total_balance > 0 {
 					let bond_reward = BondReward {
 						block_num: block_num_value,
 						total_reward: total_rewards,
-						total_balance: Self::total_bond_token_balance(symbol)
+						total_balance: total_balance,
 					};
 
 					let bond_rewards_count = Self::bond_rewards_count(symbol);
