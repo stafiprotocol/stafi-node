@@ -724,8 +724,8 @@ impl_runtime_apis! {
 	}
 
 	impl node_primitives::MultisigAddrApi<Block> for Runtime {
-		fn multisig_addr(chainType: ChainType) -> Vec<MultisigAddr> {
-			MultisigAddress::multisig_addr_list(chainType)
+		fn multisig_addr(chain_type: ChainType) -> Vec<MultisigAddr> {
+			MultisigAddress::multisig_addr_list(chain_type)
 		}
 	}
 

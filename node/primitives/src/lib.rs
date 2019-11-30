@@ -95,7 +95,7 @@ pub enum ContractExecResult {
 
 sr_api::decl_runtime_apis! {
 	pub trait MultisigAddrApi {
-		fn multisig_addr(chainType: ChainType) -> Vec<MultisigAddr>;
+		fn multisig_addr(chain_type: ChainType) -> Vec<MultisigAddr>;
 	}
 
 	pub trait StakesApi {
