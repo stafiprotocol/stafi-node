@@ -50,12 +50,17 @@ static OPERATION_TYPES: &'static [&'static str] = &[
     "delegation",
 ];
 
-use crate::message_utils::*;
+pub use crate::message_utils::*;
 
-pub fn write_transacion(branch: &str, transaction: Transaction) -> String {
+pub fn encode_transaction(branch: &str, transaction: &Transaction) -> String {
     let mut trans_hex = "".to_string();
-    
     trans_hex += &write_branch(&branch);
+    trans_hex += &write_transacion(&transaction);
+    trans_hex
+}
+
+pub fn write_transacion(transaction: &Transaction) -> String {
+    let mut trans_hex = "".to_string();
     
     trans_hex += &write_int(
         OPERATION_TYPES
@@ -88,7 +93,7 @@ pub fn write_transacion(branch: &str, transaction: Transaction) -> String {
     // const code = TezosLanguageUtil.normalizeMichelineWhiteSpace(JSON.stringify(transaction.parameters));
     // const result = TezosLanguageUtil.translateMichelineToHex(code);
     // trans_hex += 'ff' + ('0000000' + (result.length / 2).toString(16)).slice(-8) + result; // prefix byte length
-    if let Some(params) = transaction.parameters {
+    if let Some(params) = &transaction.parameters {
         trans_hex += "ff";
         // entrypoint == "default"
         trans_hex += "00";
