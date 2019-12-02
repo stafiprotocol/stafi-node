@@ -5106,7 +5106,6 @@ version = "0.1.0"
 dependencies = [
  "frame-support 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "frame-system 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
- "hex 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "node-primitives 0.1.0",
  "pallet-babe 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
@@ -5114,10 +5113,8 @@ dependencies = [
  "pallet-session 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "pallet-timestamp 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "parity-scale-codec 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "reqwest 0.9.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.103 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.103 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_json 1.0.42 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "sr-primitives 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "sr-std 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",

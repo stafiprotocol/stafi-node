@@ -32,7 +32,7 @@ use tezosworker::tezos;
 
 #[test]
 fn test_offchain_local_storage() {
-	let mut ext = new_test_ext(vec![0, 1, 2, 3]);
+	let mut ext = new_test_ext(vec![0, 1, 2, 3], vec![]);
 	let (offchain, _state) = TestOffchainExt::new();
 	let (pool, _state) = TestTransactionPoolExt::new();
 	ext.register_extension(OffchainExt::new(offchain));
@@ -55,7 +55,7 @@ fn test_offchain_local_storage() {
 #[test]
 #[ignore]
 fn test_offchain_request_tezos() {
-	let mut ext = new_test_ext(vec![0, 1, 2, 3]);
+	let mut ext = new_test_ext(vec![0, 1, 2, 3], vec![]);
 	let (offchain, _state) = TestOffchainExt::new();
 	let (pool, _state) = TestTransactionPoolExt::new();
 	ext.register_extension(OffchainExt::new(offchain));

@@ -20,7 +20,7 @@
 extern crate substrate_primitives as primitives;
 extern crate sr_io as runtime_io;
 
-use crate::tezosworker::{Module, Trait};
+use crate::tezosworker::{Module, Trait, GenesisConfig};
 use sr_primitives::Perbill;
 use sr_primitives::testing::{Header, UintAuthorityId, TestXt};
 use sr_primitives::traits::{IdentityLookup, BlakeTwo256};
@@ -42,6 +42,7 @@ impl_outer_dispatch! {
 }
 
 type DummyValidatorId = u64;
+type DummyAccountId = u64;
 
 /// An extrinsic type used for tests.
 pub type Extrinsic = TestXt<Call, ()>;
@@ -65,7 +66,7 @@ impl system::Trait for Runtime {
 	type Call = Call;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = u64;
+	type AccountId = babe::AuthorityId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type Event = ();
@@ -103,12 +104,17 @@ impl Trait for Runtime {
 	type SubmitTransaction = SubmitTransaction;
 }
 
-pub fn new_test_ext(authorities: Vec<DummyValidatorId>) -> runtime_io::TestExternalities {
+pub fn new_test_ext(authorities: Vec<DummyValidatorId>, auth_account: Vec<DummyAccountId>) -> runtime_io::TestExternalities {
     let mut t = system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+	let p: babe::AuthorityId = UintAuthorityId(1 as u64).to_public_key();
 
-    babe::GenesisConfig {
+	babe::GenesisConfig {
         authorities: authorities.into_iter().map(|a| (UintAuthorityId(a).to_public_key(), 1)).collect(),
     }.assimilate_storage::<Runtime>(&mut t).unwrap();
+
+	GenesisConfig::<Runtime> {
+		auth_account: auth_account.into_iter().map(|a| UintAuthorityId(a).to_public_key()).collect(),
+	}.assimilate_storage(&mut t).unwrap();
 
     t.into()
 }

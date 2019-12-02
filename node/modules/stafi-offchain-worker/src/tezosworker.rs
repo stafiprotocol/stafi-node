@@ -54,6 +54,10 @@ decl_storage! {
 		//for test
 		StakeData get(stake_data): Vec<XtzStakeData<T::AccountId, T::Hash, Balance>>;
 	}
+	add_extra_genesis {
+		config(auth_account): Vec<T::AccountId>;
+		build(|config| Module::<T>::initialize_auth_account(config.auth_account.clone()))
+	}
 }
 
 decl_module! {
@@ -161,6 +165,10 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
+    fn initialize_auth_account(aa: Vec<T::AccountId>) {
+        <AuthAccount<T>>::put(aa);
+    }
+
     fn get_babe_list() -> Vec<AuthorityId> {
         <babe::Module<T>>::authorities().iter().map(|x| x.0.clone()).collect::<Vec<AuthorityId>>()
     }
@@ -240,7 +248,7 @@ impl<T: Trait> Module<T> {
         };
 
         //for test
-        /*struct MyStakeData {
+        struct MyStakeData {
             block_hash: Vec<u8>,
             tx_hash: Vec<u8>,
             stake_account: Vec<u8>,
@@ -292,11 +300,11 @@ impl<T: Trait> Module<T> {
             multi_sig_address: "tz1YSGFfMeFBLaBati1AeWkMtDsrpjrkzvPx".as_bytes().to_vec(),
             stake_amount: 225000000,
         };
-        stake_data.push(xsd);*/
+        stake_data.push(xsd);
 
-        for xsd in <stafi_staking_storage::Module<T>>::xtz_transfer_init_data_records() {
+        //for xsd in <stafi_staking_storage::Module<T>>::xtz_transfer_init_data_records() {
         //for xsd in Self::stake_data() {
-        //for xsd in stake_data {
+        for xsd in stake_data {
             let blockhash = xsd.block_hash;
             let txhash = xsd.tx_hash;
             let from = xsd.stake_account;
@@ -567,9 +575,17 @@ mod test {
 
     #[test]
     fn test_babe_initial_list() {
-        mock::new_test_ext(vec![0, 1, 2, 3]).execute_with(|| {
+        mock::new_test_ext(vec![0, 1, 2, 3], vec![]).execute_with(|| {
             assert_eq!(mock::TezosWorker::get_babe_list().len(), 4);
             assert_eq!(mock::TezosWorker::get_babe_list()[0], UintAuthorityId(0).to_public_key());
+        })
+    }
+
+    #[test]
+    fn test_is_auth_account() {
+        mock::new_test_ext(vec![0, 1, 2, 3], vec![2]).execute_with(|| {
+            assert_eq!(mock::TezosWorker::get_babe_list().len(), 4);
+            assert_eq!(true, mock::TezosWorker::is_auth_account(&mock::TezosWorker::get_babe_list()[2]));
         })
     }
 }
