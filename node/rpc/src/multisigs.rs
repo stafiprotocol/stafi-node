@@ -27,7 +27,6 @@ use node_primitives::{
 pub use node_primitives::MultisigAddrApi;
 use codec::{Encode, Decode};
 use sr_primitives::traits;
-use hex;
 
 use serde::{Serialize, Deserialize};
 
