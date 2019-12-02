@@ -600,3 +600,27 @@ pub fn find_object_by_key_and_value(o: &JsonValue, key:&str, value:&str) -> bool
 
     None
 }*/
+
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_rjson() {
+        let json_str = r#"{"time":{"updated":"Dec 2, 2019 00:36:00 UTC","updatedISO":"2019-12-02T00:36:00+00:00","updateduk":"Dec 2, 2019 at 00:36 GMT"},"disclaimer":"This data was produced from the CoinDesk Bitcoin Price Index (USD). Non-USD currency data converted using hourly conversion rate from openexchangerates.org","bpi":{"USD":{"code":"USD","rate":"7,409.7067","description":"United States Dollar","rate_float":7409.7067}}}"#;
+
+        let data_array: Vec<char> = json_str.chars().collect();
+        let mut index:usize = 0;
+        let o = parse::<JsonValue, JsonArray, JsonObject, JsonValue>(&*data_array, &mut index).unwrap_or(JsonValue::None);
+        assert_eq!(false, is_none(&o));
+
+        let usd = get_value_by_key_recursively(&o, "USD").unwrap();
+        assert_eq!(true, is_object(&usd));
+
+        let rate = get_value_by_key(&usd, "rate").unwrap();
+        assert_eq!(true, is_string(&rate));
+
+        let rate = get_string(&rate).unwrap();
+        let price = rate.replace(",","").parse::<f64>().unwrap_or(0.0) as u32;
+        assert_eq!(true, price == 7409);
+    }
+}
