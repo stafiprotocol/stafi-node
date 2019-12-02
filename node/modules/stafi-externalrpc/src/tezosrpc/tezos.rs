@@ -191,7 +191,8 @@ impl ProvideInherentData for InherentDataProvider {
 		&INHERENT_IDENTIFIER
 	}
 
-	fn provide_inherent_data(&self, inherent_data: &mut InherentData) -> Result<(), inherents::Error> {	
+	fn provide_inherent_data(&self, inherent_data: &mut InherentData) -> Result<(), inherents::Error> {
+		log::info!("{}", "in provide_inherent_data");
 		use std::time::SystemTime;
 		let mut now_millis:u64 = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64;
 		let verify_in_batch = false;

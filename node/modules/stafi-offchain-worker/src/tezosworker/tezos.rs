@@ -257,3 +257,14 @@ pub fn vec8_to_u64(v: Vec<u8>) -> u64 {
     }
     u64::from_be_bytes(a)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_vec8_to_u64() {
+        let v = (123 as u64).to_be_bytes().to_vec();
+        assert_eq!(123, vec8_to_u64(v));
+    }
+}

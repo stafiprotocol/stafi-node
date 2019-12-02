@@ -6,7 +6,6 @@ extern crate sr_io as runtime_io;
 use support::{decl_module, decl_storage, decl_event, ensure};
 use rstd::prelude::*;
 use rstd::vec::Vec;
-//use rstd::result::Result;
 use system::{ensure_signed, ensure_root, ensure_none};
 use node_primitives::{OcVerifiedData, VerifyStatus, TxHashType, HostData, XtzStakeData, Balance, AuthIndex};
 use sr_primitives::traits::{SaturatedConversion, StaticLookup};
@@ -19,7 +18,6 @@ use app_crypto::{RuntimeAppPublic};
 use babe_primitives::AuthorityId;
 use codec::{Encode};
 use log::info;
-
 pub mod tezos;
 
 /// only for debug
@@ -561,3 +559,18 @@ decl_event!(
         RemoveVerified(TxHashType),
     }
 );
+
+#[cfg(test)]
+mod test {
+    use crate::mock;
+    use sr_primitives::testing::UintAuthorityId;
+
+    #[test]
+    fn test_babe_initial_list() {
+        mock::new_test_ext(vec![0, 1, 2, 3]).execute_with(|| {
+            assert_eq!(mock::TezosWorker::get_babe_list().len(), 4);
+            assert_eq!(mock::TezosWorker::get_babe_list()[0], UintAuthorityId(0).to_public_key());
+        })
+    }
+}
+

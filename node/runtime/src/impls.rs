@@ -117,7 +117,8 @@ mod tests {
 	use super::*;
 	use sr_primitives::assert_eq_error_rate;
 	use crate::{MaximumBlockWeight, AvailableBlockRatio, Runtime};
-	use crate::{constants::currency::*, TransactionPayment, TargetBlockFullness};
+	use crate::{TransactionPayment, TargetBlockFullness};
+	use node_primitives::constants::currency::*;
 	use support::weights::Weight;
 
 	fn max() -> Weight {
