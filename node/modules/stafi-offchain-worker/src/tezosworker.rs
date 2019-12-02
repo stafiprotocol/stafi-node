@@ -29,7 +29,8 @@ fn debug(msg: &str) {
 
 pub const TEZOS_BLOCK_CONFIRMED: u8 = 3;
 pub const TEZOS_BLOCK_DURATION: u64 = 60000;
-pub const TEZOS_RPC_HOST: &'static [u8] = b"https://rpc.tezrpc.me";
+// pub const TEZOS_RPC_HOST: &'static [u8] = b"https://rpc.tezrpc.me";
+pub const TEZOS_RPC_HOST: &'static [u8] = b"https://tezos-test-rpc.wetez.io";
 pub const OFFCHAIN_MIN_AUTH: u8 = 1;
 pub const TEZOS_WAIT_DURATION: u64 = 120000;
 
