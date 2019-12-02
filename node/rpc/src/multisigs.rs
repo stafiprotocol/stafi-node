@@ -81,7 +81,7 @@ where
 
             let ret = RpcMultisigAddr {
                 chain_type: addr.chain_type,
-                multisig_addr: String::from("0x") + &hex::encode(addr.multisig_addr),
+                multisig_addr: String::from_utf8(addr.multisig_addr).unwrap(),
             };
 
             result.push(ret);
