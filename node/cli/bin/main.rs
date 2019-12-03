@@ -51,7 +51,7 @@ fn main() -> Result<(), substrate_cli::error::Error> {
 		executable_name: "stafi",
 		author: "Stafi Protocol <technical@stafi.com>",
 		description: "Generic stafi node",
-		support_url: "https://github.com/stafiprotocol/stafi/issues/new",
+		support_url: "https://github.com/stafiprotocol/stafi-node/issues/new",
 	};
 
 	node_cli::run(std::env::args(), Exit, version)
