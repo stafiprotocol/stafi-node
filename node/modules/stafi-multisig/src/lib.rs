@@ -69,6 +69,8 @@ pub mod transaction;
 pub use transaction::{Transaction, TransactionType, TransferT};
 
 pub mod multisigaddr;
+mod mock;
+mod tests;
 
 pub trait MultiSigFor<AccountId: Sized, Hash: Sized> {
     /// generate multisig addr for a accountid
