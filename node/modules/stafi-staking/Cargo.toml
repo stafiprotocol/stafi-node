@@ -7,7 +7,9 @@ edition = "2018"
 [dependencies]
 serde = { version = "1.0", default_features = false }
 parity-codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
+sr-io = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 sr-std = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+primitives = { package = "substrate-primitives", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 sr-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 support = { package = "frame-support", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 system = { package = "frame-system", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
@@ -25,12 +27,18 @@ stafi-multisig = { path = "../stafi-multisig", default-features = false }
 
 log = "0.4"
 
+[dev-dependencies]
+babe = { git = "https://github.com/stafiprotocol/stafi-blockchain", package = "pallet-babe", default-features = false }
+timestamp = { git = "https://github.com/stafiprotocol/stafi-blockchain", package = "pallet-timestamp", default-features = false }
+
 [features]
 default = ["std"]
 std = [
     "serde/std",
     "parity-codec/std",
+    "sr-io/std",
     "sr-std/std",
+    "primitives/std",
     "sr-primitives/std",
     "support/std",
     "system/std",

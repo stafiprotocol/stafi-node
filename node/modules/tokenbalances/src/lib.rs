@@ -6,7 +6,12 @@ use support::{decl_module, decl_storage, decl_event, dispatch::Result, Parameter
 use system::ensure_signed;
 use parity_codec::{Codec, Encode, Decode};
 use sr_primitives::traits::MaybeSerialize;
-use node_primitives::{Symbol}; 
+use node_primitives::{Symbol};
+
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
 
 pub mod bondtoken;
 
