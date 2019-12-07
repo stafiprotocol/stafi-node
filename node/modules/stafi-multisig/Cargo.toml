@@ -18,6 +18,9 @@ pallet-balances = { package = "pallet-balances", git = "https://github.com/stafi
 
 node-primitives = { path = "../../primitives", default-features = false }
 
+[dev-dependencies]
+hex-literal = "0.2.1"
+
 [features]
 default = ["std"]
 std=[

@@ -5107,6 +5107,7 @@ version = "0.1.0"
 dependencies = [
  "frame-support 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "frame-system 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
+ "hex-literal 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "node-primitives 0.1.0",
  "pallet-balances 2.0.0 (git+https://github.com/stafiprotocol/stafi-blockchain)",
  "parity-scale-codec 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
