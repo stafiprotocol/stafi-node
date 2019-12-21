@@ -32,6 +32,77 @@ use crate::mock::*;
 use super::*;
 
 #[test]
+fn test_owner() {
+    let mut ext = new_test_ext();
+    ext.execute_with(|| {
+        let deployer: AccountId =
+            hex!["d43b38b84b60b06e7f1a00d892dcff67ea69dc1dc2f837fdb6a27344b63c9279"]
+                .into();
+        let account_a: AccountId =
+            hex!["e489771ea3c4f10cb28698d21d5382ce3c5a673f47bade2b7325718701ad4b0c"]
+                .into();
+
+
+        let account_b: AccountId =
+            hex!["7e35cbeea9f986613567088dbdb56da124f6511e339a44fd53a127b7653cff34"]
+                .into();
+
+        let account_c: AccountId =
+            hex!["63410a24555c6f0c5ba8f0d27f85740dca150d9a0d67e3fa8502d5d9e6a4fafe"]
+                .into();
+
+        let origin = Origin::signed(deployer.clone());
+        Balances::make_free_balance_be(&deployer, 500);
+        for account in &[account_a.clone(), account_b.clone()] {
+            Balances::make_free_balance_be(&account, 0);
+        }
+        let owners: Vec<_> = [account_a.clone(), account_b.clone()].iter().map(|i| (i.clone(), true)).collect();
+        let result = MultiSigMock::deploy(origin, owners, 1, 10);
+        let multisig_addr = MultiSigMock::multi_sig_list_item_for((deployer.clone(), 0)).unwrap();
+
+        let result = MultiSigMock::is_owner_for(Origin::signed(deployer.clone()), multisig_addr.clone());
+        assert_ok!(result);
+
+        let result = MultiSigMock::is_owner_for(Origin::signed(account_c.clone()), multisig_addr.clone());
+        assert_eq!(result.is_err(), true);
+    });
+}
+
+#[test]
+fn test_not_owner() {
+    let mut ext = new_test_ext();
+    ext.execute_with(|| {
+        let deployer: AccountId =
+            hex!["d43b38b84b60b06e7f1a00d892dcff67ea69dc1dc2f837fdb6a27344b63c9279"]
+                .into();
+        let account_a: AccountId =
+            hex!["e489771ea3c4f10cb28698d21d5382ce3c5a673f47bade2b7325718701ad4b0c"]
+                .into();
+
+
+        let account_b: AccountId =
+            hex!["7e35cbeea9f986613567088dbdb56da124f6511e339a44fd53a127b7653cff34"]
+                .into();
+
+        let account_c: AccountId =
+            hex!["63410a24555c6f0c5ba8f0d27f85740dca150d9a0d67e3fa8502d5d9e6a4fafe"]
+                .into();
+
+        let origin = Origin::signed(deployer.clone());
+        Balances::make_free_balance_be(&deployer, 500);
+        for account in &[account_a.clone(), account_b.clone()] {
+            Balances::make_free_balance_be(&account, 0);
+        }
+        let owners: Vec<_> = [account_a.clone(), account_b.clone()].iter().map(|i| (i.clone(), true)).collect();
+        let result = MultiSigMock::deploy(origin, owners, 1, 10);
+        let multisig_addr = MultiSigMock::multi_sig_list_item_for((deployer.clone(), 0)).unwrap();
+
+        let result = MultiSigMock::is_owner_for(Origin::signed(account_c.clone()), multisig_addr.clone());
+        assert_eq!(result.is_err(), true);
+    });
+}
+
+#[test]
 fn test_create_multisig() {
     let mut ext = new_test_ext();
     ext.execute_with(|| {
@@ -73,5 +144,45 @@ fn test_create_multisig() {
         assert_ok!(confirm);
         assert_eq!(9, Balances::total_balance(&multisig_addr));
         assert_eq!(1, Balances::total_balance(&account_c));
+    });
+}
+
+#[test]
+fn test_cancel_multisig() {
+    let mut ext = new_test_ext();
+    ext.execute_with(|| {
+        let deployer: AccountId =
+            hex!["d43b38b84b60b06e7f1a00d892dcff67ea69dc1dc2f837fdb6a27344b63c9279"]
+                .into();
+        let account_a: AccountId =
+            hex!["e489771ea3c4f10cb28698d21d5382ce3c5a673f47bade2b7325718701ad4b0c"]
+                .into();
+
+
+        let account_b: AccountId =
+            hex!["7e35cbeea9f986613567088dbdb56da124f6511e339a44fd53a127b7653cff34"]
+                .into();
+
+        let account_c: AccountId =
+            hex!["63410a24555c6f0c5ba8f0d27f85740dca150d9a0d67e3fa8502d5d9e6a4fafe"]
+                .into();
+
+        let origin = Origin::signed(deployer.clone());
+        Balances::make_free_balance_be(&deployer, 500);
+        for account in &[account_a.clone(), account_b.clone(), account_c.clone()] {
+            Balances::make_free_balance_be(&account, 0);
+        }
+        let owners: Vec<_> = [account_a.clone(), account_b.clone(), account_c.clone()].iter().map(|i| (i.clone(), true)).collect();
+        let result = MultiSigMock::deploy(origin, owners, 2, 10);
+        let multisig_addr = MultiSigMock::multi_sig_list_item_for((deployer.clone(), 0)).unwrap();
+
+        let transfer = MultiSigMock::transfer(Origin::signed(deployer.clone()), multisig_addr.clone(), TransactionType::TransferStafi, account_c.clone(), 1);
+        let transefer_id = MultiSigMock::pending_list_item_for((multisig_addr.clone(), 0)).unwrap();
+        // Cancel
+        let cancel = MultiSigMock::remove_multi_sig_for(Origin::signed(account_c.clone()), multisig_addr.clone(), transefer_id.clone());
+        assert_ok!(cancel);
+
+        let confirm = MultiSigMock::confirm(Origin::signed(account_a.clone()), multisig_addr.clone(), transefer_id);
+        assert_eq!(confirm.is_err(), true);
     });
 }
