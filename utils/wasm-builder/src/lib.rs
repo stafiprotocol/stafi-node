@@ -1,27 +1,22 @@
-// Copyright 2019 Parity Technologies (UK) Ltd.
-// This file is part of Substrate.
+// Copyright 2019-2020 Stafi Protocol.
+// This file is part of Stafi.
 
-// Substrate is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// Substrate is distributed in the hope that it will be useful,
+// Stafi is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with Substrate.  If not, see <http://www.gnu.org/licenses/>.
+// along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
 
-//! # WASM builder is a utility for building a project as a WASM binary
+//! # Wasm builder is a utility for building a project as a Wasm binary
 //!
-//! The WASM builder is a tool that integrates the process of building the WASM binary of your project into the main
+//! The Wasm builder is a tool that integrates the process of building the WASM binary of your project into the main
 //! `cargo` build process.
 //!
 //! ## Project setup
 //!
-//! A project that should be compiled as a WASM binary needs to:
+//! A project that should be compiled as a Wasm binary needs to:
 //!
 //! 1. Add a `build.rs` file.
 //! 2. Add `substrate-wasm-builder` as dependency into `build-dependencies`.
@@ -47,12 +42,20 @@
 //! include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 //! ```
 //!
-//! This will include the generated WASM binary as two constants `WASM_BINARY` and `WASM_BINARY_BLOATY`.
-//! The former is a compact WASM binary and the latter is not compacted.
+//! This will include the generated Wasm binary as two constants `WASM_BINARY` and `WASM_BINARY_BLOATY`.
+//! The former is a compact Wasm binary and the latter is not compacted.
+//!
+//! ### Feature
+//!
+//! Wasm builder supports to enable cargo features while building the Wasm binary. By default it will
+//! enable all features in the wasm build that are enabled for the native build except the
+//! `default` and `std` features. Besides that, wasm builder supports the special `runtime-wasm`
+//! feature. This `runtime-wasm` feature will be enabled by the wasm builder when it compiles the
+//! Wasm binary. If this feature is not present, it will not be enabled.
 //!
 //! ## Environment variables
 //!
-//! By using environment variables, you can configure which WASM binaries are built and how:
+//! By using environment variables, you can configure which Wasm binaries are built and how:
 //!
 //! - `SKIP_WASM_BUILD` - Skips building any wasm binary. This is useful when only native should be recompiled.
 //! - `BUILD_DUMMY_WASM_BINARY` - Builds dummy wasm binaries. These dummy binaries are empty and useful
@@ -60,12 +63,14 @@
 //! - `WASM_BUILD_TYPE` - Sets the build type for building wasm binaries. Supported values are `release` or `debug`.
 //!                       By default the build type is equal to the build type used by the main build.
 //! - `TRIGGER_WASM_BUILD` - Can be set to trigger a wasm build. On subsequent calls the value of the variable
-//!                          needs to change. As WASM builder instructs `cargo` to watch for file changes
+//!                          needs to change. As wasm builder instructs `cargo` to watch for file changes
 //!                          this environment variable should only be required in certain circumstances.
 //! - `WASM_BUILD_RUSTFLAGS` - Extend `RUSTFLAGS` given to `cargo build` while building the wasm binary.
 //! - `WASM_BUILD_NO_COLOR` - Disable color output of the wasm build.
 //! - `WASM_TARGET_DIRECTORY` - Will copy any build wasm binary to the given directory. The path needs
 //!                            to be absolute.
+//! - `WASM_BUILD_TOOLCHAIN` - The toolchain that should be used to build the wasm binaries. The
+//!                            format needs to be the same as used by cargo, e.g. `nightly-2020-02-20`.
 //!
 //! Each project can be skipped individually by using the environment variable `SKIP_PROJECT_NAME_WASM_BUILD`.
 //! Where `PROJECT_NAME` needs to be replaced by the name of the cargo project, e.g. `node-runtime` will
@@ -73,12 +78,15 @@
 //!
 //! ## Prerequisites:
 //!
-//! WASM builder requires the following prerequisities for building the WASM binary:
+//! Wasm builder requires the following prerequisites for building the Wasm binary:
 //!
 //! - rust nightly + `wasm32-unknown-unknown` toolchain
 //!
+//! If a specific rust nightly is installed with `rustup`, it is important that the wasm target is installed
+//! as well. For example if installing the rust nightly from 20.02.2020 using `rustup install nightly-2020-02-20`,
+//! the wasm target needs to be installed as well `rustup target add wasm32-unknown-unknown --toolchain nightly-2020-02-20`.
 
-use std::{env, fs, path::PathBuf, process::{Command, Stdio, self}};
+use std::{env, fs, path::PathBuf, process::{Command, self}, io::BufRead};
 
 mod prerequisites;
 mod wasm_project;
@@ -102,6 +110,9 @@ const WASM_TARGET_DIRECTORY: &str = "WASM_TARGET_DIRECTORY";
 
 /// Environment variable to disable color output of the wasm build.
 const WASM_BUILD_NO_COLOR: &str = "WASM_BUILD_NO_COLOR";
+
+/// Environment variable to set the toolchain used to compile the wasm binary.
+const WASM_BUILD_TOOLCHAIN: &str = "WASM_BUILD_TOOLCHAIN";
 
 /// Build the currently built project as wasm binary.
 ///
@@ -158,8 +169,8 @@ pub fn build_project_with_default_rustflags(
 				pub const WASM_BINARY: &[u8] = include_bytes!("{wasm_binary}");
 				pub const WASM_BINARY_BLOATY: &[u8] = include_bytes!("{wasm_binary_bloaty}");
 			"#,
-			wasm_binary = wasm_binary.wasm_binary_path(),
-			wasm_binary_bloaty = bloaty.wasm_binary_bloaty_path(),
+			wasm_binary = wasm_binary.wasm_binary_path_escaped(),
+			wasm_binary_bloaty = bloaty.wasm_binary_bloaty_path_escaped(),
 		),
 	);
 }
@@ -176,19 +187,67 @@ fn write_file_if_changed(file: PathBuf, content: String) {
 	}
 }
 
+/// Copy `src` to `dst` if the `dst` does not exist or is different.
+fn copy_file_if_changed(src: PathBuf, dst: PathBuf) {
+	let src_file = fs::read_to_string(&src).ok();
+	let dst_file = fs::read_to_string(&dst).ok();
+
+	if src_file != dst_file {
+		fs::copy(&src, &dst)
+			.expect(&format!("Copying `{}` to `{}` can not fail; qed", src.display(), dst.display()));
+	}
+}
+
 /// Get a cargo command that compiles with nightly
 fn get_nightly_cargo() -> CargoCommand {
+	let env_cargo = CargoCommand::new(
+		&env::var("CARGO").expect("`CARGO` env variable is always set by cargo"),
+	);
 	let default_cargo = CargoCommand::new("cargo");
-	let mut rustup_run_nightly = CargoCommand::new("rustup");
-	rustup_run_nightly.args(&["run", "nightly", "cargo"]);
+	let rustup_run_nightly = CargoCommand::new_with_args("rustup", &["run", "nightly", "cargo"]);
+	let wasm_toolchain = env::var(WASM_BUILD_TOOLCHAIN).ok();
 
-	if default_cargo.is_nightly() {
+	// First check if the user requested a specific toolchain
+	if let Some(cmd) = wasm_toolchain.and_then(|t| get_rustup_nightly(Some(t))) {
+		cmd
+	} else if env_cargo.is_nightly() {
+		env_cargo
+	} else if default_cargo.is_nightly() {
 		default_cargo
-	} else if rustup_run_nightly.works() {
+	} else if rustup_run_nightly.is_nightly() {
 		rustup_run_nightly
 	} else {
-		default_cargo
+		// If no command before provided us with a nightly compiler, we try to search one
+		// with rustup. If that fails as well, we return the default cargo and let the prequisities
+		// check fail.
+		get_rustup_nightly(None).unwrap_or(default_cargo)
 	}
+}
+
+/// Get a nightly from rustup. If `selected` is `Some(_)`, a `CargoCommand` using the given
+/// nightly is returned.
+fn get_rustup_nightly(selected: Option<String>) -> Option<CargoCommand> {
+	let host = format!("-{}", env::var("HOST").expect("`HOST` is always set by cargo"));
+
+	let version = match selected {
+		Some(selected) => selected,
+		None => {
+			let output = Command::new("rustup").args(&["toolchain", "list"]).output().ok()?.stdout;
+			let lines = output.as_slice().lines();
+
+			let mut latest_nightly = None;
+			for line in lines.filter_map(|l| l.ok()) {
+				if line.starts_with("nightly-") && line.ends_with(&host) {
+					// Rustup prints them sorted
+					latest_nightly = Some(line.clone());
+				}
+			}
+
+			latest_nightly?.trim_end_matches(&host).into()
+		}
+	};
+
+	Some(CargoCommand::new_with_args("rustup", &["run", &version, "cargo"]))
 }
 
 /// Builder for cargo commands
@@ -203,28 +262,17 @@ impl CargoCommand {
 		CargoCommand { program: program.into(), args: Vec::new() }
 	}
 
-	fn arg(&mut self, arg: &str) -> &mut Self {
-		self.args.push(arg.into());
-		self
-	}
-
-	fn args(&mut self, args: &[&str]) -> &mut Self {
-		args.into_iter().for_each(|a| { self.arg(a); });
-		self
+	fn new_with_args(program: &str, args: &[&str]) -> Self {
+		CargoCommand {
+			program: program.into(),
+			args: args.iter().map(ToString::to_string).collect(),
+		}
 	}
 
 	fn command(&self) -> Command {
 		let mut cmd = Command::new(&self.program);
 		cmd.args(&self.args);
 		cmd
-	}
-
-	fn works(&self) -> bool {
-		self.command()
-			.stdout(Stdio::null())
-			.stderr(Stdio::null())
-			.status()
-			.map(|s| s.success()).unwrap_or(false)
 	}
 
 	/// Check if the supplied cargo command is a nightly version

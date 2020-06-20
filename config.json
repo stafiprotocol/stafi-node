@@ -1,6 +1,0 @@
-{
-    "chain":"dev",
-    "port":30333,
-    "telemetry-url":"ws://telemetry.polkadot.io:1024",
-    "validator":true
-}

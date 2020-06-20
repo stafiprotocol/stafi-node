@@ -1,24 +1,17 @@
 [workspace]
 members = [
-	"node/runtime",
+	"node/bench",
 	"node/cli",
+	"node/executor",
+	"node/inspect",
+	"node/primitives",
 	"node/rpc-client",
 	"node/rpc",
-	"node/executor",
-	"node/primitives",
-	"node/modules/stafi-crypto",
-	"node/modules/bridge-tezos",
-	"node/modules/stafi-externalrpc",
-	"node/modules/stafi-fund",
-	"node/modules/stafi-multisig",
-	"node/modules/stafi-staking",
-	"node/modules/stafi-staking-storage",
-	"node/modules/tokenbalances",
+	"node/runtime",
+	"node/testing",
+	"utils/wasm-builder",
+	"utils/wasm-builder-runner",
 ]
 
-# [badges]
-# travis-ci = { repository = "stafiprotocol/stafi-node", branch = "master" }
-
 [profile.release]
-# Stafi runtime requires unwinding.
 panic = "unwind"

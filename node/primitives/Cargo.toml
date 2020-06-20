@@ -1,28 +1,29 @@
 [package]
 name = "node-primitives"
-version = "0.1.0"
-authors = ["Stafi Protocol"]
+version = "2.0.0-rc3"
+authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
 
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-serde = { version = "1.0.102", features = [ "derive" ] }
-sr-api = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-primitives = { package = "substrate-primitives", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-sr-primitives = { git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
-parity-codec = { package = "parity-scale-codec", version = "1.0.6", default-features = false, features = ["derive"] }
-rstd = { package = "sr-std", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+codec = { package = "parity-scale-codec", version = "1.3.0", default-features = false, features = ["derive"] }
+frame-system = { version = "2.0.0-rc3", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-application-crypto = { version = "2.0.0-rc3", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-core = { version = "2.0.0-rc3", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-runtime = { version = "2.0.0-rc3", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
 [dev-dependencies]
-substrate-serializer = { git = "https://github.com/stafiprotocol/stafi-blockchain" }
+sp-serializer = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 pretty_assertions = "0.6.1"
 
 [features]
 default = ["std"]
 std = [
-	"primitives/std",
-	"parity-codec/std",
-	"rstd/std",
-	"sr-api/std",
-	"sr-primitives/std",
+	"codec/std",
+	"frame-system/std",
+	"sp-application-crypto/std",
+	"sp-core/std",
+	"sp-runtime/std",
 ]

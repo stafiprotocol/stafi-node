@@ -1,37 +1,23 @@
-// Copyright 2018-2019 Parity Technologies (UK) Ltd.
-// This file is part of Substrate.
+// Copyright 2019-2020 Stafi Protocol.
+// This file is part of Stafi.
 
-// Substrate is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// Substrate is distributed in the hope that it will be useful,
+// Stafi is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with Substrate.  If not, see <http://www.gnu.org/licenses/>.
+// along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
 
-//! Low-level types used throughout the Substrate code.
+//! Low-level types used throughout the Stafi code.
 
-// #![warn(missing_docs)]
+#![warn(missing_docs)]
 
 #![cfg_attr(not(feature = "std"), no_std)]
-// rjson
-#![feature(core_intrinsics)]
 
-use sr_primitives::{
+use sp_runtime::{
 	generic, traits::{Verify, BlakeTwo256, IdentifyAccount}, OpaqueExtrinsic, MultiSignature
 };
-
-use rstd::prelude::*;
-
-#[cfg(feature = "std")]
-use serde::{Serialize, Deserialize};
-use parity_codec::{Encode, Decode};
-
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -56,7 +42,7 @@ pub type Moment = u64;
 pub type Index = u32;
 
 /// A hash of some data used by the chain.
-pub type Hash = primitives::H256;
+pub type Hash = sp_core::H256;
 
 /// A timestamp: milliseconds since the unix epoch.
 /// `u64` is enough to represent a duration of half a billion years, when the
@@ -72,54 +58,33 @@ pub type Block = generic::Block<Header, OpaqueExtrinsic>;
 /// Block ID.
 pub type BlockId = generic::BlockId<Block>;
 
+/// App-specific crypto used for reporting equivocation/misbehavior in BABE and
+/// GRANDPA. Any rewards for misbehavior reporting will be paid out to this
+/// account.
+pub mod report {
+	use super::{Signature, Verify};
+	use frame_system::offchain::AppCrypto;
+	use sp_core::crypto::{key_types, KeyTypeId};
 
-/// A result of execution of a contract.
-#[derive(Eq, PartialEq, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
-pub enum ContractExecResult {
-	/// The contract returned successfully.
-	///
-	/// There is a status code and, optionally, some data returned by the contract.
-	Success {
-		/// Status code returned by the contract.
-		status: u8,
-		/// Output data returned by the contract.
-		///
-		/// Can be empty.
-		data: Vec<u8>,
-	},
-	/// The contract execution either trapped or returned an error.
-	Error,
-}
+	/// Key type for the reporting module. Used for reporting BABE and GRANDPA
+	/// equivocations.
+	pub const KEY_TYPE: KeyTypeId = key_types::REPORTING;
 
-
-sr_api::decl_runtime_apis! {
-	pub trait MultisigAddrApi {
-		fn multisig_addr(chain_type: ChainType) -> Vec<MultisigAddr>;
+	mod app {
+		use sp_application_crypto::{app_crypto, sr25519};
+		app_crypto!(sr25519, super::KEY_TYPE);
 	}
 
-	pub trait StakesApi {
-		fn get_stake_hash(account: AccountId) -> Vec<Hash>;
-		fn get_stake_data(hash: Hash) -> Option<XtzStakeData<AccountId, Hash, Balance>>;
+	/// Identity of the equivocation/misbehavior reporter.
+	pub type ReporterId = app::Public;
+
+	/// An `AppCrypto` type to allow submitting signed transactions using the reporting
+	/// application key as signer.
+	pub struct ReporterAppCrypto;
+
+	impl AppCrypto<<Signature as Verify>::Signer, Signature> for ReporterAppCrypto {
+		type RuntimeAppPublic = ReporterId;
+		type GenericSignature = sp_core::sr25519::Signature;
+		type GenericPublic = sp_core::sr25519::Public;
 	}
 }
-
-pub mod constants;
-
-pub mod stafistaking;
-pub use stafistaking::{XtzStakeData, XtzStakeStage, AtomStakeData, AtomStakeStage};
-
-pub mod externalrpc;
-pub use externalrpc::{VerifiedData, OcVerifiedData, VerifyStatus, TxHashType, BabeIdType, HostData, AuthIndex};
-
-pub mod tokenbalances;
-pub use tokenbalances::{BondTokenLockType, BondTokenLockStatus, CustomRedeemData};
-
-pub mod multisig;
-pub use multisig::{MultisigAddr};
-
-pub mod chain;
-pub use chain::{ChainType, StakeTokenType, Symbol};
-
-pub mod rjson;
-

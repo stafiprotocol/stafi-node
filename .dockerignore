@@ -1,7 +1,8 @@
 doc
 target/
-modules/*/target/
 node/runtime/wasm/target/
 .idea/
+.vscode
+.DS_Store
 Dockerfile
 .dockerignore

@@ -1,58 +1,50 @@
 # stafi-node
 
-[Stafi](https://stafi.io) is:
-- A Decentralize Protocol to Provide the liquidity of Your Staking Assets
+[Stafi](http://stafi.io) is:
+- The First Decentralized Protocol Unlocking Liquidity of Staked Assets
 
-STAFI Protocol solves the contradiction between the token liquidity and Mainnet security by issuing ABS tokens, which provides the liquidity of your Staking Assets. ABS token increases the staking rate to a higher level (100%, theoretically) ,and it could be tradable, its security is guided by STAFI Protocol which ensure ABS token is the only collateral that can apply to redeem staking asstes from original staking blockchain ( Tezos, Cosmos, Polkadot, etc,.).
+The protocol of Stafi is created by Substrate and adopts Nominated Proof-of-Stake (NPoS), which complete Staking by setting up Staking Contracts in the upper layer to communicate with public chains. The Staking process is immune to Stafi’s contracts, for the latter act as the account book during Staking. Tokens staked through contracts will be written in the contracts and finally be locked-up on the original chain.
 
+## Note
 
-### Initial Setup
+Now we are mainly testing the functions of block generation, transfer, staking, etc. And this is to prepare for the POA(Supports staking, not transfer). We will open the Staking Contracts code later when we are ready. 
 
-```
-curl https://sh.rustup.rs -sSf | sh
-rustup update stable
-rustup update nightly
-rustup default nightly
-rustup target add wasm32-unknown-unknown --toolchain nightly
-cargo install --git https://github.com/alexcrichton/wasm-gc
-```
+## Building
 
-You will also need to install the following packages:
+### Build from Source
 
-Linux:
-```
-sudo apt install cmake pkg-config libssl-dev git clang libclang-dev
+```bash
+git clone https://github.com/stafiprotocol/stafi-node.git
+cd stafi-node
+./scripts/init.sh
 ```
 
-Mac:
-```
-brew install cmake pkg-config openssl git llvm
-```
+### Upgrade
 
-### Building
-
-```
+```bash
+cd stafi-node
+git pull
 cargo build --release
 ```
 
-### Running
+## Running
 
-Ensure you have a fresh start if updating from another version:
-```
-./scripts/purge-chain.sh
-```
-To start up the Stafi node, run:
-```
-./target/release/stafi --dev
+### Stafi Testnet
+
+```bash
+./target/release/stafi --chain=testnet
 ```
 
-## Implemented Modules
+You can see your node on [telemetry] (set a custom name with `--name "my custom name"`).
 
-### Stafi
+[telemetry]: https://telemetry.polkadot.io/#list/Stafi%20Testnet%20v0.1.0
 
-* [Stafi-crypto](https://github.com/stafiprotocol/stafi-node/tree/master/node/modules/stafi-crypto)
-* [Stafi-externalrpc](https://github.com/stafiprotocol/stafi-node/tree/master/node/modules/stafi-externalrpc)
-* [Stafi-multisig](https://github.com/stafiprotocol/stafi-node/tree/master/node/modules/stafi-multisig)
-* [Stafi-offchain-worker](https://github.com/stafiprotocol/stafi-node/tree/master/node/modules/stafi-offchain-worker)
-* [Stafi-staking](https://github.com/stafiprotocol/stafi-node/tree/master/node/modules/stafi-staking)
-* [Tokenbalances](https://github.com/stafiprotocol/stafi-node/tree/master/node/modules/tokenbalances)
+
+### Using Docker
+Coming
+
+
+## Connect to node
+You can check node status on [Stafi-apps].
+
+[Stafi-apps]: http://apps.stafi.io/
