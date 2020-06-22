@@ -9,9 +9,9 @@ The protocol of Stafi is created by Substrate and adopts Nominated Proof-of-Stak
 
 Now we are mainly testing the functions of block generation, transfer, staking, etc. And this is to prepare for the POA(Supports staking, not transfer). We will open the Staking Contracts code later when we are ready. 
 
-## Building
+## Running from Source
 
-### Build from Source
+### Building
 
 Download the source:
 
@@ -20,7 +20,7 @@ git clone https://github.com/stafiprotocol/stafi-node.git
 cd stafi-node
 ```
 
-Install system dependencies(We recommend ubuntu or macos):
+Install system dependencies(recommend ubuntu or macos):
 
 ```bash
 ./scripts/init.sh
@@ -32,18 +32,9 @@ Build Stafi:
 cargo build --release
 ```
 
+### Running
 
-### Upgrade
-
-```bash
-cd stafi-node
-git pull
-cargo build --release
-```
-
-## Running
-
-### Stafi Testnet
+#### Stafi Testnet
 
 ```bash
 ./target/release/stafi --chain=testnet
@@ -53,13 +44,30 @@ You can see your node on [telemetry] (set a custom name with `--name "my custom 
 
 [telemetry]: https://telemetry.polkadot.io/#list/Stafi%20Testnet%20v0.1.0
 
+### Upgrade
 
-### Using Docker
+Make sure you are on the right branch.
+
+```bash
+git pull
+cargo build --release
+```
+
+### Clean
+
+If you need to start from beginning. You should clean your db.
+
+```bash
+./target/release/stafi purge-chain --chain=testnet
+```
+
+
+## Running using Docker
 Coming
 
 
 ## Connect to node
-You can check node status on [Stafi-apps].
+You can see the information of the chain on [Stafi-apps].
 
 [Stafi-apps]: http://apps.stafi.io/
 
