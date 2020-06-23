@@ -127,7 +127,7 @@ Go to Staking > Account Actions, and click "Set Session Key" on the bonding acco
 Submit this extrinsic and you are now ready to start validating.
 
 
-#### Validate
+### Validate
 
 To verify that your node is live and synchronized, head to Telemetry and find your node. Note that this will show all nodes on the Stafi network, which is why it is important to select a unique name!
 
