@@ -88,19 +88,21 @@ fn session_keys(
 }
 
 fn stafi_testnet_config_genesis() -> GenesisConfig {
+	const INITIAL_STASH_STAKED: Balance = 1_000 * FIS;
 	genesis(
 		crate::testnet_fixtures::get_initial_authorities(),
 		crate::testnet_fixtures::get_root_key(),
 		crate::testnet_fixtures::get_balances(),
 		crate::testnet_fixtures::get_vestings(),
+		INITIAL_STASH_STAKED
 	)
 }
 
 /// testnet config.
-pub fn stafi_testnet_v010_config() -> ChainSpec {
+pub fn stafi_public_testnet_config() -> ChainSpec {
 	ChainSpec::from_genesis(
-		"Stafi Testnet v0.1.0",
-		"stafi_testnet_v010",
+		"Stafi Testnet Seiya",
+		"stafi_public_testnet",
 		ChainType::Live,
 		stafi_testnet_config_genesis,
 		crate::testnet_fixtures::get_bootnodes(),
@@ -322,10 +324,9 @@ pub fn genesis(
 	)>,
 	root_key: AccountId,
 	balances: Vec<(AccountId, Balance)>,
-	vesting: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>
+	vesting: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
+	initial_stash_staked: Balance
 ) -> GenesisConfig {
-
-	const STASH_STAKED_ENDOWMENT: Balance = 1_000 * FIS;
 
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -352,7 +353,7 @@ pub fn genesis(
 			validator_count: 50,
 			minimum_validator_count: initial_authorities.len() as u32,
 			stakers: initial_authorities.iter().map(|x| {
-				(x.0.clone(), x.1.clone(), STASH_STAKED_ENDOWMENT, StakerStatus::Validator)
+				(x.0.clone(), x.1.clone(), initial_stash_staked, StakerStatus::Validator)
 			}).collect(),
 			invulnerables: initial_authorities.iter().map(|x| x.0.clone()).collect(),
 			slash_reward_fraction: Perbill::from_percent(10),

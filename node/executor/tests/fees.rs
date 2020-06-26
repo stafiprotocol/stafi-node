@@ -16,9 +16,9 @@ use frame_support::{
 	weights::{GetDispatchInfo, constants::ExtrinsicBaseWeight, IdentityFee, WeightToFeePolynomial},
 };
 use sp_core::NeverNativeValue;
-use sp_runtime::{FixedPointNumber, FixedI128, Perbill};
+use sp_runtime::{Perbill, FixedPointNumber};
 use node_runtime::{
-	CheckedExtrinsic, Call, Runtime, Balances, TransactionPayment,
+	CheckedExtrinsic, Call, Runtime, Balances, TransactionPayment, Multiplier,
 	TransactionByteFee,
 	constants::currency::*,
 };
@@ -32,8 +32,8 @@ use self::common::{*, sign};
 fn fee_multiplier_increases_and_decreases_on_big_weight() {
 	let mut t = new_test_ext(COMPACT_CODE, false);
 
-	// initial fee multiplier must be zero
-	let mut prev_multiplier = FixedI128::from_inner(0);
+	// initial fee multiplier must be one.
+	let mut prev_multiplier = Multiplier::one();
 
 	t.execute_with(|| {
 		assert_eq!(TransactionPayment::next_fee_multiplier(), prev_multiplier);
@@ -53,7 +53,7 @@ fn fee_multiplier_increases_and_decreases_on_big_weight() {
 			},
 			CheckedExtrinsic {
 				signed: Some((charlie(), signed_extra(0, 0))),
-				function: Call::System(frame_system::Call::fill_block(Perbill::from_percent(90))),
+				function: Call::System(frame_system::Call::fill_block(Perbill::from_percent(60))),
 			}
 		]
 	);
@@ -116,12 +116,12 @@ fn fee_multiplier_increases_and_decreases_on_big_weight() {
 }
 
 #[test]
-fn transaction_fee_is_correct_ultimate() {
-	// This uses the exact values of stafi-node.
+fn transaction_fee_is_correct() {
+	// This uses the exact values of substrate-node.
 	//
 	// weight of transfer call as of now: 1_000_000
 	// if weight of the cheapest weight would be 10^7, this would be 10^9, which is:
-	//   - 1 MILLICENTS in stafi node.
+	//   - 1 MILLICENTS in substrate node.
 	//   - 1 milli-dot based on current polkadot runtime.
 	// (this baed on assigning 0.1 CENT to the cheapest tx with `weight = 100`)
 	let mut t = new_test_ext(COMPACT_CODE, false);

@@ -1,6 +1,6 @@
 [package]
 name = "node-testing"
-version = "2.0.0-rc3"
+version = "0.1.1"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 description = "Test utilities for Stafi node."
 edition = "2018"
@@ -10,38 +10,38 @@ publish = true
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-pallet-balances = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sc-service = { version = "0.8.0-rc3", features = ["test-helpers", "db"],  git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sc-client-db = { version = "0.8.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git', features = ["kvdb-rocksdb", "parity-db"] }
-sc-client-api = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-codec = { package = "parity-scale-codec", version = "1.3.0" }
-pallet-grandpa = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-indices = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-keyring = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-node-executor = { version = "2.0.0-rc3", path = "../executor" }
-node-primitives = { version = "2.0.0-rc3", path = "../primitives" }
-node-runtime = { version = "2.0.0-rc3", path = "../runtime" }
-sp-core = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-io = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-frame-support = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-session = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-runtime = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-staking = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sc-executor = { version = "0.8.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git', features = ["wasmtime"] }
-sp-consensus = { version = "0.8.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-frame-system = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-substrate-test-client = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-timestamp = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-transaction-payment = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-treasury = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-balances = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-service = { version = "0.8.0-rc4", features = ["test-helpers", "db"],  git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-client-db = { version = "0.8.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git', features = ["kvdb-rocksdb", "parity-db"] }
+sc-client-api = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+codec = { package = "parity-scale-codec", version = "1.3.1" }
+pallet-grandpa = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-indices = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-keyring = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+node-executor = { version = "0.1.1", path = "../executor" }
+node-primitives = { version = "0.1.1", path = "../primitives" }
+node-runtime = { version = "0.1.1", path = "../runtime" }
+sp-core = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-io = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+frame-support = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-session = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-runtime = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-staking = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-executor = { version = "0.8.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git', features = ["wasmtime"] }
+sp-consensus = { version = "0.8.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+frame-system = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+substrate-test-client = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-timestamp = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-transaction-payment = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-treasury = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 wabt = "0.9.2"
-sp-api = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-finality-tracker = { version = "2.0.0-rc3", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-timestamp = { version = "2.0.0-rc3", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-block-builder = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sc-block-builder = { version = "0.8.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git'}
-sp-inherents = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-blockchain = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-api = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-finality-tracker = { version = "2.0.0-rc4", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-timestamp = { version = "2.0.0-rc4", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-block-builder = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-block-builder = { version = "0.8.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git'}
+sp-inherents = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-blockchain = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 log = "0.4.8"
 tempfile = "3.1.0"
 fs_extra = "1"
@@ -49,4 +49,4 @@ futures = "0.3.1"
 
 [dev-dependencies]
 criterion = "0.3.0"
-sc-cli = { version = "0.8.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-cli = { version = "0.8.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }

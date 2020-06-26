@@ -13,14 +13,11 @@ use codec::{Encode, Decode, Joiner};
 use frame_support::{
 	StorageValue, StorageMap,
 	traits::Currency,
-	weights::{
-		GetDispatchInfo, DispatchInfo, DispatchClass, constants::ExtrinsicBaseWeight,
-		WeightToFeePolynomial,
-	},
+	weights::{GetDispatchInfo, DispatchInfo, DispatchClass},
 };
 use sp_core::{NeverNativeValue, traits::Externalities, storage::well_known_keys};
 use sp_runtime::{
-	ApplyExtrinsicResult, FixedI128, FixedPointNumber,
+	ApplyExtrinsicResult,
 	traits::Hash as HashT,
 	transaction_validity::InvalidTransaction,
 };
@@ -29,7 +26,7 @@ use frame_system::{self, EventRecord, Phase};
 
 use node_runtime::{
 	Header, Block, UncheckedExtrinsic, CheckedExtrinsic, Call, Runtime, Balances,
-	System, TransactionPayment, Event, TransactionByteFee,
+	System, TransactionPayment, Event,
 	constants::currency::*,
 };
 use node_primitives::{Balance, Hash};
@@ -46,16 +43,17 @@ use self::common::{*, sign};
 /// test code paths that differ between native and wasm versions.
 pub const BLOATY_CODE: &[u8] = node_runtime::WASM_BINARY_BLOATY;
 
-/// Default transfer fee
-fn transfer_fee<E: Encode>(extrinsic: &E, fee_multiplier: FixedI128) -> Balance {
-	let length_fee = TransactionByteFee::get() * (extrinsic.encode().len() as Balance);
-
-	let base_weight = ExtrinsicBaseWeight::get();
-	let base_fee = <Runtime as pallet_transaction_payment::Trait>::WeightToFee::calc(&base_weight);
-	let weight = default_transfer_call().get_dispatch_info().weight;
-	let weight_fee = <Runtime as pallet_transaction_payment::Trait>::WeightToFee::calc(&weight);
-
-	base_fee + fee_multiplier.saturating_mul_acc_int(length_fee + weight_fee)
+/// Default transfer fee. This will use the same logic that is implemented in transaction-payment module.
+///
+/// Note that reads the multiplier from storage directly, hence to get the fee of `extrinsic`
+/// at block `n`, it must be called prior to executing block `n` to do the calculation with the
+/// correct multiplier.
+fn transfer_fee<E: Encode>(extrinsic: &E) -> Balance {
+	TransactionPayment::compute_fee(
+		extrinsic.encode().len() as u32,
+		&default_transfer_call().get_dispatch_info(),
+		0,
+	)
 }
 
 fn xt() -> UncheckedExtrinsic {
@@ -236,7 +234,7 @@ fn successful_execution_with_native_equivalent_code_gives_ok() {
 	).0;
 	assert!(r.is_ok());
 
-	let fm = t.execute_with(TransactionPayment::next_fee_multiplier);
+	let fees = t.execute_with(|| transfer_fee(&xt()));
 
 	let r = executor_call::<NeverNativeValue, fn() -> _>(
 		&mut t,
@@ -248,7 +246,6 @@ fn successful_execution_with_native_equivalent_code_gives_ok() {
 	assert!(r.is_ok());
 
 	t.execute_with(|| {
-		let fees = transfer_fee(&xt(), fm);
 		assert_eq!(Balances::total_balance(&alice()), 42 * DOLLARS - fees);
 		assert_eq!(Balances::total_balance(&bob()), 69 * DOLLARS);
 	});
@@ -280,7 +277,7 @@ fn successful_execution_with_foreign_code_gives_ok() {
 	).0;
 	assert!(r.is_ok());
 
-	let fm = t.execute_with(TransactionPayment::next_fee_multiplier);
+	let fees = t.execute_with(|| transfer_fee(&xt()));
 
 	let r = executor_call::<NeverNativeValue, fn() -> _>(
 		&mut t,
@@ -292,7 +289,6 @@ fn successful_execution_with_foreign_code_gives_ok() {
 	assert!(r.is_ok());
 
 	t.execute_with(|| {
-		let fees = transfer_fee(&xt(), fm);
 		assert_eq!(Balances::total_balance(&alice()), 42 * DOLLARS - fees);
 		assert_eq!(Balances::total_balance(&bob()), 69 * DOLLARS);
 	});
@@ -305,7 +301,7 @@ fn full_native_block_import_works() {
 	let (block1, block2) = blocks();
 
 	let mut alice_last_known_balance: Balance = Default::default();
-	let mut fm = t.execute_with(TransactionPayment::next_fee_multiplier);
+	let mut fees = t.execute_with(|| transfer_fee(&xt()));
 
 	executor_call::<NeverNativeValue, fn() -> _>(
 		&mut t,
@@ -316,7 +312,6 @@ fn full_native_block_import_works() {
 	).0.unwrap();
 
 	t.execute_with(|| {
-		let fees = transfer_fee(&xt(), fm);
 		assert_eq!(Balances::total_balance(&alice()), 42 * DOLLARS - fees);
 		assert_eq!(Balances::total_balance(&bob()), 169 * DOLLARS);
 		alice_last_known_balance = Balances::total_balance(&alice());
@@ -355,7 +350,7 @@ fn full_native_block_import_works() {
 		assert_eq!(System::events(), events);
 	});
 
-	fm = t.execute_with(TransactionPayment::next_fee_multiplier);
+	fees = t.execute_with(|| transfer_fee(&xt()));
 
 	executor_call::<NeverNativeValue, fn() -> _>(
 		&mut t,
@@ -366,7 +361,6 @@ fn full_native_block_import_works() {
 	).0.unwrap();
 
 	t.execute_with(|| {
-		let fees = transfer_fee(&xt(), fm);
 		assert_eq!(
 			Balances::total_balance(&alice()),
 			alice_last_known_balance - 10 * DOLLARS - fees,
@@ -444,7 +438,7 @@ fn full_wasm_block_import_works() {
 	let (block1, block2) = blocks();
 
 	let mut alice_last_known_balance: Balance = Default::default();
-	let mut fm = t.execute_with(TransactionPayment::next_fee_multiplier);
+	let mut fees = t.execute_with(|| transfer_fee(&xt()));
 
 	executor_call::<NeverNativeValue, fn() -> _>(
 		&mut t,
@@ -455,12 +449,12 @@ fn full_wasm_block_import_works() {
 	).0.unwrap();
 
 	t.execute_with(|| {
-		assert_eq!(Balances::total_balance(&alice()), 42 * DOLLARS - transfer_fee(&xt(), fm));
+		assert_eq!(Balances::total_balance(&alice()), 42 * DOLLARS - fees);
 		assert_eq!(Balances::total_balance(&bob()), 169 * DOLLARS);
 		alice_last_known_balance = Balances::total_balance(&alice());
 	});
 
-	fm = t.execute_with(TransactionPayment::next_fee_multiplier);
+	fees = t.execute_with(|| transfer_fee(&xt()));
 
 	executor_call::<NeverNativeValue, fn() -> _>(
 		&mut t,
@@ -473,11 +467,11 @@ fn full_wasm_block_import_works() {
 	t.execute_with(|| {
 		assert_eq!(
 			Balances::total_balance(&alice()),
-			alice_last_known_balance - 10 * DOLLARS - transfer_fee(&xt(), fm),
+			alice_last_known_balance - 10 * DOLLARS - fees,
 		);
 		assert_eq!(
 			Balances::total_balance(&bob()),
-			179 * DOLLARS - 1 * transfer_fee(&xt(), fm),
+			179 * DOLLARS - 1 * fees,
 		);
 	});
 }
@@ -749,7 +743,7 @@ fn successful_execution_gives_ok() {
 		assert_eq!(Balances::total_balance(&alice()), 111 * DOLLARS);
 	});
 
-	let fm = t.execute_with(TransactionPayment::next_fee_multiplier);
+	let fees = t.execute_with(|| transfer_fee(&xt()));
 
 	let r = executor_call::<NeverNativeValue, fn() -> _>(
 		&mut t,
@@ -764,7 +758,6 @@ fn successful_execution_gives_ok() {
 		.expect("Extrinsic failed");
 
 	t.execute_with(|| {
-		let fees = transfer_fee(&xt(), fm);
 		assert_eq!(Balances::total_balance(&alice()), 42 * DOLLARS - fees);
 		assert_eq!(Balances::total_balance(&bob()), 69 * DOLLARS);
 	});

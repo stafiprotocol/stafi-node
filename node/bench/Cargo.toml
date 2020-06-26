@@ -1,6 +1,6 @@
 [package]
 name = "node-bench"
-version = "0.8.0-rc3"
+version = "0.1.1"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 description = "Stafi node integration benchmarks."
 edition = "2018"
@@ -9,21 +9,21 @@ edition = "2018"
 
 [dependencies]
 log = "0.4.8"
-node-primitives = { version = "2.0.0-rc3", path = "../primitives" }
-node-testing = { version = "2.0.0-rc3", path = "../testing" }
-node-runtime = { version = "2.0.0-rc3", path = "../runtime" }
-sc-cli = { version = "0.8.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sc-client-api = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-runtime = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-state-machine = { version = "0.8.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+node-primitives = { version = "0.1.1", path = "../primitives" }
+node-testing = { version = "0.1.1", path = "../testing" }
+node-runtime = { version = "0.1.1", path = "../runtime" }
+sc-cli = { version = "0.8.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-client-api = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-runtime = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-state-machine = { version = "0.8.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 serde = "1.0.101"
 serde_json = "1.0.41"
 structopt = "0.3"
 derive_more = "0.99.2"
 kvdb = "0.6"
 kvdb-rocksdb = "0.8"
-sp-trie = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-core = { version = "2.0.0-rc3", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-trie = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-core = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 hash-db = "0.15.2"
 tempfile = "3.1.0"
 fs_extra = "1"
