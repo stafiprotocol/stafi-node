@@ -13,11 +13,12 @@ Now we are mainly testing the functions of block generation, transfer, staking, 
 
 ### Building
 
-Download the source:
+We have released the public testnet(v0.1.1). Welcome to particpate in us. Download the source:
 
 ```bash
 git clone https://github.com/stafiprotocol/stafi-node.git
 cd stafi-node
+git checkout v0.1.1
 ```
 
 Install system dependencies(recommend ubuntu or macos):
@@ -50,7 +51,7 @@ Note: By default, Validator nodes are in archive mode. If you've already synced 
 
 You can see your node on [telemetry] (set a custom name with `--name "my custom name"`).
 
-[telemetry]: https://telemetry.polkadot.io/#list/Stafi%20Testnet%20v0.1.0
+[telemetry]: https://telemetry.polkadot.io/#list/Stafi%20Testnet%20Seiya
 
 ### Upgrade
 
@@ -69,13 +70,14 @@ If you need to start from beginning. You should clean your db.
 ./target/release/stafi purge-chain --chain=testnet
 ```
 
+## Faucet
+You need to have some FIS tokens to continue. The faucet is coming.
+
 
 ## Running using Docker
 Coming
 
 ## Become a validator
-
-Note: You need to have some FIS tokens to continue.
 
 ### Bond FIS tokens
 
