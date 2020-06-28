@@ -5,6 +5,8 @@
 
 The protocol of Stafi is created by Substrate and adopts Nominated Proof-of-Stake (NPoS), which complete Staking by setting up Staking Contracts in the upper layer to communicate with public chains. The Staking process is immune to Stafi’s contracts, for the latter act as the account book during Staking. Tokens staked through contracts will be written in the contracts and finally be locked-up on the original chain.
 
+For more specific guides, see the [documentation](https://docs.stafi.io).
+
 ## Note
 
 Now we are mainly testing the functions of block generation, transfer, staking, etc. And this is to prepare for the POA(Supports staking, not transfer). We will open the Staking Contracts code later when we are ready. 
