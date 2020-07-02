@@ -35,6 +35,8 @@ Build Stafi:
 cargo build --release
 ```
 
+> You may encounter CMAKE_PROJECT_VERSION error. Please scroll bottom and follow the instruction to fix it.
+
 ### Running
 
 #### Stafi Testnet
