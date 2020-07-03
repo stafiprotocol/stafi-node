@@ -29,6 +29,8 @@ Install system dependencies(recommend ubuntu or macos):
 ./scripts/init.sh
 ```
 
+> Run source ~/.cargo/env to update environment or you can add `export PATH="$HOME/.cargo/bin:$PATH"` in the ~/.bashrc.
+
 Build Stafi:
 
 ```bash
