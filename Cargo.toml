@@ -8,6 +8,7 @@ members = [
 	"node/rpc-client",
 	"node/rpc",
 	"node/runtime",
+	"node/pallets/claims",
 	"node/testing",
 	"utils/wasm-builder",
 	"utils/wasm-builder-runner",

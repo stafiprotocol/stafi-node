@@ -73,6 +73,8 @@ pallet-transaction-payment = { version = "2.0.0-rc4", default-features = false, 
 pallet-transaction-payment-rpc-runtime-api = { version = "2.0.0-rc4", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 pallet-vesting = { version = "2.0.0-rc4", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
+claims = { version = "0.1.1", default-features = false, path = "../pallets/claims" }
+
 [build-dependencies]
 wasm-builder-runner = { version = "1.0.5", package = "substrate-wasm-builder-runner", path = "../../utils/wasm-builder-runner" }
 
@@ -132,6 +134,7 @@ std = [
 	"sp-version/std",
 	"pallet-recovery/std",
 	"pallet-vesting/std",
+	"claims/std"
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",
