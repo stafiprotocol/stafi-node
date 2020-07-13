@@ -68,14 +68,19 @@ fn properties() -> Option<sc_service::Properties> {
 	serde_json::from_str(properties_json).unwrap()
 }
 
-/// mainnet
+/// Mainnet
 pub fn stafi_mainnet_config() -> Result<ChainSpec, String> {
 	ChainSpec::from_json_bytes(&include_bytes!("../res/mainnet.json")[..])
 }
 
-/// testnet
+/// Public testnet
 pub fn stafi_testnet_config() -> Result<ChainSpec, String> {
 	ChainSpec::from_json_bytes(&include_bytes!("../res/testnet.json")[..])
+}
+
+/// Sitara testnet
+pub fn stafi_sitara_testnet_config() -> Result<ChainSpec, String> {
+	ChainSpec::from_json_bytes(&include_bytes!("../res/sitara-testnet.json")[..])
 }
 
 fn session_keys(
@@ -98,7 +103,7 @@ fn stafi_testnet_config_genesis() -> GenesisConfig {
 	)
 }
 
-/// testnet config.
+/// Seiya testnet config.
 pub fn stafi_public_testnet_config() -> ChainSpec {
 	ChainSpec::from_genesis(
 		"Stafi Testnet Seiya",
@@ -106,6 +111,22 @@ pub fn stafi_public_testnet_config() -> ChainSpec {
 		ChainType::Live,
 		stafi_testnet_config_genesis,
 		crate::testnet_fixtures::get_bootnodes(),
+		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
+			.expect("Staging telemetry url is valid; qed")),
+		Some(DEFAULT_PROTOCOL_ID),
+		properties(),
+		Default::default(),
+	)
+}
+
+/// Sitara testnet config.
+pub fn stafi_incentive_testnet_config() -> ChainSpec {
+	ChainSpec::from_genesis(
+		"Stafi Testnet Sitara",
+		"stafi_sitara",
+		ChainType::Live,
+		stafi_testnet_config_genesis,
+		crate::testnet_fixtures::get_sitara_bootnodes(),
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Staging telemetry url is valid; qed")),
 		Some(DEFAULT_PROTOCOL_ID),

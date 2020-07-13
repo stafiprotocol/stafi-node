@@ -85,7 +85,7 @@ decl_module! {
 		// Initializing events
 		fn deposit_event() = default;
 
-        /// Make a claim to collect your DOTs.
+        /// Make a claim to collect your FIS.
 		///
 		/// The dispatch origin for this call must be _None_.
 		///
