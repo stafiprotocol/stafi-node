@@ -43,14 +43,16 @@ cargo build --release
 
 #### Stafi Testnet
 
-```bash
-./target/release/stafi --chain=testnet
-```
-
 If you want to be a validator, you should run with the --pruning=archive option.
 
 ```bash
 ./target/release/stafi --chain=testnet --pruning=archive
+```
+
+If you just want to run a normal node, you can remove --pruning.
+
+```bash
+./target/release/stafi --chain=testnet
 ```
 
 > Note: By default, Validator nodes are in archive mode. If you've already synced the chain not in archive mode, you must first remove the database with stafi purge-chain and then ensure that you run Stafi with the --pruning=archive option. The --pruning=archive flag is implied by the --validator and --sentry flags, so it is only required explicitly if you start your node without one of these two options. 
@@ -58,6 +60,31 @@ If you want to be a validator, you should run with the --pruning=archive option.
 You can see your node on [telemetry] (set a custom name with `--name "my custom name"`).
 
 [telemetry]: https://telemetry.polkadot.io/#list/Stafi%20Testnet%20Seiya
+
+More flags
+
+```bash
+./target/release/stafi \
+  --base-path ~ \
+  --chain=sitara \
+  --port 30333 \
+  --ws-port 9944 \
+  --rpc-port 9933 \
+  --validator \
+  --name 'your custom name'
+```
+
+Flags in detail:
+
+| Flags      | Descriptions |
+| :--------- | :----- |
+| --base-path  |Specifies a directory where Substrate should store all the data related to this chain. If the directory does not exist it will be created for you. |
+| --chain sitara     |   Specifies which chain specification to use. |
+| --port 30333     |    Specifies the port that your node will listen for p2p traffic on. 30333 is the default and this flag can be omitted if you're happy with the default. If run multiple nodes on the same physical system, you will need to explicitly specify a different port for it. |
+| --ws-port 9944     |    Specifies the port that your node will listen for incoming web socket traffic on. 9944 is the default, so it can also be omitted. |
+| --rpc-port 9933     |    Specifies the port that your node will listen for incoming RPC traffic on. 9933 is the default, so it can also be omitted. |
+| --validator      |    Means that we want to participate in block production and finalization rather than just sync the network. |
+| --name      |    human-readable name in the telemetry UI |
 
 ### Upgrade
 
