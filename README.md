@@ -55,7 +55,7 @@ If you just want to run a normal node, you can remove --pruning.
 ./target/release/stafi --chain=sitara --name='your name'
 ```
 
-** Important! You should set your name in the following format: `your custom name|The first 10 characters of your stash account`, if your custom name is `myName`, your stash account is `35pTPQxUa63juA11qa2drLf7Pz1ue4c3twBphL5Q6bGerWsK`([Create one if you do not have one](https://docs.stafi.io/staking/create-a-fis-account)), then you should run with `--name='myName|35pTPQxUa6'`. If you do not set your name like this, you will not get the reward.**
+**Important! You should set your name in the following format: `your custom name|The first 10 characters of your stash account`, if your custom name is `myName`, your stash account is `35pTPQxUa63juA11qa2drLf7Pz1ue4c3twBphL5Q6bGerWsK`([Create one if you do not have one](https://docs.stafi.io/staking/create-a-fis-account)), then you should run with `--name='myName|35pTPQxUa6'`. If you do not set your name like this, you will not get the reward.**
 
 > Note: By default, Validator nodes are in archive mode. If you've already synced the chain not in archive mode, you must first remove the database with stafi purge-chain and then ensure that you run Stafi with the --pruning=archive option. The --pruning=archive flag is implied by the --validator and --sentry flags, so it is only required explicitly if you start your node without one of these two options. 
 
