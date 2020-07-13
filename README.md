@@ -15,12 +15,12 @@ Now we are mainly testing the functions of block generation, transfer, staking, 
 
 ### Building
 
-We have released the public testnet Seiya(v0.1.1). Welcome to particpate in us. Download the source:
+We have released the incentive testnet Sitara. Welcome to particpate in us. Download the source:
 
 ```bash
 git clone https://github.com/stafiprotocol/stafi-node.git
 cd stafi-node
-git checkout v0.1.1
+git checkout sitara
 ```
 
 Install system dependencies(recommend ubuntu or macos):
@@ -41,23 +41,52 @@ cargo build --release
 
 ### Running
 
-#### Stafi Testnet
-
-```bash
-./target/release/stafi --chain=testnet
-```
+#### Stafi Incentive Testnet
 
 If you want to be a validator, you should run with the --pruning=archive option.
 
 ```bash
-./target/release/stafi --chain=testnet --pruning=archive
+./target/release/stafi --chain=sitara --pruning=archive --name='your name'
 ```
+
+If you just want to run a normal node, you can remove --pruning.
+
+```bash
+./target/release/stafi --chain=sitara --name='your name'
+```
+
+** Important! You should set your name in the following format: `your custom name|The first 10 characters of your stash account`, if your custom name is `myName`, your stash account is `35pTPQxUa63juA11qa2drLf7Pz1ue4c3twBphL5Q6bGerWsK`([Create one if you do not have one](https://docs.stafi.io/staking/create-a-fis-account)), then you should run with `--name='myName|35pTPQxUa6'`. If you do not set your name like this, you will not get the reward.**
 
 > Note: By default, Validator nodes are in archive mode. If you've already synced the chain not in archive mode, you must first remove the database with stafi purge-chain and then ensure that you run Stafi with the --pruning=archive option. The --pruning=archive flag is implied by the --validator and --sentry flags, so it is only required explicitly if you start your node without one of these two options. 
 
 You can see your node on [telemetry] (set a custom name with `--name "my custom name"`).
 
-[telemetry]: https://telemetry.polkadot.io/#list/Stafi%20Testnet%20Seiya
+[telemetry]: https://telemetry.polkadot.io/#list/Stafi%20Testnet%20Sitara
+
+More flags
+
+```bash
+./target/release/stafi \
+  --base-path ~ \
+  --chain=sitara \
+  --port 30333 \
+  --ws-port 9944 \
+  --rpc-port 9933 \
+  --validator \
+  --name 'your custom name'
+```
+
+Flags in detail:
+
+| Flags      | Descriptions |
+| :--------- | :----- |
+| --base-path  |Specifies a directory where Substrate should store all the data related to this chain. If the directory does not exist it will be created for you. |
+| --chain sitara     |   Specifies which chain specification to use. |
+| --port 30333     |    Specifies the port that your node will listen for p2p traffic on. 30333 is the default and this flag can be omitted if you're happy with the default. If run multiple nodes on the same physical system, you will need to explicitly specify a different port for it. |
+| --ws-port 9944     |    Specifies the port that your node will listen for incoming web socket traffic on. 9944 is the default, so it can also be omitted. |
+| --rpc-port 9933     |    Specifies the port that your node will listen for incoming RPC traffic on. 9933 is the default, so it can also be omitted. |
+| --validator      |    Means that we want to participate in block production and finalization rather than just sync the network. |
+| --name      |    human-readable name in the telemetry UI |
 
 ### Upgrade
 
@@ -73,33 +102,15 @@ cargo build --release
 If you need to start from beginning. You should clean your db.
 
 ```bash
-./target/release/stafi purge-chain --chain=testnet
+./target/release/stafi purge-chain --chain=sitara
 ```
-
-## Faucet for Seiya
-You need to have some FIS tokens to participate in Seiya.
-
-### Get Faucet
-
-- Join Stafi Protocol Group: [Click Here](https://t.me/stafi_protocol)
-- Join Stafi Faucet Group: [Click Here](https://t.me/StafiFaucet)
-- On the Faucet group, reply /faucet + Account
-     + Example: /faucet 35Eb25MdWe3aBuehR3Abx9caw7S68za39aYijvnWB5V3uv3S
-- If your account meets the requirements for issuance, 200 tokens will be automatically distributed to your account, you can view your balance via [Stafi-apps](https://apps.stafi.io).
-
-### Faucet distribution rules
-
-- Each Telegram account can receive 1 airdrops within 2 days.
-- Each address can only receive airdrop for 1 time.
-- The address to receive the airdrop needs to be satisfied with: the address prefix should be start with number 3 ([Create a account](https://docs.stafi.io/staking/create-a-fis-account)).
-- The maximum daily distribution of airdrops is 300, first come first served.
-- The number of each airdrop is a fixed value: 200.
-
 
 ## Running using Docker
 Coming
 
 ## Become a validator
+
+You need to have some FIS tokens to continue.
 
 ### Bond FIS tokens
 
@@ -128,7 +139,7 @@ After a few seconds, you should see an "ExtrinsicSuccess" message. You should no
 Once your node is fully synced, stop the process by pressing Ctrl-C. At your terminal prompt, you will now start running the node in validator mode.
 
 ```bash
-./target/release/stafi --chain=testnet --validator --name "name on telemetry"
+./target/release/stafi --chain=sitara --validator --name "name on telemetry"
 ```
 You can give your validator any name that you like, but note that others will be able to see it, and it will be included in the list of all servers using the same telemetry server. Since numerous people are using telemetry, it is recommended that you choose something likely to be unique.
 
