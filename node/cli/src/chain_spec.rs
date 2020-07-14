@@ -371,7 +371,7 @@ pub fn genesis(
 			}).collect::<Vec<_>>(),
 		}),
 		pallet_staking: Some(StakingConfig {
-			validator_count: 100,
+			validator_count: 50,
 			minimum_validator_count: initial_authorities.len() as u32,
 			stakers: initial_authorities.iter().map(|x| {
 				(x.0.clone(), x.1.clone(), initial_stash_staked, StakerStatus::Validator)
