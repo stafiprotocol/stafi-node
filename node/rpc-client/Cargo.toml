@@ -1,6 +1,6 @@
 [package]
 name = "node-rpc-client"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
 
@@ -13,5 +13,5 @@ futures = "0.1.29"
 hyper = "0.12.35"
 jsonrpc-core-client = { version = "14.2.0", default-features = false, features = ["http"] }
 log = "0.4.8"
-node-primitives = { version = "0.1.1", path = "../primitives" }
+node-primitives = { version = "0.2.0", path = "../primitives" }
 sc-rpc = { version = "2.0.0-rc4", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
