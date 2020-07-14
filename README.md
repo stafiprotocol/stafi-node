@@ -90,7 +90,7 @@ Flags in detail:
 
 ### Upgrade
 
-Make sure you are on the right branch.
+Make sure you are on the right branch. And there is no need to shut down your node when recompiling.
 
 ```bash
 git pull
