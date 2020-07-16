@@ -23,19 +23,20 @@ cd stafi-node
 git checkout sitara
 ```
 
-Install system dependencies(recommend ubuntu or macos):
+Install system dependencies if you haven't done it yet(recommend ubuntu):
 
 ```bash
 ./scripts/init.sh
 ```
 
-> Run source ~/.cargo/env to update environment or you can add `export PATH="$HOME/.cargo/bin:$PATH"` in the ~/.bashrc.
+> You can add `export PATH="$HOME/.cargo/bin:$PATH"` in the ~/.bashrc and restart the terminal or run source ~/.cargo/env to update environment temporarily.
 
 Build Stafi:
 
 ```bash
 cargo build --release
 ```
+It may takes 30minutes - 1hour, which depends on your machine.
 
 > You may encounter CMAKE_PROJECT_VERSION error. Please scroll bottom and follow the instruction to fix it.
 
@@ -49,11 +50,12 @@ If you want to be a validator, you should run with the --pruning=archive option.
 ./target/release/stafi --chain=sitara --pruning=archive --name='your name'
 ```
 
-If you just want to run a normal node, you can remove --pruning.
+If you just want to run a simple node, you can remove --pruning.
 
 ```bash
 ./target/release/stafi --chain=sitara --name='your name'
 ```
+> When running as a simple sync node (above), only the state of the past 256 blocks will be kept.
 
 **Important! You should set your name in the following format: `your custom name|The first 10 characters of your stash account`, if your custom name is `myName`, your stash account is `35pTPQxUa63juA11qa2drLf7Pz1ue4c3twBphL5Q6bGerWsK`([Create one if you do not have one](https://docs.stafi.io/staking/create-a-fis-account)), then you should run with `--name='myName|35pTPQxUa6'`. If you do not set your name like this, you will not get the reward.**
 
@@ -73,7 +75,7 @@ More flags
   --ws-port 9944 \
   --rpc-port 9933 \
   --validator \
-  --name 'your custom name'
+  --name 'your name'
 ```
 
 Flags in detail:
