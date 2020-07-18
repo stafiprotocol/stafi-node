@@ -103,6 +103,17 @@ fn stafi_testnet_config_genesis() -> GenesisConfig {
 	)
 }
 
+fn stafi_sitara_testnet_config_genesis() -> GenesisConfig {
+	const INITIAL_STASH_STAKED: Balance = 1_000 * FIS;
+	genesis(
+		crate::testnet_fixtures::get_initial_authorities(),
+		crate::testnet_fixtures::get_root_key(),
+		crate::testnet_fixtures::get_sitara_balances(),
+		crate::testnet_fixtures::get_vestings(),
+		INITIAL_STASH_STAKED
+	)
+}
+
 /// Seiya testnet config.
 pub fn stafi_public_testnet_config() -> ChainSpec {
 	ChainSpec::from_genesis(
@@ -125,7 +136,7 @@ pub fn stafi_incentive_testnet_config() -> ChainSpec {
 		"Stafi Testnet Sitara",
 		"stafi_sitara",
 		ChainType::Live,
-		stafi_testnet_config_genesis,
+		stafi_sitara_testnet_config_genesis,
 		crate::testnet_fixtures::get_sitara_bootnodes(),
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Staging telemetry url is valid; qed")),
