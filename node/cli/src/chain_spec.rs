@@ -33,6 +33,11 @@ use sp_runtime::{Perbill, traits::{Verify, IdentifyAccount}};
 pub use node_primitives::{AccountId, Balance, Signature, BlockNumber};
 pub use node_runtime::GenesisConfig;
 
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
+use hex::FromHex;
+
 type AccountPublic = <Signature as Verify>::Signer;
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -57,6 +62,21 @@ pub type ChainSpec = sc_service::GenericChainSpec<
 	GenesisConfig,
 	Extensions,
 >;
+
+#[derive(Serialize, Deserialize)]
+struct Allocation {
+    balances: Vec<(String, String)>,
+    vesting: Vec<(String, BlockNumber, BlockNumber, String)>,
+}
+
+fn get_drop_sitara_allocation() -> serde_json::Result<Allocation>{
+	let path = Path::new("node/cli/res/drop-sitara.json");
+	let mut file = File::open(&path).unwrap();
+	let mut data = String::new();
+	file.read_to_string(&mut data).unwrap();
+	let a: Allocation = serde_json::from_str(&data)?;
+	return Ok(a);
+}
 
 fn properties() -> Option<sc_service::Properties> {
 	let properties_json = r#"
@@ -105,11 +125,35 @@ fn stafi_testnet_config_genesis() -> GenesisConfig {
 
 fn stafi_sitara_testnet_config_genesis() -> GenesisConfig {
 	const INITIAL_STASH_STAKED: Balance = 1_000 * FIS;
+
+	let allocation = get_drop_sitara_allocation().unwrap();
+	let balances = allocation.balances.iter().map(|b| {
+		let balance = b.1.to_string().parse::<Balance>().unwrap() * FIS;
+		return (
+			<[u8; 32]>::from_hex(b.0.clone()).unwrap().into(),
+			balance,
+		);
+	})
+	.filter(|b| b.1 > 0)
+	.collect();
+
+	let vesting = allocation.vesting.iter().map(|v| {
+		let vesting_balance = v.3.to_string().parse::<Balance>().unwrap() * FIS;
+		return (
+			<[u8; 32]>::from_hex(v.0.clone()).unwrap().into(),
+			v.1,
+			v.2,
+			vesting_balance,
+		);
+	})
+	.filter(|v| v.3 > 0)
+	.collect();
+
 	genesis(
 		crate::testnet_fixtures::get_initial_authorities(),
 		crate::testnet_fixtures::get_root_key(),
-		crate::testnet_fixtures::get_sitara_balances(),
-		crate::testnet_fixtures::get_vestings(),
+		balances,
+		vesting,
 		INITIAL_STASH_STAKED
 	)
 }

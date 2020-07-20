@@ -3035,6 +3035,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "futures 0.3.5",
+ "hex",
  "hex-literal",
  "jsonrpc-core",
  "log",
