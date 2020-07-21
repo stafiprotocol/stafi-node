@@ -65,6 +65,8 @@ You can see your node on [telemetry] (set a custom name with `--name "my custom 
 
 [telemetry]: https://telemetry.polkadot.io/#list/Stafi%20Testnet%20Sitara
 
+> Make sure to enable 30333 libp2p port on your server. Eventually, it will take a little bit of time to discover other peers over the network.
+
 More flags
 
 ```bash
