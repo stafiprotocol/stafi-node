@@ -1,6 +1,6 @@
 [package]
 name = "node-runtime"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
 build = "build.rs"
@@ -22,7 +22,7 @@ sp-authority-discovery = { version = "2.0.0-rc4", default-features = false, git 
 sp-consensus-babe = { version = "0.8.0-rc4", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-block-builder = { git = 'https://github.com/stafiprotocol/stafi-blockchain.git', default-features = false, version = "2.0.0-rc4"}
 sp-inherents = { version = "2.0.0-rc4", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-node-primitives = { version = "0.2.1", default-features = false, path = "../primitives" }
+node-primitives = { version = "0.2.2", default-features = false, path = "../primitives" }
 sp-offchain = { version = "2.0.0-rc4", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-core = { version = "2.0.0-rc4", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-std = { version = "2.0.0-rc4", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
@@ -73,7 +73,7 @@ pallet-transaction-payment = { version = "2.0.0-rc4", default-features = false, 
 pallet-transaction-payment-rpc-runtime-api = { version = "2.0.0-rc4", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 pallet-vesting = { version = "2.0.0-rc4", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
-claims = { version = "0.2.1", default-features = false, path = "../pallets/claims" }
+claims = { version = "0.2.2", default-features = false, path = "../pallets/claims" }
 
 [build-dependencies]
 wasm-builder-runner = { version = "1.0.5", package = "substrate-wasm-builder-runner", path = "../../utils/wasm-builder-runner" }
