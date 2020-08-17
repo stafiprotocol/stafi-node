@@ -128,7 +128,7 @@ fn stafi_sitara_testnet_config_genesis() -> GenesisConfig {
 
 	let allocation = get_drop_sitara_allocation().unwrap();
 	let balances = allocation.balances.iter().map(|b| {
-		let balance = b.1.to_string().parse::<Balance>().unwrap() * FIS;
+		let balance = b.1.to_string().parse::<Balance>().unwrap();
 		return (
 			<[u8; 32]>::from_hex(b.0.clone()).unwrap().into(),
 			balance,
@@ -138,7 +138,7 @@ fn stafi_sitara_testnet_config_genesis() -> GenesisConfig {
 	.collect();
 
 	let vesting = allocation.vesting.iter().map(|v| {
-		let vesting_balance = v.3.to_string().parse::<Balance>().unwrap() * FIS;
+		let vesting_balance = v.3.to_string().parse::<Balance>().unwrap();
 		return (
 			<[u8; 32]>::from_hex(v.0.clone()).unwrap().into(),
 			v.1,
@@ -177,8 +177,8 @@ pub fn stafi_public_testnet_config() -> ChainSpec {
 /// Sitara testnet config.
 pub fn stafi_incentive_testnet_config() -> ChainSpec {
 	ChainSpec::from_genesis(
-		"Stafi Testnet Sitara",
-		"stafi_sitara",
+		"Stafi Testnet Sitara2.0",
+		"stafi_sitara2.0",
 		ChainType::Live,
 		stafi_sitara_testnet_config_genesis,
 		crate::testnet_fixtures::get_sitara_bootnodes(),
