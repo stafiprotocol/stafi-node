@@ -1,6 +1,6 @@
 [package]
 name = "substrate-wasm-builder"
-version = "1.0.11"
+version = "2.0.0"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 description = "Utility for building WASM binaries"
 edition = "2018"

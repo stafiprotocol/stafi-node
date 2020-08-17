@@ -15,8 +15,8 @@ use crate::keyring::*;
 use sp_keyring::{Ed25519Keyring, Sr25519Keyring};
 use node_runtime::{
 	GenesisConfig, BalancesConfig, SessionConfig, StakingConfig, SystemConfig,
-	GrandpaConfig, IndicesConfig, WASM_BINARY,
-	AccountId,
+	GrandpaConfig, IndicesConfig, wasm_binary_unwrap,
+	AccountId, StakerStatus,
 };
 use node_runtime::constants::currency::*;
 use sp_core::ChangesTrieConfiguration;
@@ -54,7 +54,7 @@ pub fn config_endowed(
 				digest_interval: 2,
 				digest_levels: 2,
 			}) } else { None },
-			code: code.map(|x| x.to_vec()).unwrap_or_else(|| WASM_BINARY.to_vec()),
+			code: code.map(|x| x.to_vec()).unwrap_or_else(|| wasm_binary_unwrap().to_vec()),
 		}),
 		pallet_indices: Some(IndicesConfig {
 			indices: vec![],
@@ -80,9 +80,9 @@ pub fn config_endowed(
 		}),
 		pallet_staking: Some(StakingConfig {
 			stakers: vec![
-				(dave(), alice(), 111 * DOLLARS, pallet_staking::StakerStatus::Validator),
-				(eve(), bob(), 100 * DOLLARS, pallet_staking::StakerStatus::Validator),
-				(ferdie(), charlie(), 100 * DOLLARS, pallet_staking::StakerStatus::Validator)
+				(dave(), alice(), 111 * DOLLARS, StakerStatus::Validator),
+				(eve(), bob(), 100 * DOLLARS, StakerStatus::Validator),
+				(ferdie(), charlie(), 100 * DOLLARS, StakerStatus::Validator)
 			],
 			validator_count: 3,
 			minimum_validator_count: 0,
