@@ -327,11 +327,7 @@ pub fn testnet_genesis(
 		}),
 		pallet_membership_Instance1: Some(Default::default()),
 		pallet_treasury: Some(Default::default()),
-		pallet_vesting: Some(VestingConfig {
-			vesting: endowed_accounts.iter().cloned().map(|who| {
-				(who, 100 as BlockNumber, 100 as BlockNumber, 0.to_string().parse::<Balance>().unwrap())
-			}).collect(),
-		}),
+		pallet_vesting: Some(Default::default()),
 	}
 }
 

@@ -118,7 +118,7 @@ decl_module! {
 		    T::Currency::deposit_creating(&dest, balance_due);
 
             <Total<T>>::put(new_total);
-            <Claimed<T>>::insert(&dest, balance_due);
+            <Claimed<T>>::insert(&dest, balance_claim);
 
 			Self::deposit_event(RawEvent::Claimed(dest, balance_due));
 			Ok(())
@@ -183,10 +183,15 @@ impl<T: Trait> sp_runtime::traits::ValidateUnsigned for Module<T> {
 		let e = InvalidTransaction::Custom(ValidityError::DestHasNoClaim.into());
 		ensure!(<Claims<T>>::contains_key(&dest), e);
 
+		let balance_claims = match <Claims<T>>::get(&dest) {
+			None => Zero::zero(),
+			Some(claims) => claims
+		};
+
 		Ok(ValidTransaction {
 			priority: PRIORITY,
 			requires: vec![],
-			provides: vec![("claims", dest).encode()],
+			provides: vec![("claims", dest, balance_claims).encode()],
 			longevity: TransactionLongevity::max_value(),
 			propagate: true,
 		})
