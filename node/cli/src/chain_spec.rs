@@ -18,7 +18,7 @@ use node_runtime::{
 	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, CouncilConfig,
 	DemocracyConfig,GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, StakerStatus,
 	StakingConfig, ElectionsConfig, IndicesConfig, SudoConfig, SystemConfig,
-	TechnicalCommitteeConfig, VestingConfig, WASM_BINARY,
+	TechnicalCommitteeConfig, VestingConfig, wasm_binary_unwrap,
 };
 use node_runtime::Block;
 use node_runtime::constants::currency::*;
@@ -32,6 +32,11 @@ use sp_runtime::{Perbill, traits::{Verify, IdentifyAccount}};
 
 pub use node_primitives::{AccountId, Balance, Signature, BlockNumber};
 pub use node_runtime::GenesisConfig;
+
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
+use hex::FromHex;
 
 type AccountPublic = <Signature as Verify>::Signer;
 
@@ -58,6 +63,21 @@ pub type ChainSpec = sc_service::GenericChainSpec<
 	Extensions,
 >;
 
+#[derive(Serialize, Deserialize)]
+struct Allocation {
+    balances: Vec<(String, String)>,
+    vesting: Vec<(String, BlockNumber, BlockNumber, String)>,
+}
+
+fn get_drop_sitara_allocation() -> serde_json::Result<Allocation>{
+	let path = Path::new("node/cli/res/drop-sitara.json");
+	let mut file = File::open(&path).unwrap();
+	let mut data = String::new();
+	file.read_to_string(&mut data).unwrap();
+	let a: Allocation = serde_json::from_str(&data)?;
+	return Ok(a);
+}
+
 fn properties() -> Option<sc_service::Properties> {
 	let properties_json = r#"
 		{
@@ -68,14 +88,19 @@ fn properties() -> Option<sc_service::Properties> {
 	serde_json::from_str(properties_json).unwrap()
 }
 
-/// mainnet
+/// Mainnet
 pub fn stafi_mainnet_config() -> Result<ChainSpec, String> {
 	ChainSpec::from_json_bytes(&include_bytes!("../res/mainnet.json")[..])
 }
 
-/// testnet
+/// Public testnet
 pub fn stafi_testnet_config() -> Result<ChainSpec, String> {
 	ChainSpec::from_json_bytes(&include_bytes!("../res/testnet.json")[..])
+}
+
+/// Sitara testnet
+pub fn stafi_sitara_testnet_config() -> Result<ChainSpec, String> {
+	ChainSpec::from_json_bytes(&include_bytes!("../res/sitara-testnet.json")[..])
 }
 
 fn session_keys(
@@ -98,7 +123,42 @@ fn stafi_testnet_config_genesis() -> GenesisConfig {
 	)
 }
 
-/// testnet config.
+fn stafi_sitara_testnet_config_genesis() -> GenesisConfig {
+	const INITIAL_STASH_STAKED: Balance = 1_000 * FIS;
+
+	let allocation = get_drop_sitara_allocation().unwrap();
+	let balances = allocation.balances.iter().map(|b| {
+		let balance = b.1.to_string().parse::<Balance>().unwrap();
+		return (
+			<[u8; 32]>::from_hex(b.0.clone()).unwrap().into(),
+			balance,
+		);
+	})
+	.filter(|b| b.1 > 0)
+	.collect();
+
+	let vesting = allocation.vesting.iter().map(|v| {
+		let vesting_balance = v.3.to_string().parse::<Balance>().unwrap();
+		return (
+			<[u8; 32]>::from_hex(v.0.clone()).unwrap().into(),
+			v.1,
+			v.2,
+			vesting_balance,
+		);
+	})
+	.filter(|v| v.3 > 0)
+	.collect();
+
+	genesis(
+		crate::testnet_fixtures::get_initial_authorities(),
+		crate::testnet_fixtures::get_root_key(),
+		balances,
+		vesting,
+		INITIAL_STASH_STAKED
+	)
+}
+
+/// Seiya testnet config.
 pub fn stafi_public_testnet_config() -> ChainSpec {
 	ChainSpec::from_genesis(
 		"Stafi Testnet Seiya",
@@ -106,6 +166,22 @@ pub fn stafi_public_testnet_config() -> ChainSpec {
 		ChainType::Live,
 		stafi_testnet_config_genesis,
 		crate::testnet_fixtures::get_bootnodes(),
+		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
+			.expect("Staging telemetry url is valid; qed")),
+		Some(DEFAULT_PROTOCOL_ID),
+		properties(),
+		Default::default(),
+	)
+}
+
+/// Sitara testnet config.
+pub fn stafi_incentive_testnet_config() -> ChainSpec {
+	ChainSpec::from_genesis(
+		"Stafi Testnet Sitara2.0",
+		"stafi_sitara2.0",
+		ChainType::Live,
+		stafi_sitara_testnet_config_genesis,
+		crate::testnet_fixtures::get_sitara_bootnodes(),
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Staging telemetry url is valid; qed")),
 		Some(DEFAULT_PROTOCOL_ID),
@@ -184,7 +260,7 @@ pub fn testnet_genesis(
 
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
-			code: WASM_BINARY.to_vec(),
+			code: wasm_binary_unwrap().to_vec(),
 			changes_trie_config: Default::default(),
 		}),
 		pallet_balances: Some(BalancesConfig {
@@ -251,11 +327,7 @@ pub fn testnet_genesis(
 		}),
 		pallet_membership_Instance1: Some(Default::default()),
 		pallet_treasury: Some(Default::default()),
-		pallet_vesting: Some(VestingConfig {
-			vesting: endowed_accounts.iter().cloned().map(|who| {
-				(who, 100 as BlockNumber, 100 as BlockNumber, 0.to_string().parse::<Balance>().unwrap())
-			}).collect(),
-		}),
+		pallet_vesting: Some(Default::default()),
 	}
 }
 
@@ -330,7 +402,7 @@ pub fn genesis(
 
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
-			code: WASM_BINARY.to_vec(),
+			code: wasm_binary_unwrap().to_vec(),
 			changes_trie_config: Default::default(),
 		}),
 		pallet_balances: Some(BalancesConfig {
@@ -350,7 +422,7 @@ pub fn genesis(
 			}).collect::<Vec<_>>(),
 		}),
 		pallet_staking: Some(StakingConfig {
-			validator_count: 50,
+			validator_count: 200,
 			minimum_validator_count: initial_authorities.len() as u32,
 			stakers: initial_authorities.iter().map(|x| {
 				(x.0.clone(), x.1.clone(), initial_stash_staked, StakerStatus::Validator)
@@ -389,7 +461,7 @@ pub fn genesis(
 #[cfg(test)]
 pub(crate) mod tests {
 	use super::*;
-	use crate::service::{new_full, new_light};
+	use crate::service::{new_full_base, new_light_base};
 	use sc_service_test;
 	use sp_runtime::BuildStorage;
 
@@ -439,8 +511,14 @@ pub(crate) mod tests {
 	fn test_connectivity() {
 		sc_service_test::connectivity(
 			integration_test_config_with_two_authorities(),
-			|config| new_full(config),
-			|config| new_light(config),
+			|config| {
+				let (keep_alive, _, client, network, transaction_pool) = new_full_base(config,|_, _| ())?;
+				Ok(sc_service_test::TestNetComponents::new(keep_alive, client, network, transaction_pool))
+			},
+			|config| {
+				let (keep_alive, _, client, network, transaction_pool) = new_light_base(config)?;
+				Ok(sc_service_test::TestNetComponents::new(keep_alive, client, network, transaction_pool))
+			}
 		);
 	}
 

@@ -72,4 +72,4 @@ fi
 rustup update nightly
 rustup target add wasm32-unknown-unknown --toolchain nightly
 
-echo 'Run source ~/.cargo/env now to update environment or you can add `export PATH="$HOME/.cargo/bin:$PATH"` in the ~/.bashrc.'
+echo 'You can add `export PATH="$HOME/.cargo/bin:$PATH"` in the ~/.bashrc and restart the terminal or run source ~/.cargo/env to update environment temporarily.'

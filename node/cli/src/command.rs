@@ -12,35 +12,33 @@
 use crate::{chain_spec, service, Cli, Subcommand};
 use node_executor::Executor;
 use node_runtime::{Block, RuntimeApi};
-use sc_cli::{Result, SubstrateCli};
+use sc_cli::{Result, SubstrateCli, RuntimeVersion, Role, ChainSpec};
+use sc_service::PartialComponents;
+use crate::service::new_partial;
 
 impl SubstrateCli for Cli {
-	fn impl_name() -> &'static str {
-		"Stafi Node"
+	fn impl_name() -> String {
+		"Stafi Node".into()
 	}
 
-	fn impl_version() -> &'static str {
-		env!("SUBSTRATE_CLI_IMPL_VERSION")
+	fn impl_version() -> String {
+		env!("SUBSTRATE_CLI_IMPL_VERSION").into()
 	}
 
-	fn description() -> &'static str {
-		env!("CARGO_PKG_DESCRIPTION")
+	fn description() -> String {
+		env!("CARGO_PKG_DESCRIPTION").into()
 	}
 
-	fn author() -> &'static str {
-		env!("CARGO_PKG_AUTHORS")
+	fn author() -> String {
+		env!("CARGO_PKG_AUTHORS").into()
 	}
 
-	fn support_url() -> &'static str {
-		"https://github.com/stafiprotocol/stafi-node/issues/new"
+	fn support_url() -> String {
+		"https://github.com/stafiprotocol/stafi-node/issues/new".into()
 	}
 
 	fn copyright_start_year() -> i32 {
 		2019
-	}
-
-	fn executable_name() -> &'static str {
-		"stafi"
 	}
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
@@ -49,11 +47,17 @@ impl SubstrateCli for Cli {
 			"local" => Box::new(chain_spec::local_testnet_config()),
 			"public-test" => Box::new(chain_spec::stafi_public_testnet_config()),
 			"testnet" => Box::new(chain_spec::stafi_testnet_config()?),
-            "" | "stafi" => Box::new(chain_spec::stafi_mainnet_config()?),
+			"incentive-test" => Box::new(chain_spec::stafi_incentive_testnet_config()),
+			"sitara" => Box::new(chain_spec::stafi_sitara_testnet_config()?),
+            "" | "mainnet" => Box::new(chain_spec::stafi_mainnet_config()?),
 			path => Box::new(chain_spec::ChainSpec::from_json_file(
 				std::path::PathBuf::from(path),
 			)?),
 		})
+	}
+
+	fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
+		&node_runtime::VERSION
 	}
 }
 
@@ -64,11 +68,10 @@ pub fn run() -> Result<()> {
 	match &cli.subcommand {
 		None => {
 			let runner = cli.create_runner(&cli.run)?;
-			runner.run_node(
-				service::new_light,
-				service::new_full,
-				node_runtime::VERSION
-			)
+			runner.run_node_until_exit(|config| match config.role {
+				Role::Light => service::new_light(config),
+				_ => service::new_full(config),
+			})
 		}
 		Some(Subcommand::Inspect(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
@@ -88,8 +91,11 @@ pub fn run() -> Result<()> {
 		}
 		Some(Subcommand::Base(subcommand)) => {
 			let runner = cli.create_runner(subcommand)?;
-
-			runner.run_subcommand(subcommand, |config| Ok(new_full_start!(config).0))
+			runner.run_subcommand(subcommand, |config| {
+				let PartialComponents { client, backend, task_manager, import_queue, ..}
+					= new_partial(&config)?;
+				Ok((client, backend, import_queue, task_manager))
+			})
 		}
 	}
 }
