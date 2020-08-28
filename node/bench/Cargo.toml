@@ -12,24 +12,24 @@ log = "0.4.8"
 node-primitives = { version = "0.2.3", path = "../primitives" }
 node-testing = { version = "0.2.3", path = "../testing" }
 node-runtime = { version = "0.2.3", path = "../runtime" }
-sc-cli = { version = "0.8.0-rc5", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sc-client-api = { version = "2.0.0-rc5", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-runtime = { version = "2.0.0-rc5", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-state-machine = { version = "0.8.0-rc5", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-cli = { version = "0.8.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-client-api = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-runtime = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-state-machine = { version = "0.8.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 serde = "1.0.101"
 serde_json = "1.0.41"
 structopt = "0.3"
 derive_more = "0.99.2"
 kvdb = "0.7"
 kvdb-rocksdb = "0.9"
-sp-trie = { version = "2.0.0-rc5", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-core = { version = "2.0.0-rc5", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-consensus = { version = "0.8.0-rc5", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-transaction-pool = { version = "2.0.0-rc5", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sc-basic-authorship = { version = "0.8.0-rc5", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-inherents = { version = "2.0.0-rc5", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-finality-tracker = { version = "2.0.0-rc5", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-timestamp = { version = "2.0.0-rc5", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-trie = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-core = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-consensus = { version = "0.8.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-transaction-pool = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-basic-authorship = { version = "0.8.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-inherents = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-finality-tracker = { version = "2.0.0-rc6", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-timestamp = { version = "2.0.0-rc6", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 hash-db = "0.15.2"
 tempfile = "3.1.0"
 fs_extra = "1"
@@ -38,5 +38,5 @@ rand = { version = "0.7.2", features = ["small_rng"] }
 lazy_static = "1.4.0"
 parity-util-mem = { version = "0.7.0", default-features = false, features = ["primitive-types"] }
 parity-db = { version = "0.1.2" }
-sc-transaction-pool = { version = "2.0.0-rc5", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-transaction-pool = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 futures = { version = "0.3.4", features = ["thread-pool"] }
