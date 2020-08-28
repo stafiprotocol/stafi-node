@@ -78,6 +78,15 @@ fn get_drop_sitara_allocation() -> serde_json::Result<Allocation>{
 	return Ok(a);
 }
 
+fn get_drop_mainnet_allocation() -> serde_json::Result<Allocation>{
+	let path = Path::new("node/cli/res/drop-mainnet.json");
+	let mut file = File::open(&path).unwrap();
+	let mut data = String::new();
+	file.read_to_string(&mut data).unwrap();
+	let a: Allocation = serde_json::from_str(&data)?;
+	return Ok(a);
+}
+
 fn properties() -> Option<sc_service::Properties> {
 	let properties_json = r#"
 		{
@@ -146,12 +155,45 @@ fn stafi_sitara_testnet_config_genesis() -> GenesisConfig {
 			vesting_balance,
 		);
 	})
-	.filter(|v| v.3 > 0)
 	.collect();
 
 	genesis(
 		crate::testnet_fixtures::get_initial_authorities(),
 		crate::testnet_fixtures::get_root_key(),
+		balances,
+		vesting,
+		INITIAL_STASH_STAKED
+	)
+}
+
+fn stafi_mainnet_config_genesis() -> GenesisConfig {
+	const INITIAL_STASH_STAKED: Balance = 1_000 * FIS;
+
+	let allocation = get_drop_mainnet_allocation().unwrap();
+	let balances = allocation.balances.iter().map(|b| {
+		let balance = b.1.to_string().parse::<Balance>().unwrap();
+		return (
+			<[u8; 32]>::from_hex(b.0.clone()).unwrap().into(),
+			balance,
+		);
+	})
+	.filter(|b| b.1 > 0)
+	.collect();
+
+	let vesting = allocation.vesting.iter().map(|v| {
+		let vesting_balance = v.3.to_string().parse::<Balance>().unwrap();
+		return (
+			<[u8; 32]>::from_hex(v.0.clone()).unwrap().into(),
+			v.1,
+			v.2,
+			vesting_balance,
+		);
+	})
+	.collect();
+
+	genesis(
+		crate::mainnet_fixtures::get_initial_authorities(),
+		crate::mainnet_fixtures::get_root_key(),
 		balances,
 		vesting,
 		INITIAL_STASH_STAKED
@@ -184,6 +226,22 @@ pub fn stafi_incentive_testnet_config() -> ChainSpec {
 		crate::testnet_fixtures::get_sitara_bootnodes(),
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Staging telemetry url is valid; qed")),
+		Some(DEFAULT_PROTOCOL_ID),
+		properties(),
+		Default::default(),
+	)
+}
+
+/// Mainnet config.
+pub fn stafi_mainnet_spec_config() -> ChainSpec {
+	ChainSpec::from_genesis(
+		"Stafi",
+		"stafi_mainnet",
+		ChainType::Live,
+		stafi_mainnet_config_genesis,
+		crate::mainnet_fixtures::get_bootnodes(),
+		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
+			.expect("Mainnet telemetry url is valid; qed")),
 		Some(DEFAULT_PROTOCOL_ID),
 		properties(),
 		Default::default(),
@@ -422,8 +480,8 @@ pub fn genesis(
 			}).collect::<Vec<_>>(),
 		}),
 		pallet_staking: Some(StakingConfig {
-			validator_count: 200,
-			minimum_validator_count: initial_authorities.len() as u32,
+			validator_count: 60,
+			minimum_validator_count: 4,
 			stakers: initial_authorities.iter().map(|x| {
 				(x.0.clone(), x.1.clone(), initial_stash_staked, StakerStatus::Validator)
 			}).collect(),

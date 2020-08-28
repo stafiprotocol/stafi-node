@@ -17,11 +17,10 @@ use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_core::crypto::UncheckedInto;
 use hex_literal::hex;
-use node_primitives::{AccountId, Balance, BlockNumber};
-use node_runtime::constants::currency::*;
+use node_primitives::{AccountId};
 use sc_network::{config::MultiaddrWithPeerId};
 
-/// Testnet bootnodes
+/// Mainnet bootnodes
 pub fn get_bootnodes() -> Vec<MultiaddrWithPeerId> {
 	return vec![
 		"/ip4/185.228.137.49/tcp/30333/p2p/12D3KooWSFhGrte1XYYHkktbkMjZbpyNjNbkcsxsN5nKZVrnbgL2".parse().unwrap(),
@@ -30,16 +29,7 @@ pub fn get_bootnodes() -> Vec<MultiaddrWithPeerId> {
 	];
 }
 
-/// Sitara Testnet bootnodes
-pub fn get_sitara_bootnodes() -> Vec<MultiaddrWithPeerId> {
-	return vec![
-		"/ip4/185.228.137.49/tcp/30334/p2p/12D3KooWDE2ZnFUzEV6kLFpMdDMpSyNnjuKq3dH4yJ97T2AYVFcc".parse().unwrap(),
-		"/ip4/46.38.241.169/tcp/30334/p2p/12D3KooWFJVjCwsGKoLgkP91X5Jc2f4UU3rGauXARddhVft3HkUE".parse().unwrap(),
-		"/ip4/5.45.104.102/tcp/30334/p2p/12D3KooWMiqcUFkB5XWbVc66T3eNjFmLVztKVWy8CwQ6zoUQMPeV".parse().unwrap(),
-	];
-}
-
-/// Testnet initial authorities
+/// Mainnet initial authorities
 pub fn get_initial_authorities() -> Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId)> {
 	return vec![(
 		// 5DAM9w5tLThneVLTuv6M91Lyjz4n6bgUM3u4gCtJ8Bai85DP
@@ -83,36 +73,8 @@ pub fn get_initial_authorities() -> Vec<(AccountId, AccountId, GrandpaId, BabeId
 	)];
 }
 
-/// Testnet root key
+/// Mainnet root key
 pub fn get_root_key() -> AccountId {
 	// 5CVAqeuuBdWQvH4hAVUwBr6KKvNbLw8iXLQuGJMe1UtwkyKG
 	return hex!["12a8b88f69ed1960f6fb77ad7937787c34432e459e933957d6c12106e4881122"].into();
-}
-
-/// Testnet balances
-pub fn get_balances() -> Vec<(AccountId, Balance)> {
-	return vec![
-		(hex!["308a03fec4d787f08caf4fa7c569ad59e75c240a749a67704d35ed71c8298356"].into(), 10_000_000 * FIS),
-		(hex!["c4d8c141c908b043a875e40a4a3ec930d60dfadc5a167a1f65970eaf34cb6e51"].into(), 100 * FIS),
-		(hex!["924cc3a998e6b2293fc46281e78be2a6693437bf33fcec370a9167bc33fdf17b"].into(), 10_000_000 * FIS),
-		(hex!["d409e31b8d45397b0b23d6955bb084ceae0c3635fd8e7fea58c46ffb389a7523"].into(), 100 * FIS),
-		(hex!["841b98d00ff0f9548c5792d53c842e1d0e741bea470e22051ab98ae85b510833"].into(), 10_000_000 * FIS),
-		(hex!["425ef3c6c4ca93e6047569bd61ebc0df15c9b54b460ddc4f28553c6c0ff1d518"].into(), 100 * FIS),
-		(hex!["12a8b88f69ed1960f6fb77ad7937787c34432e459e933957d6c12106e4881122"].into(), 10 * FIS),
-		(hex!["22aa4571470fafa5dc60cbfcde7b563929ddd271c9b06a40c09479a63edde430"].into(), 10_000_000 * FIS),
-		(hex!["dfcf9666b6c1c4346507b77ce0a9da67717bb03b24602245b6157e48b1152981"].into(), 30_000_000 * FIS),
-		(hex!["8cba31dbd353953c5e87c68fd30326c533de480c6c832e1c8d2828e3dd11215c"].into(), 30_000_000 * FIS),
-	];
-}
-
-/// Testnet vestings
-pub fn get_vestings() -> Vec<(AccountId, BlockNumber, BlockNumber, Balance)>{
-	return vec![
-		(
-			hex!["22aa4571470fafa5dc60cbfcde7b563929ddd271c9b06a40c09479a63edde430"].into(),
-			3000 as BlockNumber,
-			500000 as BlockNumber,
-			0 as Balance
-		),
-	];
 }

@@ -33,3 +33,4 @@ pub use cli::*;
 pub use command::*;
 
 pub mod testnet_fixtures;
+pub mod mainnet_fixtures;
