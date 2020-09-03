@@ -481,7 +481,7 @@ pub fn genesis(
 		}),
 		pallet_staking: Some(StakingConfig {
 			validator_count: 60,
-			minimum_validator_count: 4,
+			minimum_validator_count: 3,
 			stakers: initial_authorities.iter().map(|x| {
 				(x.0.clone(), x.1.clone(), initial_stash_staked, StakerStatus::Validator)
 			}).collect(),
