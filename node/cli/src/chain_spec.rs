@@ -167,7 +167,7 @@ fn stafi_sitara_testnet_config_genesis() -> GenesisConfig {
 }
 
 fn stafi_mainnet_config_genesis() -> GenesisConfig {
-	const INITIAL_STASH_STAKED: Balance = 1_000 * FIS;
+	const INITIAL_STASH_STAKED: Balance = 300_000 * FIS;
 
 	let allocation = get_drop_mainnet_allocation().unwrap();
 	let balances = allocation.balances.iter().map(|b| {
