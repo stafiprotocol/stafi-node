@@ -12,31 +12,31 @@ targets = ["x86_64-unknown-linux-gnu"]
 codec = { package = "parity-scale-codec", version = "1.3.4" }
 node-primitives = { version = "0.2.3", path = "../primitives" }
 node-runtime = { version = "0.2.3", path = "../runtime" }
-sc-executor = { version = "0.8.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-core = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-io = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-state-machine = { version = "0.8.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-trie = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-executor = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-core = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-io = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-state-machine = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-trie = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 trie-root = "0.16.0"
-frame-benchmarking = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+frame-benchmarking = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
 [dev-dependencies]
 criterion = "0.3.0"
-frame-support = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-frame-system = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+frame-support = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+frame-system = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 node-testing = { version = "0.2.3", path = "../testing" }
-pallet-balances = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-grandpa = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-im-online = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-indices = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-session = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-timestamp = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-transaction-payment = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-treasury = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-application-crypto = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-runtime = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-externalities = { version = "0.8.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-substrate-test-client = { version = "2.0.0-rc6", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-balances = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-grandpa = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-im-online = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-indices = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-session = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-timestamp = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-transaction-payment = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-treasury = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-application-crypto = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-runtime = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-externalities = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+substrate-test-client = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 wabt = "0.9.2"
 
 [features]
