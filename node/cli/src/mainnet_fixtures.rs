@@ -23,9 +23,9 @@ use sc_network::{config::MultiaddrWithPeerId};
 /// Mainnet bootnodes
 pub fn get_bootnodes() -> Vec<MultiaddrWithPeerId> {
 	return vec![
-		"/ip4/185.228.137.49/tcp/30334/p2p/12D3KooWDE2ZnFUzEV6kLFpMdDMpSyNnjuKq3dH4yJ97T2AYVFcc".parse().unwrap(),
-		"/ip4/46.38.241.169/tcp/30334/p2p/12D3KooWFJVjCwsGKoLgkP91X5Jc2f4UU3rGauXARddhVft3HkUE".parse().unwrap(),
-		"/ip4/5.45.104.102/tcp/30334/p2p/12D3KooWMiqcUFkB5XWbVc66T3eNjFmLVztKVWy8CwQ6zoUQMPeV".parse().unwrap(),
+		"/dns/p2p.node-0.stafi.io/tcp/30334/p2p/12D3KooWDE2ZnFUzEV6kLFpMdDMpSyNnjuKq3dH4yJ97T2AYVFcc".parse().unwrap(),
+		"/dns/p2p.node-1.stafi.io/tcp/30334/p2p/12D3KooWFJVjCwsGKoLgkP91X5Jc2f4UU3rGauXARddhVft3HkUE".parse().unwrap(),
+		"/dns/p2p.node-2.stafi.io/tcp/30334/p2p/12D3KooWMiqcUFkB5XWbVc66T3eNjFmLVztKVWy8CwQ6zoUQMPeV".parse().unwrap(),
 	];
 }
 
