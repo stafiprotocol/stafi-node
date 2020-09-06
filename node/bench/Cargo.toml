@@ -21,7 +21,7 @@ serde_json = "1.0.41"
 structopt = "0.3"
 derive_more = "0.99.2"
 kvdb = "0.7"
-kvdb-rocksdb = "0.9"
+kvdb-rocksdb = "0.9.1"
 sp-trie = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-core = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-consensus = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
