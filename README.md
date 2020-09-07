@@ -9,18 +9,18 @@ For more specific guides, see the [documentation](https://docs.stafi.io).
 
 ## Note
 
-Now we are mainly testing the functions of block generation, transfer, staking, etc. And this is to prepare for the POA(support staking, not transfer). We will open more codes later when we are ready. 
+Now we are mainly testing the functions of block generation, transfer, staking, etc. We will open more codes later when we are ready.
 
 ## Running from Source
 
 ### Building
 
-We have released the public testnet Seiya(v0.1.1). Welcome to particpate in us. Download the source:
+Welcome to particpate in us. Download the source:
 
 ```bash
 git clone https://github.com/stafiprotocol/stafi-node.git
 cd stafi-node
-git checkout v0.1.1
+git checkout v0.3.1
 ```
 
 Install system dependencies(recommend ubuntu or macos):
@@ -29,24 +29,43 @@ Install system dependencies(recommend ubuntu or macos):
 ./scripts/init.sh
 ```
 
-> Run source ~/.cargo/env to update environment or you can add `export PATH="$HOME/.cargo/bin:$PATH"` in the ~/.bashrc.
+> You can add `export PATH="$HOME/.cargo/bin:$PATH"` in the ~/.bashrc and restart the terminal or run source ~/.cargo/env to update environment.
 
 Build Stafi:
 
 ```bash
 cargo build --release
 ```
+It may take 30minutes - 1hour, which depends on your machine.
 
 > You may encounter CMAKE_PROJECT_VERSION error. Please scroll bottom and follow the instruction to fix it.
 
 ### Running
 
-#### Stafi Testnet
+#### Stafi Mainnet
 
-If you want to be a validator, you should run with the --pruning=archive option.
+If you want to be a validator.
 
 ```bash
-./target/release/stafi --chain=testnet --pruning=archive
+./target/release/stafi --validator --name='your name' --execution=NativeElseWasm
+```
+
+If you just want to run a normal node.
+
+```bash
+./target/release/stafi
+```
+
+You can see your node on [telemetry] (set a custom name with `--name "my custom name"`).
+
+[telemetry]: https://telemetry.polkadot.io/#list/Stafi
+
+#### Stafi Testnet
+
+If you want to be a validator.
+
+```bash
+./target/release/stafi --chain=testnet --validator --name='your name' --execution=NativeElseWasm
 ```
 
 If you just want to run a normal node, you can remove --pruning.
@@ -55,23 +74,24 @@ If you just want to run a normal node, you can remove --pruning.
 ./target/release/stafi --chain=testnet
 ```
 
-> Note: By default, Validator nodes are in archive mode. If you've already synced the chain not in archive mode, you must first remove the database with stafi purge-chain and then ensure that you run Stafi with the --pruning=archive option. The --pruning=archive flag is implied by the --validator and --sentry flags, so it is only required explicitly if you start your node without one of these two options. 
-
 You can see your node on [telemetry] (set a custom name with `--name "my custom name"`).
 
 [telemetry]: https://telemetry.polkadot.io/#list/Stafi%20Testnet%20Seiya
+
+> Note: By default, Validator nodes are in archive mode. If you've already synced the chain not in archive mode, you must first remove the database with stafi purge-chain and then ensure that you run Stafi with the --pruning=archive option. The --pruning=archive flag is implied by the --validator and --sentry flags, so it is only required explicitly if you start your node without one of these two options. 
 
 More flags
 
 ```bash
 ./target/release/stafi \
   --base-path ~ \
-  --chain=sitara \
+  --chain=testnet \
   --port 30333 \
   --ws-port 9944 \
   --rpc-port 9933 \
   --validator \
-  --name 'your custom name'
+  --name 'your custom name' \
+  -execution=NativeElseWasm
 ```
 
 Flags in detail:
@@ -79,21 +99,25 @@ Flags in detail:
 | Flags      | Descriptions |
 | :--------- | :----- |
 | --base-path  |Specifies a directory where Substrate should store all the data related to this chain. If the directory does not exist it will be created for you. |
-| --chain sitara     |   Specifies which chain specification to use. |
+| --chain testnet     |   Specifies which chain specification to use. |
 | --port 30333     |    Specifies the port that your node will listen for p2p traffic on. 30333 is the default and this flag can be omitted if you're happy with the default. If run multiple nodes on the same physical system, you will need to explicitly specify a different port for it. |
 | --ws-port 9944     |    Specifies the port that your node will listen for incoming web socket traffic on. 9944 is the default, so it can also be omitted. |
 | --rpc-port 9933     |    Specifies the port that your node will listen for incoming RPC traffic on. 9933 is the default, so it can also be omitted. |
 | --validator      |    Means that we want to participate in block production and finalization rather than just sync the network. |
 | --name      |    human-readable name in the telemetry UI |
+| --execution      |    The execution strategy that should be used by all execution contexts [possible values: Native, Wasm, Both, NativeElseWasm] |
+| --rpc-methods      |    RPC methods to expose. [default: Auto] [possible values: Auto, Safe, Unsafe] |
+| --rpc-cors      |    Specify browser Origins allowed to access the HTTP & WS RPC servers |
+| --ws-external      |   Listen to all Websocket interfaces |
 
 ### Upgrade
 
-Make sure you are on the right branch.
+Make sure you are on the right branch. And there is no need to shut down your node when recompiling.
 
 ```bash
-git pull
 cargo build --release
 ```
+Please restart your node after the compiling.
 
 ### Clean
 
@@ -152,12 +176,7 @@ After a few seconds, you should see an "ExtrinsicSuccess" message. You should no
 
 ### Set Session Keys
 
-Once your node is fully synced, stop the process by pressing Ctrl-C. At your terminal prompt, you will now start running the node in validator mode.
-
-```bash
-./target/release/stafi --chain=testnet --validator --name "name on telemetry"
-```
-You can give your validator any name that you like, but note that others will be able to see it, and it will be included in the list of all servers using the same telemetry server. Since numerous people are using telemetry, it is recommended that you choose something likely to be unique.
+Once your node is fully synced, you can set the session keys. Just make sure you are running the node in validator mode.
 
 #### Generating the Session Keys
 
