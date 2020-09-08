@@ -3,7 +3,7 @@
 [Stafi](https://stafi.io) is:
 - The First Decentralized Protocol Unlocking Liquidity of Staked Assets
 
-The protocol of Stafi is created by Substrate and adopts Nominated Proof-of-Stake (NPoS), which complete Staking by setting up Staking Contracts in the upper layer to communicate with public chains. The Staking process is immune to Stafi’s contracts, for the latter act as the account book during Staking. Tokens staked through contracts will be written in the contracts and finally be locked-up on the original chain.
+The protocol of Stafi is created by Substrate and adopts Nominated Proof-of-Stake (NPoS), which completes Staking by setting up Staking Contracts in the upper layer to communicate with public chains. The Staking process is immune to Stafi’s contracts, for the latter act as the account book during Staking. Tokens staked through contracts will be written in the contracts and finally be locked-up on the original chain.
 
 For more specific guides, see the [documentation](https://docs.stafi.io).
 
@@ -15,7 +15,7 @@ Now we are mainly testing the functions of block generation, transfer, staking, 
 
 ### Building
 
-Welcome to particpate in us. Download the source:
+Welcome to participate in us. Download the source:
 
 ```bash
 git clone https://github.com/stafiprotocol/stafi-node.git
@@ -29,7 +29,7 @@ Install system dependencies(recommend ubuntu or macos):
 ./scripts/init.sh
 ```
 
-> You can add `export PATH="$HOME/.cargo/bin:$PATH"` in the ~/.bashrc and restart the terminal or run source ~/.cargo/env to update environment.
+> You can add `export PATH="$HOME/.cargo/bin:$PATH"` in the ~/.bashrc and restart the terminal or run source ~/.cargo/env to update the environment.
 
 Build Stafi:
 
@@ -38,7 +38,7 @@ cargo build --release
 ```
 It may take 30minutes - 1hour, which depends on your machine.
 
-> You may encounter CMAKE_PROJECT_VERSION error. Please scroll bottom and follow the instruction to fix it.
+> You may encounter CMAKE_PROJECT_VERSION error. Please scroll to the bottom and follow the instructions to fix it.
 
 ### Running
 
@@ -121,7 +121,7 @@ Please restart your node after the compiling.
 
 ### Clean
 
-If you need to start from beginning. You should clean your db.
+If you need to start from the beginning. You should clean your db.
 
 ```bash
 ./target/release/stafi purge-chain --chain=testnet
@@ -140,9 +140,9 @@ You need to have some FIS tokens to participate in Seiya.
 
 ### Faucet distribution rules
 
-- Each Telegram account can receive 1 airdrops within 2 days.
+- Each Telegram account can receive 1 airdrop within 2 days.
 - Each address can only receive airdrop for 1 time.
-- The address to receive the airdrop needs to be satisfied with: the address prefix should be start with number 3 ([Create a account](https://docs.stafi.io/staking/create-a-fis-account)).
+- The address to receive the airdrop needs to be satisfied with: the address prefix should be start with number 3 ([Create an account](https://docs.stafi.io/guides/account-creation)).
 - The maximum daily distribution of airdrops is 300, first come first served.
 - The number of each airdrop is a fixed value: 200.
 
