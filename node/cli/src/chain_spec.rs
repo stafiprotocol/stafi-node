@@ -219,8 +219,8 @@ pub fn stafi_public_testnet_config() -> ChainSpec {
 /// Sitara testnet config.
 pub fn stafi_incentive_testnet_config() -> ChainSpec {
 	ChainSpec::from_genesis(
-		"Stafi Testnet Sitara2.0",
-		"stafi_sitara2.0",
+		"Stafi Testnet Sitara3.0",
+		"stafi_sitara3.0",
 		ChainType::Live,
 		stafi_sitara_testnet_config_genesis,
 		crate::testnet_fixtures::get_sitara_bootnodes(),
