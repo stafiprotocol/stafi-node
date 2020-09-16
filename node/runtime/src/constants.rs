@@ -16,7 +16,7 @@ pub mod currency {
 	use node_primitives::Balance;
 
 	pub const FIS: Balance = 1_000_000_000_000;
-	pub const DOLLARS: Balance = FIS * 10;
+	pub const DOLLARS: Balance = FIS;
 	pub const CENTS: Balance = DOLLARS / 100;
 	pub const MILLICENTS: Balance = CENTS / 1_000;
 
