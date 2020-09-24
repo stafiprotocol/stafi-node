@@ -14,4 +14,4 @@ hyper = "0.12.35"
 jsonrpc-core-client = { version = "14.2.0", default-features = false, features = ["http"] }
 log = "0.4.8"
 node-primitives = { version = "0.3.1", path = "../primitives" }
-sc-rpc = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-rpc = { rev = "b383cd5d", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }

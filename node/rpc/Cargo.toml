@@ -12,21 +12,21 @@ jsonrpc-core = "14.2.0"
 jsonrpc-pubsub = "14.2.0"
 node-primitives = { version = "0.3.1", path = "../primitives" }
 node-runtime = { version = "0.3.1", path = "../runtime" }
-pallet-transaction-payment-rpc = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sc-client-api = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sc-consensus-babe = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sc-consensus-babe-rpc = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git'}
-sc-consensus-epochs = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sc-finality-grandpa = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sc-finality-grandpa-rpc = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sc-keystore = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sc-rpc-api = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sc-rpc = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-api = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-block-builder = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-blockchain = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-consensus = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-consensus-babe = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-transaction-pool = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-substrate-frame-rpc-system = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-transaction-payment-rpc = { rev = "b383cd5d", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-client-api = { rev = "b383cd5d", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-consensus-babe = { rev = "b383cd5d", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-consensus-babe-rpc = { rev = "b383cd5d", git = 'https://github.com/stafiprotocol/stafi-blockchain.git'}
+sc-consensus-epochs = { rev = "b383cd5d", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-finality-grandpa = { rev = "b383cd5d", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-finality-grandpa-rpc = { rev = "b383cd5d", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-keystore = { rev = "b383cd5d", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-rpc-api = { rev = "b383cd5d", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-rpc = { rev = "b383cd5d", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-api = { rev = "b383cd5d", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-block-builder = { rev = "b383cd5d", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-blockchain = { rev = "b383cd5d", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-consensus = { rev = "b383cd5d", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-consensus-babe = { rev = "b383cd5d", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-transaction-pool = { rev = "b383cd5d", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+substrate-frame-rpc-system = { rev = "b383cd5d", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 

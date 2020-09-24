@@ -704,6 +704,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "chainbridge"
+version = "0.3.1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "serde",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-runtime",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "substrate-wasm-builder-runner 1.0.6",
+]
+
+[[package]]
 name = "chrono"
 version = "0.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1312,6 +1327,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "ethereum"
+version = "0.3.1"
+dependencies = [
+ "chainbridge",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "serde",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "sp-runtime",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "substrate-wasm-builder-runner 1.0.6",
+]
+
+[[package]]
 name = "event-listener"
 version = "2.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1440,7 +1472,7 @@ checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 [[package]]
 name = "fork-tree"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "parity-scale-codec",
 ]
@@ -1448,7 +1480,7 @@ dependencies = [
 [[package]]
 name = "frame-benchmarking"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -1456,17 +1488,17 @@ dependencies = [
  "parity-scale-codec",
  "paste",
  "sp-api",
- "sp-io",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-runtime-interface",
- "sp-std",
- "sp-storage",
+ "sp-runtime-interface 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-storage 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "frame-benchmarking-cli"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-benchmarking",
  "parity-scale-codec",
@@ -1474,43 +1506,43 @@ dependencies = [
  "sc-client-db",
  "sc-executor",
  "sc-service",
- "sp-core",
- "sp-externalities",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-externalities 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-state-machine",
+ "sp-state-machine 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "structopt",
 ]
 
 [[package]]
 name = "frame-executive"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-support",
  "frame-system",
  "parity-scale-codec",
  "serde",
- "sp-io",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-std",
- "sp-tracing",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-tracing 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "frame-metadata"
 version = "11.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "parity-scale-codec",
  "serde",
- "sp-core",
- "sp-std",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "frame-support"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "bitmask",
  "frame-metadata",
@@ -1523,19 +1555,19 @@ dependencies = [
  "serde",
  "smallvec 1.4.2",
  "sp-arithmetic",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-inherents",
- "sp-io",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-state-machine",
- "sp-std",
- "sp-tracing",
+ "sp-state-machine 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-tracing 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "frame-support-procedural"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-support-procedural-tools",
  "proc-macro2",
@@ -1546,7 +1578,7 @@ dependencies = [
 [[package]]
 name = "frame-support-procedural-tools"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-support-procedural-tools-derive",
  "proc-macro-crate",
@@ -1558,7 +1590,7 @@ dependencies = [
 [[package]]
 name = "frame-support-procedural-tools-derive"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1568,37 +1600,37 @@ dependencies = [
 [[package]]
 name = "frame-system"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
  "parity-scale-codec",
  "serde",
- "sp-core",
- "sp-io",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-version",
 ]
 
 [[package]]
 name = "frame-system-benchmarking"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "frame-system-rpc-runtime-api"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -3469,14 +3501,14 @@ dependencies = [
  "serde",
  "serde_json",
  "sp-consensus",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-finality-tracker",
  "sp-inherents",
  "sp-runtime",
- "sp-state-machine",
+ "sp-state-machine 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-timestamp",
  "sp-transaction-pool",
- "sp-trie",
+ "sp-trie 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "structopt",
  "tempfile",
 ]
@@ -3538,16 +3570,16 @@ dependencies = [
  "sp-authority-discovery",
  "sp-consensus",
  "sp-consensus-babe",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-finality-grandpa",
  "sp-finality-tracker",
  "sp-inherents",
- "sp-io",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-keyring",
  "sp-runtime",
  "sp-timestamp",
  "sp-transaction-pool",
- "sp-trie",
+ "sp-trie 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "structopt",
  "substrate-build-script-utils",
  "substrate-frame-cli",
@@ -3577,12 +3609,12 @@ dependencies = [
  "parity-scale-codec",
  "sc-executor",
  "sp-application-crypto",
- "sp-core",
- "sp-externalities",
- "sp-io",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-externalities 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-state-machine",
- "sp-trie",
+ "sp-state-machine 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-trie 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "substrate-test-client",
  "trie-root",
  "wabt",
@@ -3599,7 +3631,7 @@ dependencies = [
  "sc-client-api",
  "sc-service",
  "sp-blockchain",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
  "structopt",
 ]
@@ -3612,7 +3644,7 @@ dependencies = [
  "parity-scale-codec",
  "pretty_assertions",
  "sp-application-crypto",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
  "sp-serializer",
 ]
@@ -3661,6 +3693,8 @@ dependencies = [
 name = "node-runtime"
 version = "0.3.1"
 dependencies = [
+ "chainbridge",
+ "ethereum",
  "frame-benchmarking",
  "frame-executive",
  "frame-support",
@@ -3707,15 +3741,15 @@ dependencies = [
  "sp-authority-discovery",
  "sp-block-builder",
  "sp-consensus-babe",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-inherents",
- "sp-io",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
  "sp-keyring",
  "sp-offchain",
  "sp-runtime",
  "sp-session",
  "sp-staking",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-transaction-pool",
  "sp-version",
  "static_assertions",
@@ -3754,10 +3788,10 @@ dependencies = [
  "sp-block-builder",
  "sp-blockchain",
  "sp-consensus",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-finality-tracker",
  "sp-inherents",
- "sp-io",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-keyring",
  "sp-runtime",
  "sp-timestamp",
@@ -3931,7 +3965,7 @@ dependencies = [
 [[package]]
 name = "pallet-authority-discovery"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3941,13 +3975,13 @@ dependencies = [
  "sp-application-crypto",
  "sp-authority-discovery",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-authorship"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3956,13 +3990,13 @@ dependencies = [
  "sp-authorship",
  "sp-inherents",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-babe"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -3976,18 +4010,18 @@ dependencies = [
  "sp-consensus-babe",
  "sp-consensus-vrf",
  "sp-inherents",
- "sp-io",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
  "sp-session",
  "sp-staking",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-timestamp",
 ]
 
 [[package]]
 name = "pallet-balances"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -3995,44 +4029,44 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-collective"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
  "serde",
- "sp-core",
- "sp-io",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-democracy"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
  "serde",
- "sp-io",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-elections-phragmen"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4041,13 +4075,13 @@ dependencies = [
  "serde",
  "sp-npos-elections",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-finality-tracker"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4057,13 +4091,13 @@ dependencies = [
  "sp-finality-tracker",
  "sp-inherents",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-grandpa"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4074,18 +4108,18 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-application-crypto",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-finality-grandpa",
  "sp-runtime",
  "sp-session",
  "sp-staking",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-identity"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "enumflags2",
  "frame-benchmarking",
@@ -4093,15 +4127,15 @@ dependencies = [
  "frame-system",
  "parity-scale-codec",
  "serde",
- "sp-io",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-im-online"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4111,64 +4145,64 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-application-crypto",
- "sp-core",
- "sp-io",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
  "sp-staking",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-indices"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
  "serde",
- "sp-core",
- "sp-io",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-keyring",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-membership"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-support",
  "frame-system",
  "parity-scale-codec",
  "serde",
- "sp-io",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-multisig"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
  "serde",
- "sp-core",
- "sp-io",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-offences"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4177,13 +4211,13 @@ dependencies = [
  "serde",
  "sp-runtime",
  "sp-staking",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-offences-benchmarking"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4198,72 +4232,72 @@ dependencies = [
  "parity-scale-codec",
  "sp-runtime",
  "sp-staking",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-proxy"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
  "serde",
- "sp-core",
- "sp-io",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-randomness-collective-flip"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-support",
  "frame-system",
  "parity-scale-codec",
  "safe-mix",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-recovery"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "enumflags2",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
  "serde",
- "sp-io",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-scheduler"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
  "serde",
- "sp-io",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-session"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4271,19 +4305,19 @@ dependencies = [
  "pallet-timestamp",
  "parity-scale-codec",
  "serde",
- "sp-core",
- "sp-io",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
  "sp-session",
  "sp-staking",
- "sp-std",
- "sp-trie",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-trie 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-session-benchmarking"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4293,13 +4327,13 @@ dependencies = [
  "rand 0.7.3",
  "sp-runtime",
  "sp-session",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-staking"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4310,18 +4344,18 @@ dependencies = [
  "rand_chacha 0.2.2",
  "serde",
  "sp-application-crypto",
- "sp-io",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-npos-elections",
  "sp-runtime",
  "sp-staking",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "static_assertions",
 ]
 
 [[package]]
 name = "pallet-staking-reward-curve"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -4332,21 +4366,21 @@ dependencies = [
 [[package]]
 name = "pallet-sudo"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-support",
  "frame-system",
  "parity-scale-codec",
  "serde",
- "sp-io",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-timestamp"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4355,16 +4389,16 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-inherents",
- "sp-io",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-timestamp",
 ]
 
 [[package]]
 name = "pallet-transaction-payment"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4372,16 +4406,16 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "smallvec 1.4.2",
- "sp-core",
- "sp-io",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-transaction-payment-rpc"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -4391,7 +4425,7 @@ dependencies = [
  "serde",
  "sp-api",
  "sp-blockchain",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-rpc",
  "sp-runtime",
 ]
@@ -4399,20 +4433,20 @@ dependencies = [
 [[package]]
 name = "pallet-transaction-payment-rpc-runtime-api"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
  "serde",
  "sp-api",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-treasury"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4421,29 +4455,29 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-utility"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
  "serde",
- "sp-core",
- "sp-io",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "pallet-vesting"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "enumflags2",
  "frame-benchmarking",
@@ -4452,7 +4486,7 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
@@ -5574,7 +5608,7 @@ dependencies = [
 [[package]]
 name = "sc-authority-discovery"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "bytes 0.5.4",
  "derive_more",
@@ -5594,7 +5628,7 @@ dependencies = [
  "sp-api",
  "sp-authority-discovery",
  "sp-blockchain",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
  "substrate-prometheus-endpoint",
 ]
@@ -5602,7 +5636,7 @@ dependencies = [
 [[package]]
 name = "sc-basic-authorship"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "futures 0.3.5",
  "futures-timer 3.0.2",
@@ -5615,7 +5649,7 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-consensus",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-inherents",
  "sp-runtime",
  "sp-transaction-pool",
@@ -5626,7 +5660,7 @@ dependencies = [
 [[package]]
 name = "sc-block-builder"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "parity-scale-codec",
  "sc-client-api",
@@ -5634,16 +5668,16 @@ dependencies = [
  "sp-block-builder",
  "sp-blockchain",
  "sp-consensus",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-inherents",
  "sp-runtime",
- "sp-state-machine",
+ "sp-state-machine 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sc-chain-spec"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "impl-trait-for-tuples",
  "parity-scale-codec",
@@ -5653,14 +5687,14 @@ dependencies = [
  "serde",
  "serde_json",
  "sp-chain-spec",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
 ]
 
 [[package]]
 name = "sc-chain-spec-derive"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -5671,7 +5705,7 @@ dependencies = [
 [[package]]
 name = "sc-cli"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "ansi_term 0.12.1",
  "atty",
@@ -5702,11 +5736,11 @@ dependencies = [
  "serde",
  "serde_json",
  "sp-blockchain",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-keyring",
- "sp-panic-handler",
+ "sp-panic-handler 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-state-machine",
+ "sp-state-machine 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-utils",
  "sp-version",
  "structopt",
@@ -5718,7 +5752,7 @@ dependencies = [
 [[package]]
 name = "sc-client-api"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "derive_more",
  "fnv",
@@ -5735,17 +5769,17 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-consensus",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-database",
- "sp-externalities",
+ "sp-externalities 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-inherents",
  "sp-keyring",
  "sp-runtime",
- "sp-state-machine",
- "sp-std",
- "sp-storage",
+ "sp-state-machine 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-storage 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-transaction-pool",
- "sp-trie",
+ "sp-trie 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-utils",
  "sp-version",
  "substrate-prometheus-endpoint",
@@ -5754,7 +5788,7 @@ dependencies = [
 [[package]]
 name = "sc-client-db"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "blake2-rfc",
  "hash-db",
@@ -5773,18 +5807,18 @@ dependencies = [
  "sp-arithmetic",
  "sp-blockchain",
  "sp-consensus",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-database",
  "sp-runtime",
- "sp-state-machine",
- "sp-trie",
+ "sp-state-machine 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-trie 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "substrate-prometheus-endpoint",
 ]
 
 [[package]]
 name = "sc-consensus"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "sc-client-api",
  "sp-blockchain",
@@ -5795,7 +5829,7 @@ dependencies = [
 [[package]]
 name = "sc-consensus-babe"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "derive_more",
  "fork-tree",
@@ -5826,9 +5860,9 @@ dependencies = [
  "sp-consensus",
  "sp-consensus-babe",
  "sp-consensus-vrf",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-inherents",
- "sp-io",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
  "sp-timestamp",
  "sp-utils",
@@ -5839,7 +5873,7 @@ dependencies = [
 [[package]]
 name = "sc-consensus-babe-rpc"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "derive_more",
  "futures 0.3.5",
@@ -5856,14 +5890,14 @@ dependencies = [
  "sp-blockchain",
  "sp-consensus",
  "sp-consensus-babe",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
 ]
 
 [[package]]
 name = "sc-consensus-epochs"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "fork-tree",
  "parity-scale-codec",
@@ -5876,7 +5910,7 @@ dependencies = [
 [[package]]
 name = "sc-consensus-slots"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "futures 0.3.5",
  "futures-timer 3.0.2",
@@ -5890,22 +5924,22 @@ dependencies = [
  "sp-blockchain",
  "sp-consensus",
  "sp-consensus-slots",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-inherents",
  "sp-runtime",
- "sp-state-machine",
+ "sp-state-machine 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sc-consensus-uncles"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "log",
  "sc-client-api",
  "sp-authorship",
  "sp-consensus",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-inherents",
  "sp-runtime",
 ]
@@ -5913,7 +5947,7 @@ dependencies = [
 [[package]]
 name = "sc-executor"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "derive_more",
  "lazy_static",
@@ -5926,54 +5960,54 @@ dependencies = [
  "sc-executor-wasmi",
  "sc-executor-wasmtime",
  "sp-api",
- "sp-core",
- "sp-externalities",
- "sp-io",
- "sp-panic-handler",
- "sp-runtime-interface",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-externalities 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-panic-handler 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-runtime-interface 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-serializer",
- "sp-trie",
+ "sp-trie 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-version",
- "sp-wasm-interface",
+ "sp-wasm-interface 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "wasmi",
 ]
 
 [[package]]
 name = "sc-executor-common"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "derive_more",
  "log",
  "parity-scale-codec",
  "parity-wasm 0.41.0",
  "sp-allocator",
- "sp-core",
- "sp-runtime-interface",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-runtime-interface 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-serializer",
- "sp-wasm-interface",
+ "sp-wasm-interface 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "wasmi",
 ]
 
 [[package]]
 name = "sc-executor-wasmi"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "log",
  "parity-scale-codec",
  "sc-executor-common",
  "sp-allocator",
- "sp-core",
- "sp-runtime-interface",
- "sp-wasm-interface",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-runtime-interface 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-wasm-interface 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "wasmi",
 ]
 
 [[package]]
 name = "sc-executor-wasmtime"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "log",
  "parity-scale-codec",
@@ -5982,16 +6016,16 @@ dependencies = [
  "sc-executor-common",
  "scoped-tls",
  "sp-allocator",
- "sp-core",
- "sp-runtime-interface",
- "sp-wasm-interface",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-runtime-interface 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-wasm-interface 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "wasmtime",
 ]
 
 [[package]]
 name = "sc-finality-grandpa"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "derive_more",
  "finality-grandpa",
@@ -6016,7 +6050,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-blockchain",
  "sp-consensus",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-finality-grandpa",
  "sp-finality-tracker",
  "sp-inherents",
@@ -6028,7 +6062,7 @@ dependencies = [
 [[package]]
 name = "sc-finality-grandpa-rpc"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "derive_more",
  "finality-grandpa",
@@ -6043,14 +6077,14 @@ dependencies = [
  "sc-rpc",
  "serde",
  "serde_json",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
 ]
 
 [[package]]
 name = "sc-informant"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "ansi_term 0.12.1",
  "futures 0.3.5",
@@ -6068,7 +6102,7 @@ dependencies = [
 [[package]]
 name = "sc-keystore"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "derive_more",
  "hex",
@@ -6077,14 +6111,14 @@ dependencies = [
  "rand 0.7.3",
  "serde_json",
  "sp-application-crypto",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "subtle 2.2.3",
 ]
 
 [[package]]
 name = "sc-light"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "hash-db",
  "lazy_static",
@@ -6094,16 +6128,16 @@ dependencies = [
  "sc-executor",
  "sp-api",
  "sp-blockchain",
- "sp-core",
- "sp-externalities",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-externalities 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-state-machine",
+ "sp-state-machine 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sc-network"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "async-std",
  "async-trait",
@@ -6143,7 +6177,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-blockchain",
  "sp-consensus",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
  "sp-utils",
  "substrate-prometheus-endpoint",
@@ -6157,7 +6191,7 @@ dependencies = [
 [[package]]
 name = "sc-network-gossip"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "futures 0.3.5",
  "futures-timer 3.0.2",
@@ -6172,7 +6206,7 @@ dependencies = [
 [[package]]
 name = "sc-offchain"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "bytes 0.5.4",
  "fnv",
@@ -6189,7 +6223,7 @@ dependencies = [
  "sc-keystore",
  "sc-network",
  "sp-api",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-offchain",
  "sp-runtime",
  "sp-utils",
@@ -6199,7 +6233,7 @@ dependencies = [
 [[package]]
 name = "sc-peerset"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "futures 0.3.5",
  "libp2p",
@@ -6212,7 +6246,7 @@ dependencies = [
 [[package]]
 name = "sc-proposer-metrics"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "log",
  "substrate-prometheus-endpoint",
@@ -6221,7 +6255,7 @@ dependencies = [
 [[package]]
 name = "sc-rpc"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "futures 0.3.5",
  "hash-db",
@@ -6239,12 +6273,12 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-chain-spec",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-offchain",
  "sp-rpc",
  "sp-runtime",
  "sp-session",
- "sp-state-machine",
+ "sp-state-machine 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-transaction-pool",
  "sp-utils",
  "sp-version",
@@ -6253,7 +6287,7 @@ dependencies = [
 [[package]]
 name = "sc-rpc-api"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "derive_more",
  "futures 0.3.5",
@@ -6267,7 +6301,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sp-chain-spec",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-rpc",
  "sp-runtime",
  "sp-transaction-pool",
@@ -6277,7 +6311,7 @@ dependencies = [
 [[package]]
 name = "sc-rpc-server"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-http-server",
@@ -6293,7 +6327,7 @@ dependencies = [
 [[package]]
 name = "sc-service"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "derive_more",
  "directories",
@@ -6334,15 +6368,15 @@ dependencies = [
  "sp-block-builder",
  "sp-blockchain",
  "sp-consensus",
- "sp-core",
- "sp-externalities",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-externalities 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-inherents",
- "sp-io",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
  "sp-session",
- "sp-state-machine",
+ "sp-state-machine 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-transaction-pool",
- "sp-trie",
+ "sp-trie 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-utils",
  "sp-version",
  "substrate-prometheus-endpoint",
@@ -6354,7 +6388,7 @@ dependencies = [
 [[package]]
 name = "sc-service-test"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "env_logger",
  "fdlimit",
@@ -6374,14 +6408,14 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-consensus",
- "sp-core",
- "sp-externalities",
- "sp-panic-handler",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-externalities 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-panic-handler 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-state-machine",
- "sp-storage",
+ "sp-state-machine 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-storage 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-transaction-pool",
- "sp-trie",
+ "sp-trie 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "substrate-test-runtime",
  "substrate-test-runtime-client",
  "tempfile",
@@ -6391,7 +6425,7 @@ dependencies = [
 [[package]]
 name = "sc-state-db"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "log",
  "parity-scale-codec",
@@ -6399,13 +6433,13 @@ dependencies = [
  "parity-util-mem-derive",
  "parking_lot 0.10.2",
  "sc-client-api",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sc-telemetry"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "futures 0.3.5",
  "futures-timer 3.0.2",
@@ -6426,7 +6460,7 @@ dependencies = [
 [[package]]
 name = "sc-tracing"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "erased-serde",
  "log",
@@ -6436,7 +6470,7 @@ dependencies = [
  "serde",
  "serde_json",
  "slog",
- "sp-tracing",
+ "sp-tracing 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "tracing",
  "tracing-subscriber",
 ]
@@ -6444,7 +6478,7 @@ dependencies = [
 [[package]]
 name = "sc-transaction-graph"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "derive_more",
  "futures 0.3.5",
@@ -6455,7 +6489,7 @@ dependencies = [
  "retain_mut",
  "serde",
  "sp-blockchain",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
  "sp-transaction-pool",
  "sp-utils",
@@ -6465,7 +6499,7 @@ dependencies = [
 [[package]]
 name = "sc-transaction-pool"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "derive_more",
  "futures 0.3.5",
@@ -6479,9 +6513,9 @@ dependencies = [
  "sc-transaction-graph",
  "sp-api",
  "sp-blockchain",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-tracing",
+ "sp-tracing 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-transaction-pool",
  "sp-utils",
  "substrate-prometheus-endpoint",
@@ -6880,34 +6914,34 @@ dependencies = [
 [[package]]
 name = "sp-allocator"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "derive_more",
  "log",
- "sp-core",
- "sp-std",
- "sp-wasm-interface",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-wasm-interface 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sp-api"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "hash-db",
  "parity-scale-codec",
  "sp-api-proc-macro",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-state-machine",
- "sp-std",
+ "sp-state-machine 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-version",
 ]
 
 [[package]]
 name = "sp-api-proc-macro"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "blake2-rfc",
  "proc-macro-crate",
@@ -6919,67 +6953,67 @@ dependencies = [
 [[package]]
 name = "sp-application-crypto"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "parity-scale-codec",
  "serde",
- "sp-core",
- "sp-io",
- "sp-std",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sp-arithmetic"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "integer-sqrt",
  "num-traits",
  "parity-scale-codec",
  "serde",
- "sp-debug-derive",
- "sp-std",
+ "sp-debug-derive 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sp-authority-discovery"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
  "sp-application-crypto",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sp-authorship"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "parity-scale-codec",
  "sp-inherents",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sp-block-builder"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
  "sp-inherents",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sp-blockchain"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "derive_more",
  "log",
@@ -6990,13 +7024,13 @@ dependencies = [
  "sp-consensus",
  "sp-database",
  "sp-runtime",
- "sp-state-machine",
+ "sp-state-machine 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sp-chain-spec"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "serde",
  "serde_json",
@@ -7005,7 +7039,7 @@ dependencies = [
 [[package]]
 name = "sp-consensus"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "derive_more",
  "futures 0.3.5",
@@ -7016,12 +7050,12 @@ dependencies = [
  "parking_lot 0.10.2",
  "serde",
  "sp-api",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-inherents",
  "sp-runtime",
- "sp-state-machine",
- "sp-std",
- "sp-trie",
+ "sp-state-machine 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-trie 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-utils",
  "sp-version",
  "substrate-prometheus-endpoint",
@@ -7031,21 +7065,21 @@ dependencies = [
 [[package]]
 name = "sp-consensus-aura"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
  "sp-application-crypto",
  "sp-inherents",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-timestamp",
 ]
 
 [[package]]
 name = "sp-consensus-babe"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "merlin",
  "parity-scale-codec",
@@ -7054,17 +7088,17 @@ dependencies = [
  "sp-consensus",
  "sp-consensus-slots",
  "sp-consensus-vrf",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-inherents",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-timestamp",
 ]
 
 [[package]]
 name = "sp-consensus-slots"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "parity-scale-codec",
  "sp-runtime",
@@ -7073,19 +7107,19 @@ dependencies = [
 [[package]]
 name = "sp-consensus-vrf"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "parity-scale-codec",
  "schnorrkel",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sp-core"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "base58",
  "blake2-rfc",
@@ -7113,11 +7147,55 @@ dependencies = [
  "secrecy",
  "serde",
  "sha2 0.8.2",
- "sp-debug-derive",
- "sp-externalities",
- "sp-runtime-interface",
- "sp-std",
- "sp-storage",
+ "sp-debug-derive 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "sp-externalities 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "sp-runtime-interface 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "sp-storage 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "substrate-bip39",
+ "tiny-bip39",
+ "tiny-keccak",
+ "twox-hash",
+ "wasmi",
+ "zeroize",
+]
+
+[[package]]
+name = "sp-core"
+version = "2.0.0-rc6"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+dependencies = [
+ "base58",
+ "blake2-rfc",
+ "byteorder 1.3.4",
+ "derive_more",
+ "dyn-clonable",
+ "ed25519-dalek",
+ "futures 0.3.5",
+ "hash-db",
+ "hash256-std-hasher",
+ "hex",
+ "impl-serde",
+ "lazy_static",
+ "libsecp256k1",
+ "log",
+ "merlin",
+ "num-traits",
+ "parity-scale-codec",
+ "parity-util-mem",
+ "parking_lot 0.10.2",
+ "primitive-types",
+ "rand 0.7.3",
+ "regex",
+ "schnorrkel",
+ "secrecy",
+ "serde",
+ "sha2 0.8.2",
+ "sp-debug-derive 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-externalities 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-runtime-interface 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-storage 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "substrate-bip39",
  "tiny-bip39",
  "tiny-keccak",
@@ -7129,7 +7207,7 @@ dependencies = [
 [[package]]
 name = "sp-database"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "kvdb",
  "parking_lot 0.10.2",
@@ -7138,7 +7216,17 @@ dependencies = [
 [[package]]
 name = "sp-debug-derive"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "sp-debug-derive"
+version = "2.0.0-rc6"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -7148,18 +7236,29 @@ dependencies = [
 [[package]]
 name = "sp-externalities"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "environmental",
  "parity-scale-codec",
- "sp-std",
- "sp-storage",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "sp-storage 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+]
+
+[[package]]
+name = "sp-externalities"
+version = "0.8.0-rc6"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+dependencies = [
+ "environmental",
+ "parity-scale-codec",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-storage 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sp-finality-grandpa"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "finality-grandpa",
  "log",
@@ -7167,37 +7266,37 @@ dependencies = [
  "serde",
  "sp-api",
  "sp-application-crypto",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sp-finality-tracker"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "parity-scale-codec",
  "sp-inherents",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sp-inherents"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "derive_more",
  "parity-scale-codec",
  "parking_lot 0.10.2",
- "sp-core",
- "sp-std",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sp-io"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "futures 0.3.5",
  "hash-db",
@@ -7205,23 +7304,44 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "parking_lot 0.10.2",
- "sp-core",
- "sp-externalities",
- "sp-runtime-interface",
- "sp-state-machine",
- "sp-std",
- "sp-tracing",
- "sp-trie",
- "sp-wasm-interface",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "sp-externalities 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "sp-runtime-interface 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "sp-state-machine 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "sp-tracing 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "sp-trie 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "sp-wasm-interface 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+]
+
+[[package]]
+name = "sp-io"
+version = "2.0.0-rc6"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+dependencies = [
+ "futures 0.3.5",
+ "hash-db",
+ "libsecp256k1",
+ "log",
+ "parity-scale-codec",
+ "parking_lot 0.10.2",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-externalities 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-runtime-interface 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-state-machine 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-tracing 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-trie 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-wasm-interface 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sp-keyring"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "lazy_static",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
  "strum",
 ]
@@ -7229,19 +7349,19 @@ dependencies = [
 [[package]]
 name = "sp-npos-elections"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-arithmetic",
  "sp-npos-elections-compact",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sp-npos-elections-compact"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -7252,17 +7372,26 @@ dependencies = [
 [[package]]
 name = "sp-offchain"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "sp-api",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
 ]
 
 [[package]]
 name = "sp-panic-handler"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+dependencies = [
+ "backtrace",
+ "log",
+]
+
+[[package]]
+name = "sp-panic-handler"
+version = "2.0.0-rc6"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "backtrace",
  "log",
@@ -7271,16 +7400,16 @@ dependencies = [
 [[package]]
 name = "sp-rpc"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "serde",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sp-runtime"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "either",
  "hash256-std-hasher",
@@ -7293,32 +7422,60 @@ dependencies = [
  "serde",
  "sp-application-crypto",
  "sp-arithmetic",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-inherents",
- "sp-io",
- "sp-std",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sp-runtime-interface"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "parity-scale-codec",
  "primitive-types",
- "sp-externalities",
- "sp-runtime-interface-proc-macro",
- "sp-std",
- "sp-storage",
- "sp-tracing",
- "sp-wasm-interface",
+ "sp-externalities 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "sp-runtime-interface-proc-macro 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "sp-storage 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "sp-tracing 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "sp-wasm-interface 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "static_assertions",
+]
+
+[[package]]
+name = "sp-runtime-interface"
+version = "2.0.0-rc6"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+dependencies = [
+ "parity-scale-codec",
+ "primitive-types",
+ "sp-externalities 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-runtime-interface-proc-macro 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-storage 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-tracing 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-wasm-interface 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "static_assertions",
 ]
 
 [[package]]
 name = "sp-runtime-interface-proc-macro"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+dependencies = [
+ "Inflector",
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "sp-runtime-interface-proc-macro"
+version = "2.0.0-rc6"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "Inflector",
  "proc-macro-crate",
@@ -7330,7 +7487,7 @@ dependencies = [
 [[package]]
 name = "sp-serializer"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "serde",
  "serde_json",
@@ -7339,30 +7496,30 @@ dependencies = [
 [[package]]
 name = "sp-session"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
  "sp-staking",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sp-staking"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "parity-scale-codec",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sp-state-machine"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "hash-db",
  "itertools 0.9.0",
@@ -7372,10 +7529,31 @@ dependencies = [
  "parking_lot 0.10.2",
  "rand 0.7.3",
  "smallvec 1.4.2",
- "sp-core",
- "sp-externalities",
- "sp-panic-handler",
- "sp-trie",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "sp-externalities 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "sp-panic-handler 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "sp-trie 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "trie-db",
+ "trie-root",
+]
+
+[[package]]
+name = "sp-state-machine"
+version = "0.8.0-rc6"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+dependencies = [
+ "hash-db",
+ "itertools 0.9.0",
+ "log",
+ "num-traits",
+ "parity-scale-codec",
+ "parking_lot 0.10.2",
+ "rand 0.7.3",
+ "smallvec 1.4.2",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-externalities 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-panic-handler 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-trie 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "trie-db",
  "trie-root",
 ]
@@ -7383,39 +7561,67 @@ dependencies = [
 [[package]]
 name = "sp-std"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+
+[[package]]
+name = "sp-std"
+version = "2.0.0-rc6"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 
 [[package]]
 name = "sp-storage"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "impl-serde",
  "parity-scale-codec",
  "ref-cast",
  "serde",
- "sp-debug-derive",
- "sp-std",
+ "sp-debug-derive 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+]
+
+[[package]]
+name = "sp-storage"
+version = "2.0.0-rc6"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+dependencies = [
+ "impl-serde",
+ "parity-scale-codec",
+ "ref-cast",
+ "serde",
+ "sp-debug-derive 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sp-timestamp"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "impl-trait-for-tuples",
  "parity-scale-codec",
  "sp-api",
  "sp-inherents",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "wasm-timer",
 ]
 
 [[package]]
 name = "sp-tracing"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+dependencies = [
+ "log",
+ "rental",
+ "tracing",
+]
+
+[[package]]
+name = "sp-tracing"
+version = "2.0.0-rc6"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "log",
  "rental",
@@ -7425,7 +7631,7 @@ dependencies = [
 [[package]]
 name = "sp-transaction-pool"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "derive_more",
  "futures 0.3.5",
@@ -7440,13 +7646,27 @@ dependencies = [
 [[package]]
 name = "sp-trie"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "hash-db",
  "memory-db",
  "parity-scale-codec",
- "sp-core",
- "sp-std",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "trie-db",
+ "trie-root",
+]
+
+[[package]]
+name = "sp-trie"
+version = "2.0.0-rc6"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+dependencies = [
+ "hash-db",
+ "memory-db",
+ "parity-scale-codec",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "trie-db",
  "trie-root",
 ]
@@ -7454,7 +7674,7 @@ dependencies = [
 [[package]]
 name = "sp-utils"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "futures 0.3.5",
  "futures-core",
@@ -7466,23 +7686,34 @@ dependencies = [
 [[package]]
 name = "sp-version"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "impl-serde",
  "parity-scale-codec",
  "serde",
  "sp-runtime",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "sp-wasm-interface"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "impl-trait-for-tuples",
  "parity-scale-codec",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
+ "wasmi",
+]
+
+[[package]]
+name = "sp-wasm-interface"
+version = "2.0.0-rc6"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+dependencies = [
+ "impl-trait-for-tuples",
+ "parity-scale-codec",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "wasmi",
 ]
 
@@ -7607,7 +7838,7 @@ dependencies = [
 [[package]]
 name = "substrate-build-script-utils"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "platforms",
 ]
@@ -7615,11 +7846,11 @@ dependencies = [
 [[package]]
 name = "substrate-frame-cli"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-system",
  "sc-cli",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
  "structopt",
 ]
@@ -7627,7 +7858,7 @@ dependencies = [
 [[package]]
 name = "substrate-frame-rpc-system"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "frame-system-rpc-runtime-api",
  "futures 0.3.5",
@@ -7642,7 +7873,7 @@ dependencies = [
  "sp-api",
  "sp-block-builder",
  "sp-blockchain",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
  "sp-transaction-pool",
 ]
@@ -7650,7 +7881,7 @@ dependencies = [
 [[package]]
 name = "substrate-prometheus-endpoint"
 version = "0.8.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "async-std",
  "derive_more",
@@ -7664,7 +7895,7 @@ dependencies = [
 [[package]]
 name = "substrate-test-client"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "futures 0.1.29",
  "futures 0.3.5",
@@ -7681,16 +7912,16 @@ dependencies = [
  "serde_json",
  "sp-blockchain",
  "sp-consensus",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-keyring",
  "sp-runtime",
- "sp-state-machine",
+ "sp-state-machine 0.8.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
 ]
 
 [[package]]
 name = "substrate-test-runtime"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "cfg-if",
  "frame-executive",
@@ -7710,27 +7941,27 @@ dependencies = [
  "sp-block-builder",
  "sp-consensus-aura",
  "sp-consensus-babe",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-finality-grandpa",
  "sp-inherents",
- "sp-io",
+ "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-keyring",
  "sp-offchain",
  "sp-runtime",
- "sp-runtime-interface",
+ "sp-runtime-interface 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-session",
- "sp-std",
+ "sp-std 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-transaction-pool",
- "sp-trie",
+ "sp-trie 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-version",
- "substrate-wasm-builder-runner 1.0.6 (git+https://github.com/stafiprotocol/stafi-blockchain.git)",
+ "substrate-wasm-builder-runner 1.0.6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "trie-db",
 ]
 
 [[package]]
 name = "substrate-test-runtime-client"
 version = "2.0.0-rc6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 dependencies = [
  "futures 0.3.5",
  "parity-scale-codec",
@@ -7742,7 +7973,7 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-consensus",
- "sp-core",
+ "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-runtime",
  "substrate-test-client",
  "substrate-test-runtime",
@@ -7766,7 +7997,7 @@ dependencies = [
 [[package]]
 name = "substrate-wasm-builder-runner"
 version = "1.0.6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d#b383cd5d7bd3f984c19173a5613dcbf3dcd8d2b1"
 
 [[package]]
 name = "substrate-wasm-builder-runner"
