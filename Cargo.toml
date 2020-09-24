@@ -1,6 +1,6 @@
 [workspace]
 members = [
-	"node/bench",
+	# "node/bench",
 	"node/cli",
 	"node/executor",
 	"node/inspect",

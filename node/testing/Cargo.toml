@@ -34,7 +34,6 @@ substrate-test-client = { branch = "master", git = 'https://github.com/stafiprot
 pallet-timestamp = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 pallet-transaction-payment = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 pallet-treasury = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-wabt = "0.9.2"
 sp-api = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-finality-tracker = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-timestamp = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }

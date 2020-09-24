@@ -37,7 +37,7 @@ sp-application-crypto = { branch = "master", git = 'https://github.com/stafiprot
 sp-runtime = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-externalities = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 substrate-test-client = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-wabt = "0.9.2"
+wat = "1.0"
 
 [features]
 wasmtime = [
