@@ -1336,6 +1336,7 @@ dependencies = [
  "pallet-balances",
  "parity-scale-codec",
  "serde",
+ "sp-arithmetic",
  "sp-core 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5d)",
  "sp-io 2.0.0-rc6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?rev=b383cd5)",
  "sp-runtime",

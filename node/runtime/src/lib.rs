@@ -639,18 +639,17 @@ impl chainbridge::Trait for Runtime {
 }
 
 parameter_types! {
-    // pub const HashId: chainbridge::ResourceId = chainbridge::derive_resource_id(1, &b"hash");
+    pub const HashId: chainbridge::ResourceId = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 244, 75, 230, 77, 45, 232, 149, 69, 76, 52, 103, 2, 25, 40, 229, 94, 1];
     // Note: Chain ID is 0 indicating this is native to another chain
-    // pub const NativeTokenId: chainbridge::ResourceId = chainbridge::derive_resource_id(0, &blake2_128(b"DAV"));
-
-    // pub const NFTTokenId: chainbridge::ResourceId = chainbridge::derive_resource_id(1, &blake2_128(b"NFT"));
+    pub const NativeTokenId: chainbridge::ResourceId = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 169, 224, 9, 91, 137, 101, 192, 30, 106, 9, 201, 121, 56, 243, 134, 9, 1];
 }
 
 impl ethereum::Trait for Runtime {
 	type Event = Event;
 	type BridgeOrigin = chainbridge::EnsureBridge<Runtime>;
 	type Currency = pallet_balances::Module<Runtime>;
-	// type HashId = HashId;
+	type HashId = HashId;
+	type NativeTokenId = NativeTokenId;
 }
 
 parameter_types! {

@@ -15,6 +15,7 @@ sp-std = { rev = "b383cd5d", default-features = false, git = "https://github.com
 sp-runtime = { rev = "b383cd5d", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-io = { rev = "b383cd5", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-core = { rev = "b383cd5d", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-arithmetic = { rev = "b383cd5d", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
 # frame dependencies
 frame-support = { rev = "b383cd5d", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
@@ -35,6 +36,7 @@ std = [
   "sp-runtime/std",
   "sp-io/std",
   "sp-core/std",
+  "sp-arithmetic/std",
   "frame-support/std",
   "frame-system/std",
   "pallet-balances/std",
