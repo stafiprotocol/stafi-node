@@ -3502,7 +3502,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "assert_cmd",
  "frame-benchmarking-cli",
@@ -3574,7 +3574,7 @@ dependencies = [
 
 [[package]]
 name = "node-executor"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "criterion",
  "frame-benchmarking",
@@ -3607,7 +3607,7 @@ dependencies = [
 
 [[package]]
 name = "node-inspect"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "derive_more",
  "log",
@@ -3623,7 +3623,7 @@ dependencies = [
 
 [[package]]
 name = "node-primitives"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -3636,7 +3636,7 @@ dependencies = [
 
 [[package]]
 name = "node-rpc"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "jsonrpc-core",
  "node-primitives",
@@ -3662,7 +3662,7 @@ dependencies = [
 
 [[package]]
 name = "node-rpc-client"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "env_logger",
  "futures 0.1.29",
@@ -3675,7 +3675,7 @@ dependencies = [
 
 [[package]]
 name = "node-runtime"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "frame-benchmarking",
  "frame-executive",
@@ -3740,7 +3740,7 @@ dependencies = [
 
 [[package]]
 name = "node-testing"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "criterion",
  "frame-support",
