@@ -1360,6 +1360,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "ethereum"
+version = "0.3.2"
+dependencies = [
+ "chainbridge",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "serde",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+ "substrate-wasm-builder-runner 1.0.6",
+]
+
+[[package]]
 name = "event-listener"
 version = "2.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3693,6 +3710,7 @@ name = "node-runtime"
 version = "0.3.2"
 dependencies = [
  "chainbridge",
+ "ethereum",
  "frame-benchmarking",
  "frame-executive",
  "frame-support",
