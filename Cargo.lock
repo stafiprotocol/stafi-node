@@ -732,6 +732,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "chainbridge"
+version = "0.3.2"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+ "substrate-wasm-builder-runner 1.0.6",
+]
+
+[[package]]
 name = "chrono"
 version = "0.4.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3677,6 +3692,7 @@ dependencies = [
 name = "node-runtime"
 version = "0.3.2"
 dependencies = [
+ "chainbridge",
  "frame-benchmarking",
  "frame-executive",
  "frame-support",

@@ -628,6 +628,33 @@ impl pallet_sudo::Trait for Runtime {
 }
 
 parameter_types! {
+    pub const ChainId: u8 = 1;
+    pub const ProposalLifetime: BlockNumber = 1000;
+}
+
+impl chainbridge::Trait for Runtime {
+	type Event = Event;
+	type AdminOrigin = frame_system::EnsureRoot<Self::AccountId>;
+	type Proposal = Call;
+	type ChainId = ChainId;
+	type ProposalLifetime = ProposalLifetime;
+}
+
+// parameter_types! {
+//     pub const HashId: chainbridge::ResourceId = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 244, 75, 230, 77, 45, 232, 149, 69, 76, 52, 103, 2, 25, 40, 229, 94, 1];
+//     // Note: Chain ID is 0 indicating this is native to another chain
+//     pub const NativeTokenId: chainbridge::ResourceId = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 169, 224, 9, 91, 137, 101, 192, 30, 106, 9, 201, 121, 56, 243, 134, 9, 1];
+// }
+
+// impl ethereum::Trait for Runtime {
+// 	type Event = Event;
+// 	type BridgeOrigin = chainbridge::EnsureBridge<Runtime>;
+// 	type Currency = pallet_balances::Module<Runtime>;
+// 	type HashId = HashId;
+// 	type NativeTokenId = NativeTokenId;
+// }
+
+parameter_types! {
 	pub const SessionDuration: BlockNumber = EPOCH_DURATION_IN_SLOTS as _;
 	pub const ImOnlineUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
 	/// We prioritize im-online heartbeats over election solution submission.
@@ -833,6 +860,8 @@ construct_runtime!(
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 		Proxy: pallet_proxy::{Module, Call, Storage, Event<T>},
 		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
+		ChainBridge: chainbridge::{Module, Call, Storage, Event<T>},
+		// Ethereum: ethereum::{Module, Call, Event<T>},
 	}
 );
 

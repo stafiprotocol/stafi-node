@@ -73,6 +73,9 @@ pallet-transaction-payment = { branch = "master", default-features = false, git 
 pallet-transaction-payment-rpc-runtime-api = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 pallet-vesting = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
+chainbridge = { version = "0.3.2", default-features = false, path = "../pallets/chainbridge", package = "chainbridge" }
+# ethereum = { version = "0.3.2", default-features = false, path = "../pallets/ethereum", package = "ethereum" }
+
 
 [build-dependencies]
 wasm-builder-runner = { version = "1.0.6", package = "substrate-wasm-builder-runner", path = "../../utils/wasm-builder-runner" }
@@ -132,7 +135,9 @@ std = [
 	"pallet-utility/std",
 	"sp-version/std",
 	"pallet-recovery/std",
-	"pallet-vesting/std"
+	"pallet-vesting/std",
+	"chainbridge/std",
+	# "ethereum/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",
