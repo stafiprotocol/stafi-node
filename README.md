@@ -20,7 +20,7 @@ Welcome to participate in us. Download the source:
 ```bash
 git clone https://github.com/stafiprotocol/stafi-node.git
 cd stafi-node
-git checkout v0.3.1
+git checkout v0.3.2
 ```
 
 Install system dependencies(recommend ubuntu or macos):
@@ -36,7 +36,7 @@ Build Stafi:
 ```bash
 cargo build --release
 ```
-It may take 30minutes - 1hour, which depends on your machine.
+It may take 30m - 1h, which depends on your machine.
 
 > You may encounter CMAKE_PROJECT_VERSION error. Please scroll to the bottom and follow the instructions to fix it.
 
@@ -50,10 +50,10 @@ If you want to be a validator.
 ./target/release/stafi --validator --name='your name' --execution=NativeElseWasm
 ```
 
-If you just want to run a normal node.
+If you just want to run a full node.
 
 ```bash
-./target/release/stafi
+./target/release/stafi --pruning=archive --rpc-cors=all --ws-external
 ```
 
 You can see your node on [telemetry] (set a custom name with `--name "my custom name"`).
@@ -68,10 +68,10 @@ If you want to be a validator.
 ./target/release/stafi --chain=testnet --validator --name='your name' --execution=NativeElseWasm
 ```
 
-If you just want to run a normal node, you can remove --pruning.
+If you just want to run a full node.
 
 ```bash
-./target/release/stafi --chain=testnet
+./target/release/stafi --chain=testnet --pruning=archive --rpc-cors=all --ws-external
 ```
 
 You can see your node on [telemetry] (set a custom name with `--name "my custom name"`).
@@ -124,6 +124,10 @@ Please restart your node after the compiling.
 If you need to start from the beginning. You should clean your db.
 
 ```bash
+### Mainnet
+./target/release/stafi purge-chain --chain=mainnet
+
+### Testnet
 ./target/release/stafi purge-chain --chain=testnet
 ```
 
