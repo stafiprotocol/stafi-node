@@ -30,6 +30,7 @@ sc-basic-authorship = { branch = "master", git = 'https://github.com/stafiprotoc
 sp-inherents = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-finality-tracker = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-timestamp = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-tracing = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 hash-db = "0.15.2"
 tempfile = "3.1.0"
 fs_extra = "1"

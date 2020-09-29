@@ -82,6 +82,7 @@ sp-io = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-block
 
 [features]
 default = ["std"]
+with-tracing = [ "frame-executive/with-tracing" ]
 std = [
 	"sp-authority-discovery/std",
 	"pallet-authority-discovery/std",

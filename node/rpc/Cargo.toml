@@ -8,7 +8,7 @@ edition = "2018"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-jsonrpc-core = "14.2.0"
+jsonrpc-core = "15.0.0"
 node-primitives = { version = "0.3.2", path = "../primitives" }
 node-runtime = { version = "0.3.2", path = "../runtime" }
 pallet-transaction-payment-rpc = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
@@ -26,6 +26,7 @@ sp-block-builder = { branch = "master", git = 'https://github.com/stafiprotocol/
 sp-blockchain = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-consensus = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-consensus-babe = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-runtime = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-transaction-pool = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 substrate-frame-rpc-system = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
