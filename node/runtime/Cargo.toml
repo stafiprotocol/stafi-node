@@ -76,6 +76,8 @@ pallet-vesting = { branch = "master", default-features = false, git = 'https://g
 chainbridge = { version = "0.3.2", default-features = false, path = "../pallets/chainbridge", package = "chainbridge" }
 ethereum = { version = "0.3.2", default-features = false, path = "../pallets/ethereum", package = "ethereum" }
 
+bridge-common = { version = "0.3.2", default-features = false, path = "../pallets/bridge/common" }
+bridge-ethereum = { version = "0.3.2", default-features = false, path = "../pallets/bridge/ethereum" }
 
 [build-dependencies]
 wasm-builder-runner = { version = "1.0.6", package = "substrate-wasm-builder-runner", path = "../../utils/wasm-builder-runner" }
@@ -138,6 +140,8 @@ std = [
 	"pallet-vesting/std",
 	"chainbridge/std",
 	"ethereum/std",
+	"bridge-common/std",
+	"bridge-ethereum/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

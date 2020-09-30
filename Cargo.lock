@@ -578,6 +578,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "bridge-common"
+version = "0.3.2"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "bridge-ethereum"
+version = "0.3.2"
+dependencies = [
+ "bridge-common",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-std",
+]
+
+[[package]]
 name = "bs58"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3709,6 +3734,8 @@ dependencies = [
 name = "node-runtime"
 version = "0.3.2"
 dependencies = [
+ "bridge-common",
+ "bridge-ethereum",
  "chainbridge",
  "ethereum",
  "frame-benchmarking",

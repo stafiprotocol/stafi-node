@@ -640,15 +640,31 @@ impl chainbridge::Trait for Runtime {
 	type ProposalLifetime = ProposalLifetime;
 }
 
+impl bridge_common::Trait for Runtime {
+	type Event = Event;
+	type AdminOrigin = frame_system::EnsureRoot<Self::AccountId>;
+	type Proposal = Call;
+	type ChainId = ChainId;
+	type ProposalLifetime = ProposalLifetime;
+}
+
 parameter_types! {
-    pub const HashId: chainbridge::ResourceId = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 244, 75, 230, 77, 45, 232, 149, 69, 76, 52, 103, 2, 25, 40, 229, 94, 1];
+    pub const HashId: bridge_common::ResourceId = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 244, 75, 230, 77, 45, 232, 149, 69, 76, 52, 103, 2, 25, 40, 229, 94, 1];
     // Note: Chain ID is 0 indicating this is native to another chain
-    pub const NativeTokenId: chainbridge::ResourceId = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 169, 224, 9, 91, 137, 101, 192, 30, 106, 9, 201, 121, 56, 243, 134, 9, 1];
+    pub const NativeTokenId: bridge_common::ResourceId = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 169, 224, 9, 91, 137, 101, 192, 30, 106, 9, 201, 121, 56, 243, 134, 9, 1];
 }
 
 impl ethereum::Trait for Runtime {
 	type Event = Event;
 	type BridgeOrigin = chainbridge::EnsureBridge<Runtime>;
+	type Currency = pallet_balances::Module<Runtime>;
+	type HashId = HashId;
+	type NativeTokenId = NativeTokenId;
+}
+
+impl bridge_ethereum::Trait for Runtime {
+	type Event = Event;
+	type BridgeOrigin = bridge_common::EnsureBridge<Runtime>;
 	type Currency = pallet_balances::Module<Runtime>;
 	type HashId = HashId;
 	type NativeTokenId = NativeTokenId;
@@ -862,6 +878,8 @@ construct_runtime!(
 		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
 		ChainBridge: chainbridge::{Module, Call, Storage, Event<T>},
 		Ethereum: ethereum::{Module, Call, Event<T>},
+		Bridge: bridge_common::{Module, Call, Storage, Event<T>},
+		BridgeEthereum: bridge_ethereum::{Module, Call, Event<T>},
 	}
 );
 
