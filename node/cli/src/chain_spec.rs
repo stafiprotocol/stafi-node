@@ -204,7 +204,7 @@ fn stafi_mainnet_config_genesis() -> GenesisConfig {
 pub fn stafi_public_testnet_config() -> ChainSpec {
 	ChainSpec::from_genesis(
 		"Stafi Testnet Seiya",
-		"stafi_public_testnet",
+		"stafi_seiya",
 		ChainType::Live,
 		stafi_testnet_config_genesis,
 		crate::testnet_fixtures::get_bootnodes(),
