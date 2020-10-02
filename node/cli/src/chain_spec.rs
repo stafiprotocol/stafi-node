@@ -122,7 +122,7 @@ fn session_keys(
 }
 
 fn stafi_testnet_config_genesis() -> GenesisConfig {
-	const INITIAL_STASH_STAKED: Balance = 1_000 * FIS;
+	const INITIAL_STASH_STAKED: Balance = 100 * FIS;
 	genesis(
 		crate::testnet_fixtures::get_initial_authorities(),
 		crate::testnet_fixtures::get_root_key(),
