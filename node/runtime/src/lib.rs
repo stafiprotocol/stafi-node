@@ -33,8 +33,9 @@ use sp_core::{
 	u32_trait::{_1, _2, _3, _4},
 	OpaqueMetadata,
 };
+use sp_io::hashing::blake2_128;
 pub use node_primitives::{AccountId, Signature};
-use node_primitives::{AccountIndex, Balance, BlockNumber, Hash, Index, Moment};
+use node_primitives::{AccountIndex, Balance, BlockNumber, Hash, Index, Moment, ChainId};
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
 	Permill, Perbill, Perquintill, Percent, ApplyExtrinsicResult,
@@ -654,6 +655,26 @@ impl pallet_sudo::Trait for Runtime {
 }
 
 parameter_types! {
+    pub const ChainIdentity: ChainId = 1;
+}
+
+impl bridge_common::Trait for Runtime {
+	type Event = Event;
+	type AdminOrigin = frame_system::EnsureRoot<Self::AccountId>;
+	type ChainIdentity = ChainIdentity;
+}
+
+parameter_types! {
+	pub NativeTokenId: bridge_common::ResourceId = bridge_common::derive_resource_id(0, &blake2_128(b"FIS"));
+    // pub const NativeTokenId: chainbridge_common::ResourceId = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 169, 224, 9, 91, 137, 101, 192, 30, 106, 9, 201, 121, 56, 243, 134, 9, 1];
+}
+
+impl bridge_balance::Trait for Runtime {
+	type Currency = pallet_balances::Module<Runtime>;
+	type NativeTokenId = NativeTokenId;
+}
+
+parameter_types! {
 	pub const SessionDuration: BlockNumber = EPOCH_DURATION_IN_SLOTS as _;
 	pub const ImOnlineUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
 	/// We prioritize im-online heartbeats over election solution submission.
@@ -860,6 +881,8 @@ construct_runtime!(
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 		Proxy: pallet_proxy::{Module, Call, Storage, Event<T>},
 		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
+		BridgeCommon: bridge_common::{Module, Call, Storage, Event},
+		BridgeBalance: bridge_balance::{Module, Call},
 	}
 );
 

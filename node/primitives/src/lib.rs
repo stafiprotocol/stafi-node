@@ -57,6 +57,8 @@ pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 pub type Block = generic::Block<Header, OpaqueExtrinsic>;
 /// Block ID.
 pub type BlockId = generic::BlockId<Block>;
+/// Chain ID
+pub type ChainId = u8;
 
 /// Custom validity errors used in Stafi while validating transactions.
 #[repr(u8)]
