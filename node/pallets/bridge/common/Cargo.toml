@@ -21,9 +21,6 @@ frame-support = { branch = "master", default-features = false, git = 'https://gi
 frame-system = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 pallet-balances = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
-[build-dependencies]
-wasm-builder-runner = { version = "1.0.6", package = "substrate-wasm-builder-runner", path = "../../../../utils/wasm-builder-runner" }
-
 [features]
 default = ["std"]
 std = [

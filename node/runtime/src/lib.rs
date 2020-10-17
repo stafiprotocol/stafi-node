@@ -655,26 +655,6 @@ impl pallet_sudo::Trait for Runtime {
 }
 
 parameter_types! {
-    pub const ChainIdentity: ChainId = 1;
-}
-
-impl bridge_common::Trait for Runtime {
-	type Event = Event;
-	type AdminOrigin = frame_system::EnsureRoot<Self::AccountId>;
-	type ChainIdentity = ChainIdentity;
-}
-
-parameter_types! {
-	pub NativeTokenId: bridge_common::ResourceId = bridge_common::derive_resource_id(0, &blake2_128(b"FIS"));
-    // pub const NativeTokenId: chainbridge_common::ResourceId = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 169, 224, 9, 91, 137, 101, 192, 30, 106, 9, 201, 121, 56, 243, 134, 9, 1];
-}
-
-impl bridge_balance::Trait for Runtime {
-	type Currency = pallet_balances::Module<Runtime>;
-	type NativeTokenId = NativeTokenId;
-}
-
-parameter_types! {
 	pub const SessionDuration: BlockNumber = EPOCH_DURATION_IN_SLOTS as _;
 	pub const ImOnlineUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
 	/// We prioritize im-online heartbeats over election solution submission.
@@ -845,6 +825,26 @@ impl pallet_vesting::Trait for Runtime {
 	type WeightInfo = weights::pallet_vesting::WeightInfo;
 }
 
+parameter_types! {
+    pub const ChainIdentity: ChainId = 1;
+}
+
+impl bridge_common::Trait for Runtime {
+	type Event = Event;
+	type AdminOrigin = EnsureRoot<AccountId>;
+	type ChainIdentity = ChainIdentity;
+}
+
+parameter_types! {
+	pub NativeTokenId: bridge_common::ResourceId = bridge_common::derive_resource_id(0, &blake2_128(b"FIS"));
+    // pub const NativeTokenId: chainbridge_common::ResourceId = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 169, 224, 9, 91, 137, 101, 192, 30, 106, 9, 201, 121, 56, 243, 134, 9, 1];
+}
+
+impl bridge_swap::Trait for Runtime {
+	type Currency = Balances;
+	type NativeTokenId = NativeTokenId;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -881,8 +881,8 @@ construct_runtime!(
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 		Proxy: pallet_proxy::{Module, Call, Storage, Event<T>},
 		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
-		BridgeCommon: bridge_common::{Module, Call, Storage, Event},
-		BridgeBalance: bridge_balance::{Module, Call},
+		BridgeCommon: bridge_common::{Module, Call, Storage, Event<T>},
+		BridgeSwap: bridge_swap::{Module, Call},
 	}
 );
 

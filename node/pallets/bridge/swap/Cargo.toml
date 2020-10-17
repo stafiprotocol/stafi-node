@@ -1,5 +1,5 @@
 [package]
-name = "bridge-balance"
+name = "bridge-swap"
 version = "0.3.2"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
@@ -23,9 +23,6 @@ frame-system = { branch = "master", default-features = false, git = 'https://git
 pallet-balances = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
 bridge-common = { path = "../common", default-features = false}
-
-[build-dependencies]
-wasm-builder-runner = { version = "1.0.6", package = "substrate-wasm-builder-runner", path = "../../../../utils/wasm-builder-runner" }
 
 [features]
 default = ["std"]

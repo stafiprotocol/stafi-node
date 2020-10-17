@@ -33,7 +33,7 @@ pub fn derive_resource_id(chain: ChainId, id: &[u8]) -> ResourceId {
 }
 
 pub trait Trait: system::Trait {
-    type Event: From<Event> + Into<<Self as system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
     /// Origin used to administer the pallet
     type AdminOrigin: EnsureOrigin<Self::Origin>;
     /// The identifier for this chain.
@@ -42,11 +42,13 @@ pub trait Trait: system::Trait {
 }
 
 decl_event! {
-    pub enum Event {
+    pub enum Event<T> where
+        AccountId = <T as system::Trait>::AccountId 
+    {
         /// Chain now available for transfers (chain_id)
         ChainWhitelisted(ChainId),
         /// FunglibleTransfer is for relaying fungibles (dest_id, nonce, resource_id, amount, recipient, metadata)
-        FungibleTransfer(ChainId, DepositNonce, ResourceId, U256, Vec<u8>),
+        FungibleTransfer(AccountId, ChainId, DepositNonce, ResourceId, U256, Vec<u8>),
     }
 }
 
@@ -126,12 +128,13 @@ impl<T: Trait> Module<T> {
             Error::<T>::ChainAlreadyWhitelisted
         );
         <ChainNonces>::insert(&id, 0);
-        Self::deposit_event(Event::ChainWhitelisted(id));
+        Self::deposit_event(RawEvent::ChainWhitelisted(id));
         Ok(())
     }
 
     /// Initiates a transfer of a fungible asset out of the chain. This should be called by another pallet.
     pub fn transfer_fungible(
+        source: T::AccountId,
         dest_id: ChainId,
         resource_id: ResourceId,
         to: Vec<u8>,
@@ -142,7 +145,8 @@ impl<T: Trait> Module<T> {
             Error::<T>::ChainNotWhitelisted
         );
         let nonce = Self::bump_nonce(dest_id);
-        Self::deposit_event(Event::FungibleTransfer(
+        Self::deposit_event(RawEvent::FungibleTransfer(
+            source,
             dest_id,
             nonce,
             resource_id,

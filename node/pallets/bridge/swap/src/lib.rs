@@ -31,7 +31,7 @@ decl_module! {
         const NativeTokenId: ResourceId = T::NativeTokenId::get();
 
         /// Transfers some amount of the native token to some recipient on a (whitelisted) destination chain.
-        #[weight = 195_000_000]
+        #[weight = 1_000_000_000]
         pub fn transfer_native(origin, amount: BalanceOf<T>, recipient: Vec<u8>, dest_id: ChainId) -> DispatchResult {
             let source = ensure_signed(origin)?;
             ensure!(<bridge::Module<T>>::chain_whitelisted(dest_id), Error::<T>::InvalidTransfer);
@@ -39,7 +39,7 @@ decl_module! {
             T::Currency::transfer(&source, &bridge_id, amount.into(), AllowDeath)?;
 
             let resource_id = T::NativeTokenId::get();
-            <bridge::Module<T>>::transfer_fungible(dest_id, resource_id, recipient, U256::from(amount.saturated_into()))
+            <bridge::Module<T>>::transfer_fungible(source, dest_id, resource_id, recipient, U256::from(amount.saturated_into()))
         }
     }
 }
