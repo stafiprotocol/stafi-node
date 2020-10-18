@@ -836,8 +836,7 @@ impl bridge_common::Trait for Runtime {
 }
 
 parameter_types! {
-	pub NativeTokenId: bridge_common::ResourceId = bridge_common::derive_resource_id(0, &blake2_128(b"FIS"));
-    // pub const NativeTokenId: chainbridge_common::ResourceId = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 169, 224, 9, 91, 137, 101, 192, 30, 106, 9, 201, 121, 56, 243, 134, 9, 1];
+	pub NativeTokenId: bridge_common::ResourceId = bridge_common::derive_resource_id(1, &blake2_128(b"FIS"));
 }
 
 impl bridge_swap::Trait for Runtime {

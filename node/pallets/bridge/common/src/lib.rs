@@ -64,7 +64,7 @@ decl_error! {
 }
 
 decl_storage! {
-    trait Store for Module<T: Trait> as ChainBridge {
+    trait Store for Module<T: Trait> as BridgeCommon {
         /// All whitelisted chains and their respective transaction counts
         ChainNonces get(fn chains): map hasher(opaque_blake2_256) ChainId => Option<DepositNonce>;
     }
