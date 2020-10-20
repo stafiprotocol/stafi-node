@@ -9,11 +9,11 @@ use frame_support::{
     traits::{EnsureOrigin, Get},
 };
 
-use frame_system::{self as system, ensure_root};
+use frame_system::{self as system, ensure_signed, ensure_root};
 use sp_core::U256;
 use sp_runtime::traits::{AccountIdConversion};
 use sp_runtime::{ModuleId};
-use node_primitives::ChainId;
+use node_primitives::{ChainId, Balance};
 
 const MODULE_ID: ModuleId = ModuleId(*b"cb/bridg");
 
@@ -60,13 +60,24 @@ decl_error! {
         ChainNotWhitelisted,
         /// Chain has already been enabled
         ChainAlreadyWhitelisted,
+        /// Provided proxy account is not valid
+        InvalidProxyAccount,
     }
 }
 
 decl_storage! {
     trait Store for Module<T: Trait> as BridgeCommon {
         /// All whitelisted chains and their respective transaction counts
-        ChainNonces get(fn chains): map hasher(opaque_blake2_256) ChainId => Option<DepositNonce>;
+        ChainNonces get(fn chains): map hasher(twox_64_concat) ChainId => Option<DepositNonce>;
+
+        /// All whitelisted chains and their respective transaction fees
+        ChainFees get(fn chain_fees): map hasher(twox_64_concat) ChainId => Option<Balance>;
+
+        /// Proxy accounts for setting chain fees
+        ProxyAccounts get(fn proxy_accounts): map hasher(twox_64_concat) T::AccountId => Option<u8>;
+
+        /// Account for charging fees
+        FeesAccount get(fn fees_account): Option<T::AccountId>;
     }
 }
 
@@ -89,6 +100,50 @@ decl_module! {
             Self::ensure_admin(origin)?;
             Self::whitelist(id)
         }
+
+        /// Set proxy accounts.
+        ///
+        /// # <weight>
+        /// - O(1) lookup and insert
+        /// # </weight>
+        #[weight = 100_000_000]
+        pub fn set_proxy_accounts(origin, account: T::AccountId) -> DispatchResult {
+            Self::ensure_admin(origin)?;
+            <ProxyAccounts<T>>::insert(account, 1);
+
+            Ok(())
+        }
+
+        /// Set fees for a chain ID.
+        ///
+        /// # <weight>
+        /// - O(1) lookup and insert
+        /// # </weight>
+        #[weight = 100_000_000]
+        pub fn set_chain_fees(origin, id: ChainId, fees: Balance) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+
+            ensure!(id != T::ChainIdentity::get(), Error::<T>::InvalidChainId);
+            ensure!(<ProxyAccounts<T>>::contains_key(&who), Error::<T>::InvalidProxyAccount);
+
+            <ChainFees>::insert(id, fees);
+
+            Ok(())
+        }
+
+        /// Set fees account.
+        ///
+        /// # <weight>
+        /// - O(1) lookup and insert
+        /// # </weight>
+        #[weight = 100_000_000]
+        pub fn set_fees_account(origin, account: T::AccountId) -> DispatchResult {
+            Self::ensure_admin(origin)?;
+
+            <FeesAccount<T>>::put(account);
+
+            Ok(())
+        }
     }
 }
 
@@ -109,6 +164,16 @@ impl<T: Trait> Module<T> {
     /// Checks if a chain exists as a whitelisted destination
     pub fn chain_whitelisted(id: ChainId) -> bool {
         return Self::chains(id) != None;
+    }
+
+    /// Get chain fees
+    pub fn get_chain_fees(id: ChainId) -> Option<Balance> {
+        return Self::chain_fees(id);
+    }
+
+    /// Provides an AccountId for the fees.
+    pub fn get_fees_account() -> Option<T::AccountId> {
+        return Self::fees_account();
     }
 
     /// Increments the deposit nonce for the specified chain ID
