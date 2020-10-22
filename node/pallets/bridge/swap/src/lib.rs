@@ -23,6 +23,7 @@ pub trait Trait: system::Trait + bridge::Trait {
 
 decl_error! {
     pub enum Error for Module<T: Trait> {
+        ServicePaused,
         InvalidChainId,
         InvalidChainFee,
         InsufficientAmount,
@@ -38,6 +39,9 @@ decl_module! {
         #[weight = 195_000_000]
         pub fn transfer_native(origin, amount: BalanceOf<T>, recipient: Vec<u8>, dest_id: ChainId) -> DispatchResult {
             let source = ensure_signed(origin)?;
+
+            ensure!(!<bridge::Module<T>>::check_is_paused(), Error::<T>::ServicePaused);
+
             ensure!(<bridge::Module<T>>::chain_whitelisted(dest_id), Error::<T>::InvalidChainId);
 
             let chain_fees = <bridge::Module<T>>::get_chain_fees(dest_id)

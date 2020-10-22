@@ -49,6 +49,8 @@ decl_event! {
         ChainWhitelisted(ChainId),
         /// FunglibleTransfer is for relaying fungibles (dest_id, nonce, resource_id, amount, recipient, metadata)
         FungibleTransfer(AccountId, ChainId, DepositNonce, ResourceId, U256, Vec<u8>),
+        /// Set Chain fees
+        ChainFeesSet(ChainId, Balance),
     }
 }
 
@@ -76,8 +78,11 @@ decl_storage! {
         /// Proxy accounts for setting chain fees
         ProxyAccounts get(fn proxy_accounts): map hasher(twox_64_concat) T::AccountId => Option<u8>;
 
-        /// Account for charging fees
+        /// Account for fees
         FeesAccount get(fn fees_account): Option<T::AccountId>;
+
+        /// True if the bridge is paused.
+		IsPaused get(fn is_paused): bool = false;
     }
 }
 
@@ -128,6 +133,7 @@ decl_module! {
 
             <ChainFees>::insert(id, fees);
 
+            Self::deposit_event(RawEvent::ChainFeesSet(id, fees));
             Ok(())
         }
 
@@ -141,6 +147,20 @@ decl_module! {
             Self::ensure_admin(origin)?;
 
             <FeesAccount<T>>::put(account);
+
+            Ok(())
+        }
+
+        /// Set whether to pause.
+        ///
+        /// # <weight>
+        /// - O(1) lookup and insert
+        /// # </weight>
+        #[weight = 100_000_000]
+        pub fn set_is_pasued(origin, is_paused: bool) -> DispatchResult {
+            Self::ensure_admin(origin)?;
+
+            <IsPaused>::put(is_paused);
 
             Ok(())
         }
@@ -174,6 +194,11 @@ impl<T: Trait> Module<T> {
     /// Provides an AccountId for the fees.
     pub fn get_fees_account() -> Option<T::AccountId> {
         return Self::fees_account();
+    }
+
+    /// Checks if the bridge function is paused.
+    pub fn check_is_paused() -> bool {
+        return Self::is_paused();
     }
 
     /// Increments the deposit nonce for the specified chain ID
