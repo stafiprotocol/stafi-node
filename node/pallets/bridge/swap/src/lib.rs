@@ -26,7 +26,6 @@ decl_error! {
         ServicePaused,
         InvalidChainId,
         InvalidChainFee,
-        InsufficientAmount,
         InvalidFeesAccount
     }
 }
@@ -48,22 +47,20 @@ decl_module! {
                 .ok_or_else(|| Error::<T>::InvalidChainFee)?;
             let fees: BalanceOf<T> = chain_fees.saturated_into();
 
-            ensure!(amount > fees, Error::<T>::InsufficientAmount);
-
             let fees_account = <bridge::Module<T>>::get_fees_account()
                 .ok_or_else(|| Error::<T>::InvalidFeesAccount)?;
 
-            let swap_amount = amount - fees;
+            let total_amount = amount + fees;
 
             let bridge_id = <bridge::Module<T>>::account_id();
-            T::Currency::transfer(&source, &bridge_id, amount.into(), AllowDeath)?;
+            T::Currency::transfer(&source, &bridge_id, total_amount.into(), AllowDeath)?;
 
             if fees > Zero::zero() {
                 T::Currency::transfer(&bridge_id, &fees_account, fees.into(), KeepAlive)?;
             }
 
             let resource_id = T::NativeTokenId::get();
-            <bridge::Module<T>>::transfer_fungible(source, dest_id, resource_id, recipient, U256::from(swap_amount.saturated_into()))
+            <bridge::Module<T>>::transfer_fungible(source, dest_id, resource_id, recipient, U256::from(amount.saturated_into()))
         }
     }
 }
