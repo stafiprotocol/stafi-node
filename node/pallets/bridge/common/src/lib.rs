@@ -47,7 +47,7 @@ decl_event! {
     {
         /// Chain now available for transfers (chain_id)
         ChainWhitelisted(ChainId),
-        /// FunglibleTransfer is for relaying fungibles (dest_id, nonce, resource_id, amount, recipient, metadata)
+        /// FunglibleTransfer is for relaying fungibles (AccountId, dest_id, nonce, resource_id, amount, recipient, metadata)
         FungibleTransfer(AccountId, ChainId, DepositNonce, ResourceId, U256, Vec<u8>),
         /// Set Chain fees
         ChainFeesSet(ChainId, Balance),
