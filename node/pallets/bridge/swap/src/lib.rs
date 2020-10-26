@@ -6,7 +6,7 @@ use bridge_common::{self as bridge, ResourceId};
 use frame_support::traits::{Currency, ExistenceRequirement::AllowDeath, ExistenceRequirement::KeepAlive, Get};
 use frame_support::{decl_error, decl_module, dispatch::DispatchResult, ensure};
 use frame_system::{self as system, ensure_signed};
-use sp_runtime::{traits::{Zero}};
+use sp_runtime::{traits::{Zero, Saturating}};
 use sp_core::U256;
 use sp_arithmetic::traits::SaturatedConversion;
 use node_primitives::ChainId;
@@ -50,7 +50,7 @@ decl_module! {
             let fees_account = <bridge::Module<T>>::get_fees_account()
                 .ok_or_else(|| Error::<T>::InvalidFeesAccount)?;
 
-            let total_amount = amount + fees;
+            let total_amount = amount.saturating_add(fees);
 
             let bridge_id = <bridge::Module<T>>::account_id();
             T::Currency::transfer(&source, &bridge_id, total_amount.into(), AllowDeath)?;

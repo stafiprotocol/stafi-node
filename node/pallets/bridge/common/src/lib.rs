@@ -70,10 +70,10 @@ decl_error! {
 decl_storage! {
     trait Store for Module<T: Trait> as BridgeCommon {
         /// All whitelisted chains and their respective transaction counts
-        ChainNonces get(fn chains): map hasher(twox_64_concat) ChainId => Option<DepositNonce>;
+        pub ChainNonces get(fn chains): map hasher(twox_64_concat) ChainId => Option<DepositNonce>;
 
         /// All whitelisted chains and their respective transaction fees
-        ChainFees get(fn chain_fees): map hasher(twox_64_concat) ChainId => Option<Balance>;
+        pub ChainFees get(fn chain_fees): map hasher(twox_64_concat) ChainId => Option<Balance>;
 
         /// Proxy accounts for setting chain fees
         ProxyAccounts get(fn proxy_accounts): map hasher(twox_64_concat) T::AccountId => Option<u8>;
@@ -82,7 +82,7 @@ decl_storage! {
         FeesAccount get(fn fees_account): Option<T::AccountId>;
 
         /// True if the bridge is paused.
-		IsPaused get(fn is_paused): bool = false;
+		pub IsPaused get(fn is_paused): bool = false;
     }
 }
 
