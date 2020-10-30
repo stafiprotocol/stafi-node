@@ -78,8 +78,8 @@ decl_storage! {
         /// Proxy accounts for setting chain fees
         ProxyAccounts get(fn proxy_accounts): map hasher(twox_64_concat) T::AccountId => Option<u8>;
 
-        /// Account for fees
-        FeesAccount get(fn fees_account): Option<T::AccountId>;
+        /// Recipient account for fees
+        FeesRecipientAccount get(fn fees_recipient_account): Option<T::AccountId>;
 
         /// True if the bridge is paused.
 		pub IsPaused get(fn is_paused): bool = false;
@@ -114,7 +114,7 @@ decl_module! {
         #[weight = 100_000_000]
         pub fn set_proxy_accounts(origin, account: T::AccountId) -> DispatchResult {
             Self::ensure_admin(origin)?;
-            <ProxyAccounts<T>>::insert(account, 1);
+            <ProxyAccounts<T>>::insert(account, 0);
 
             Ok(())
         }
@@ -128,7 +128,7 @@ decl_module! {
         pub fn set_chain_fees(origin, id: ChainId, fees: Balance) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
-            ensure!(id != T::ChainIdentity::get(), Error::<T>::InvalidChainId);
+            ensure!(Self::chain_whitelisted(id), Error::<T>::InvalidChainId);
             ensure!(<ProxyAccounts<T>>::contains_key(&who), Error::<T>::InvalidProxyAccount);
 
             <ChainFees>::insert(id, fees);
@@ -137,16 +137,16 @@ decl_module! {
             Ok(())
         }
 
-        /// Set fees account.
+        /// Set fees recipient account.
         ///
         /// # <weight>
         /// - O(1) lookup and insert
         /// # </weight>
         #[weight = 100_000_000]
-        pub fn set_fees_account(origin, account: T::AccountId) -> DispatchResult {
+        pub fn set_fees_recipient_account(origin, account: T::AccountId) -> DispatchResult {
             Self::ensure_admin(origin)?;
 
-            <FeesAccount<T>>::put(account);
+            <FeesRecipientAccount<T>>::put(account);
 
             Ok(())
         }
@@ -192,8 +192,8 @@ impl<T: Trait> Module<T> {
     }
 
     /// Provides an AccountId for the fees.
-    pub fn get_fees_account() -> Option<T::AccountId> {
-        return Self::fees_account();
+    pub fn get_fees_recipient_account() -> Option<T::AccountId> {
+        return Self::fees_recipient_account();
     }
 
     /// Checks if the bridge function is paused.
