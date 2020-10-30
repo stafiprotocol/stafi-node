@@ -34,7 +34,7 @@ use sp_core::{
 	OpaqueMetadata,
 };
 pub use node_primitives::{AccountId, Signature};
-use node_primitives::{AccountIndex, Balance, BlockNumber, Hash, Index, Moment};
+use node_primitives::{AccountIndex, Balance, BlockNumber, Hash, Index, Moment, RBalance};
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
 	Permill, Perbill, Perquintill, Percent, ApplyExtrinsicResult,
@@ -340,6 +340,12 @@ impl pallet_balances::Trait for Runtime {
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = frame_system::Module<Runtime>;
 	type WeightInfo = weights::pallet_balances::WeightInfo;
+}
+
+type RtokenFis = rtoken_balances::Instance1;
+impl rtoken_balances::Trait<RtokenFis> for Runtime {
+	type Event = Event;
+	type Balance = RBalance;
 }
 
 parameter_types! {
@@ -860,6 +866,7 @@ construct_runtime!(
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 		Proxy: pallet_proxy::{Module, Call, Storage, Event<T>},
 		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
+		RFis: rtoken_balances::<Instance1>::{Module, Call, Storage, Event<T>},
 	}
 );
 

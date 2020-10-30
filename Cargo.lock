@@ -3715,6 +3715,7 @@ dependencies = [
  "pallet-utility",
  "pallet-vesting",
  "parity-scale-codec",
+ "rtoken-balances",
  "serde",
  "sp-api",
  "sp-authority-discovery",
@@ -5464,6 +5465,19 @@ checksum = "99371657d3c8e4d816fb6221db98fa408242b0b53bac08f8676a41f8554fe99f"
 dependencies = [
  "libc",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "rtoken-balances"
+version = "0.3.2"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
