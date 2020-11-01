@@ -581,6 +581,7 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-core",
+ "sp-io",
  "sp-runtime",
  "sp-std",
 ]
@@ -3630,7 +3631,6 @@ dependencies = [
  "sp-trie",
  "substrate-test-client",
  "trie-root",
- "wat",
 ]
 
 [[package]]
@@ -3766,7 +3766,7 @@ dependencies = [
  "sp-transaction-pool",
  "sp-version",
  "static_assertions",
- "substrate-wasm-builder-runner 1.0.6",
+ "substrate-wasm-builder-runner 1.0.6 (git+https://github.com/stafiprotocol/stafi-blockchain.git)",
 ]
 
 [[package]]
