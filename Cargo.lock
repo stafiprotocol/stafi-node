@@ -596,7 +596,6 @@ dependencies = [
  "node-primitives",
  "pallet-balances",
  "parity-scale-codec",
- "serde",
  "sp-arithmetic",
  "sp-core",
  "sp-runtime",

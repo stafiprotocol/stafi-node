@@ -19,7 +19,7 @@ use frame_system::{self as system, ensure_signed};
 use sp_runtime::{traits::{Zero, Saturating}};
 use sp_core::U256;
 use sp_arithmetic::traits::SaturatedConversion;
-use node_primitives::ChainId;
+use node_primitives::{ChainId, ETH_CHAIN_ID};
 
 type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
@@ -35,6 +35,7 @@ decl_error! {
     pub enum Error for Module<T: Trait> {
         ServicePaused,
         InvalidChainId,
+        InvalidEthereumAddress,
         InvalidChainFee,
         InvalidFeesRecipientAccount
     }
@@ -42,6 +43,8 @@ decl_error! {
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+        type Error = Error<T>;
+
         const NativeTokenId: ResourceId = T::NativeTokenId::get();
 
         /// Transfers some amount of the native token to some recipient on a (whitelisted) destination chain.
@@ -52,6 +55,10 @@ decl_module! {
             ensure!(!<bridge::Module<T>>::check_is_paused(), Error::<T>::ServicePaused);
 
             ensure!(<bridge::Module<T>>::chain_whitelisted(dest_id), Error::<T>::InvalidChainId);
+
+            if dest_id == ETH_CHAIN_ID {
+                Self::check_eth_recipient(recipient.clone())?;
+            }
 
             let chain_fees = <bridge::Module<T>>::get_chain_fees(dest_id)
                 .ok_or_else(|| Error::<T>::InvalidChainFee)?;
@@ -72,5 +79,14 @@ decl_module! {
             let resource_id = T::NativeTokenId::get();
             <bridge::Module<T>>::transfer_fungible(source, dest_id, resource_id, recipient, U256::from(amount.saturated_into()))
         }
+    }
+}
+
+
+impl<T: Trait> Module<T> {
+    pub fn check_eth_recipient(recipient: Vec<u8>) -> DispatchResult {
+        ensure!(recipient.len() == 20, Error::<T>::InvalidEthereumAddress);
+
+        Ok(())
     }
 }
