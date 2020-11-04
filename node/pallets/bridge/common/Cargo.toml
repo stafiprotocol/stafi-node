@@ -19,7 +19,6 @@ node-primitives = { path = "../../../primitives", default-features = false }
 # frame dependencies
 frame-support = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 frame-system = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-balances = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
 [dev-dependencies]
 sp-io = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
@@ -34,5 +33,4 @@ std = [
   "sp-core/std",
   "frame-support/std",
   "frame-system/std",
-  "pallet-balances/std",
 ]

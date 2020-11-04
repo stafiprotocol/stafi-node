@@ -21,6 +21,11 @@ use sp_core::U256;
 use sp_arithmetic::traits::SaturatedConversion;
 use node_primitives::{ChainId, ETH_CHAIN_ID};
 
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
+
 type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
 pub trait Trait: system::Trait + bridge::Trait {

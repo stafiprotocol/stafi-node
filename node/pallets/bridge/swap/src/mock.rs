@@ -9,22 +9,19 @@
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
 
+use sp_std::{cell::RefCell};
+use sp_io::hashing::blake2_128;
 use sp_runtime::{Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::Header};
 use sp_core::H256;
-use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, weights::Weight};
+use frame_support::{impl_outer_origin, parameter_types, traits::{Get}, weights::Weight};
 use frame_system::{EnsureRoot};
 use node_primitives::{ChainId};
-use crate as bridge_common;
 use crate::{Module, Trait};
+
+pub(crate) type Balance = u128;
 
 impl_outer_origin!{
 	pub enum Origin for Test where system = frame_system {}
-}
-impl_outer_event!{
-	pub enum TestEvent for Test {
-		frame_system<T>,
-		bridge_common<T>,
-	}
 }
 
 // For testing the pallet, we construct most of a mock runtime. This means
@@ -51,7 +48,7 @@ impl frame_system::Trait for Test {
 	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = TestEvent;
+	type Event = ();
 	type BlockHashCount = BlockHashCount;
 	type MaximumBlockWeight = MaximumBlockWeight;
 	type DbWeight = ();
@@ -62,25 +59,65 @@ impl frame_system::Trait for Test {
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
 	type PalletInfo = ();
-	type AccountData = ();
+	type AccountData = pallet_balances::AccountData<Balance>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
+}
+
+thread_local! {
+	static EXISTENTIAL_DEPOSIT: RefCell<Balance> = RefCell::new(0);
+}
+
+pub struct ExistentialDeposit;
+impl Get<Balance> for ExistentialDeposit {
+	fn get() -> Balance {
+		EXISTENTIAL_DEPOSIT.with(|v| *v.borrow())
+	}
+}
+
+impl pallet_balances::Trait for Test {
+	type MaxLocks = ();
+	type Balance = Balance;
+	type DustRemoval = ();
+	type Event = ();
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
+	type WeightInfo = ();
 }
 
 parameter_types! {
     pub const ChainIdentity: ChainId = 1;
 }
 
-impl Trait for Test {
-	type Event = TestEvent;
+impl bridge_common::Trait for Test {
+	type Event = ();
 	type AdminOrigin = EnsureRoot<Self::AccountId>;
 	type ChainIdentity = ChainIdentity;
 }
 
+parameter_types! {
+	pub NativeTokenId: bridge_common::ResourceId = bridge_common::derive_resource_id(1, &blake2_128(b"FIS"));
+}
+
+impl Trait for Test {
+	type Currency = Balances;
+	type NativeTokenId = NativeTokenId;
+}
+
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+	pallet_balances::GenesisConfig::<Test> {
+				balances: vec![
+					(1, 100),
+				],
+			}.assimilate_storage(&mut t).unwrap();
+
 	t.into()
 }
 
-pub type BridgeCommon = Module<Test>;
+pub type System = frame_system::Module<Test>;
+pub type Balances = pallet_balances::Module<Test>;
+pub type BridgeCommon = bridge_common::Module<Test>;
+pub type BridgeSwap = Module<Test>;
