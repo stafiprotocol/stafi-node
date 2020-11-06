@@ -27,3 +27,5 @@ RUN ldd /usr/local/bin/stafi && \
 
 EXPOSE 30333 9933 9944
 VOLUME ["/data"]
+
+CMD ["/usr/local/bin/stafi", "--execution=NativeElseWasm"]
