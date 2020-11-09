@@ -134,6 +134,19 @@ decl_module! {
             Ok(())
         }
 
+        /// Remove proxy accounts.
+        ///
+        /// # <weight>
+        /// - O(1) lookup and insert
+        /// # </weight>
+        #[weight = 100_000_000]
+        pub fn remove_proxy_accounts(origin, account: T::AccountId) -> DispatchResult {
+            Self::ensure_admin(origin)?;
+            <ProxyAccounts<T>>::remove(account);
+
+            Ok(())
+        }
+
         /// Set fees for a chain ID.
         ///
         /// # <weight>

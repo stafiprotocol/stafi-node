@@ -49,6 +49,21 @@ fn set_proxy_accounts_should_work() {
 	});
 }
 
+#[test]
+fn remove_proxy_accounts_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_noop!(
+			BridgeCommon::remove_proxy_accounts(Origin::signed(42), 1),
+			sp_runtime::traits::BadOrigin,
+		);
+		assert_eq!(BridgeCommon::proxy_accounts(1), None);
+		assert_ok!(BridgeCommon::set_proxy_accounts(Origin::root(), 1));
+		assert_eq!(BridgeCommon::proxy_accounts(1), Some(0));
+		assert_ok!(BridgeCommon::remove_proxy_accounts(Origin::root(), 1));
+		assert_eq!(BridgeCommon::proxy_accounts(1), None);
+	});
+}
+
 
 #[test]
 fn set_chain_fees_should_work() {
