@@ -1,6 +1,6 @@
 [package]
 name = "node-runtime"
-version = "0.3.2"
+version = "0.3.3"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
 build = "build.rs"
@@ -74,8 +74,8 @@ pallet-transaction-payment = { branch = "master", default-features = false, git 
 pallet-transaction-payment-rpc-runtime-api = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 pallet-vesting = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
-bridge-common = { version = "0.3.2", default-features = false, path = "../pallets/bridge/common", package = "bridge-common" }
-bridge-swap = { version = "0.3.2", default-features = false, path = "../pallets/bridge/swap", package = "bridge-swap" }
+bridge-common = { version = "0.3.3", default-features = false, path = "../pallets/bridge/common", package = "bridge-common" }
+bridge-swap = { version = "0.3.3", default-features = false, path = "../pallets/bridge/swap", package = "bridge-swap" }
 
 [build-dependencies]
 # wasm-builder-runner = { version = "1.0.6", package = "substrate-wasm-builder-runner", path = "../../utils/wasm-builder-runner" }

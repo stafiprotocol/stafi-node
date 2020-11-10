@@ -572,7 +572,7 @@ dependencies = [
 
 [[package]]
 name = "bridge-common"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -587,7 +587,7 @@ dependencies = [
 
 [[package]]
 name = "bridge-swap"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "bridge-common",
  "frame-support",
@@ -3530,7 +3530,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "assert_cmd",
  "frame-benchmarking-cli",
@@ -3602,7 +3602,7 @@ dependencies = [
 
 [[package]]
 name = "node-executor"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "criterion",
  "frame-benchmarking",
@@ -3634,7 +3634,7 @@ dependencies = [
 
 [[package]]
 name = "node-inspect"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "derive_more",
  "log",
@@ -3650,7 +3650,7 @@ dependencies = [
 
 [[package]]
 name = "node-primitives"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -3663,7 +3663,7 @@ dependencies = [
 
 [[package]]
 name = "node-rpc"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "jsonrpc-core",
  "node-primitives",
@@ -3690,7 +3690,7 @@ dependencies = [
 
 [[package]]
 name = "node-rpc-client"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "futures 0.1.29",
  "hyper 0.12.35",
@@ -3703,7 +3703,7 @@ dependencies = [
 
 [[package]]
 name = "node-runtime"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "bridge-common",
  "bridge-swap",
@@ -3770,7 +3770,7 @@ dependencies = [
 
 [[package]]
 name = "node-testing"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "criterion",
  "frame-support",
