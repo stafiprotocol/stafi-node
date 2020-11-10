@@ -10,7 +10,6 @@ members = [
 	"node/runtime",
 	"node/testing",
 	"utils/wasm-builder",
-	"utils/wasm-builder-runner",
 ]
 
 [profile.release]

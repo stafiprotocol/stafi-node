@@ -78,11 +78,7 @@ bridge-common = { version = "0.3.3", default-features = false, path = "../pallet
 bridge-swap = { version = "0.3.3", default-features = false, path = "../pallets/bridge/swap", package = "bridge-swap" }
 
 [build-dependencies]
-# wasm-builder-runner = { version = "1.0.6", package = "substrate-wasm-builder-runner", path = "../../utils/wasm-builder-runner" }
 wasm-builder-runner = { branch = "master", package = "substrate-wasm-builder-runner", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-
-# [dev-dependencies]
-# sp-io = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
 [features]
 default = ["std"]

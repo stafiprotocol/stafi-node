@@ -3765,7 +3765,7 @@ dependencies = [
  "sp-transaction-pool",
  "sp-version",
  "static_assertions",
- "substrate-wasm-builder-runner 1.0.6 (git+https://github.com/stafiprotocol/stafi-blockchain.git)",
+ "substrate-wasm-builder-runner",
 ]
 
 [[package]]
@@ -7787,7 +7787,7 @@ dependencies = [
  "sp-transaction-pool",
  "sp-trie",
  "sp-version",
- "substrate-wasm-builder-runner 1.0.6 (git+https://github.com/stafiprotocol/stafi-blockchain.git)",
+ "substrate-wasm-builder-runner",
  "trie-db",
 ]
 
@@ -7832,10 +7832,6 @@ dependencies = [
 name = "substrate-wasm-builder-runner"
 version = "1.0.6"
 source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#a200cdb93c6af5763b9c7bf313fa708764ac88ca"
-
-[[package]]
-name = "substrate-wasm-builder-runner"
-version = "1.0.6"
 
 [[package]]
 name = "subtle"
