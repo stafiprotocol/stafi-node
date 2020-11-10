@@ -33,8 +33,9 @@ use sp_core::{
 	u32_trait::{_1, _2, _3, _4},
 	OpaqueMetadata,
 };
+use sp_io::hashing::blake2_128;
 pub use node_primitives::{AccountId, Signature};
-use node_primitives::{AccountIndex, Balance, BlockNumber, Hash, Index, Moment};
+use node_primitives::{AccountIndex, Balance, BlockNumber, Hash, Index, Moment, ChainId};
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
 	Permill, Perbill, Perquintill, Percent, ApplyExtrinsicResult,
@@ -101,7 +102,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 6,
+	spec_version: 9,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -824,6 +825,25 @@ impl pallet_vesting::Trait for Runtime {
 	type WeightInfo = weights::pallet_vesting::WeightInfo;
 }
 
+parameter_types! {
+    pub const ChainIdentity: ChainId = 1;
+}
+
+impl bridge_common::Trait for Runtime {
+	type Event = Event;
+	type AdminOrigin = EnsureRoot<AccountId>;
+	type ChainIdentity = ChainIdentity;
+}
+
+parameter_types! {
+	pub NativeTokenId: bridge_common::ResourceId = bridge_common::derive_resource_id(1, &blake2_128(b"FIS"));
+}
+
+impl bridge_swap::Trait for Runtime {
+	type Currency = Balances;
+	type NativeTokenId = NativeTokenId;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -860,6 +880,8 @@ construct_runtime!(
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 		Proxy: pallet_proxy::{Module, Call, Storage, Event<T>},
 		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
+		BridgeCommon: bridge_common::{Module, Call, Storage, Event<T>},
+		BridgeSwap: bridge_swap::{Module, Call},
 	}
 );
 

@@ -58,6 +58,10 @@ pub type Block = generic::Block<Header, OpaqueExtrinsic>;
 /// Block ID.
 pub type BlockId = generic::BlockId<Block>;
 
+/// Chain constants
+pub mod chain;
+pub use chain::*;
+
 /// Custom validity errors used in Stafi while validating transactions.
 #[repr(u8)]
 pub enum ValidityError {

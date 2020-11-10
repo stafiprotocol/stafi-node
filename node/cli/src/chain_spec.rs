@@ -593,6 +593,6 @@ pub(crate) mod tests {
 
 	#[test]
 	fn test_staging_test_net_chain_spec() {
-		staging_testnet_config().build_storage().unwrap();
+		stafi_public_testnet_config().build_storage().unwrap();
 	}
 }
