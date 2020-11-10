@@ -348,6 +348,11 @@ impl rtoken_balances::Trait<RtokenFis> for Runtime {
 	type Balance = RBalance;
 }
 
+impl fis_staking::Trait for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+}
+
 parameter_types! {
 	pub const TransactionByteFee: Balance = 2 * MILLICENTS;
 	pub const TargetBlockFullness: Perquintill = Perquintill::from_percent(25);
@@ -867,6 +872,7 @@ construct_runtime!(
 		Proxy: pallet_proxy::{Module, Call, Storage, Event<T>},
 		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
 		RFis: rtoken_balances::<Instance1>::{Module, Call, Storage, Event<T>},
+		FisStaking: fis_staking::{Module, Call, Storage, Event<T>},
 	}
 );
 

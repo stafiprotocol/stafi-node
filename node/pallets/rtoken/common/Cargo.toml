@@ -1,5 +1,5 @@
 [package]
-name = "rfis"
+name = "rtoken-common"
 version = "0.3.2"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"

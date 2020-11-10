@@ -1,5 +1,5 @@
 [package]
-name = "rfis"
+name = "fis-staking"
 version = "0.3.2"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"

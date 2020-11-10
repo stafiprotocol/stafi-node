@@ -73,7 +73,8 @@ pallet-transaction-payment = { branch = "master", default-features = false, git 
 pallet-transaction-payment-rpc-runtime-api = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 pallet-vesting = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
-rtoken-balances = { version = "0.3.2", default-features = false, path = "../pallets/rtoken/balances", package = "rtoken-balances" }
+rtoken-balances = { version = "0.3.2", default-features = false, path = "../pallets/rtoken/balances" }
+fis-staking = { version = "0.3.2", default-features = false, path = "../pallets/rtoken/fis" }
 
 [build-dependencies]
 wasm-builder-runner = { version = "1.0.6", package = "substrate-wasm-builder-runner", path = "../../utils/wasm-builder-runner" }
@@ -136,6 +137,7 @@ std = [
 	"pallet-recovery/std",
 	"pallet-vesting/std",
 	"rtoken-balances/std",
+	"fis-staking/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

@@ -1429,6 +1429,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "fis-staking"
+version = "0.3.2"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "pallet-staking",
+ "parity-scale-codec",
+ "serde",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "fixed-hash"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3674,6 +3690,7 @@ dependencies = [
 name = "node-runtime"
 version = "0.3.2"
 dependencies = [
+ "fis-staking",
  "frame-benchmarking",
  "frame-executive",
  "frame-support",
