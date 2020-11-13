@@ -58,7 +58,7 @@ pub use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 use pallet_session::{historical as pallet_session_historical};
 use sp_inherents::{InherentData, CheckInherentsResult};
 use static_assertions::const_assert;
-use rtoken_balances::RTokenIdentifier;
+// use rtoken_balances::RTokenIdentifier;
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -348,15 +348,15 @@ impl rtoken_balances::Trait for Runtime {
 	type Balance = Balance;
 }
 
-parameter_types! {
-	pub const RTokenFIS: RTokenIdentifier = RTokenIdentifier::FIS;
-}
+// parameter_types! {
+// 	pub const RTokenFIS: RTokenIdentifier = RTokenIdentifier::FIS;
+// }
 
 impl fis_staking::Trait for Runtime {
 	type Event = Event;
 	// type Currency = Balances;
 	type RCurrency = RBalances;
-	type Symbol = RTokenFIS;
+	// type Symbol = RTokenFIS;
 }
 
 parameter_types! {

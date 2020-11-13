@@ -1,7 +1,7 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use sp_std::prelude::*;
+use sp_std::{result, prelude::*};
 use codec::{Codec, Encode, Decode};
 use frame_support::{
     Parameter, decl_error, decl_event, decl_module, decl_storage,
@@ -10,13 +10,14 @@ use frame_support::{
     traits::{Currency, Get, ExistenceRequirement::KeepAlive},
 };
 use frame_system::{self as system, ensure_signed, ensure_root};
-use sp_runtime::traits::{Zero, AccountIdConversion, CheckedSub, CheckedAdd, SaturatedConversion, Saturating};
+use sp_runtime::traits::{Zero, AccountIdConversion, CheckedSub, CheckedAdd, SaturatedConversion, Saturating, StaticLookup};
 use sp_runtime::{ModuleId};
-use pallet_staking::{self as staking, RewardDestination, StakingLedger, EraIndex};
+use pallet_staking::{self as staking, MAX_NOMINATIONS, Nominations, RewardDestination, StakingLedger, EraIndex};
 use sp_arithmetic::{helpers_128bit::multiply_by_rational};
 use rtoken_balances::{RTokenIdentifier, traits::{Currency as RCurrency}};
 
 const POOL_ID_1: ModuleId = ModuleId(*b"rFISpot1");
+const SYMBOL: RTokenIdentifier = RTokenIdentifier::FIS;
 
 type BalanceOf<T> = staking::BalanceOf<T>;
 // type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
@@ -39,7 +40,7 @@ pub trait Trait: system::Trait + staking::Trait {
 
     type RCurrency: RCurrency<Self::AccountId>;
 
-    type Symbol: Get<RTokenIdentifier>;
+    // type Symbol: Get<RTokenIdentifier>;
 }
 
 decl_event! {
@@ -71,37 +72,38 @@ decl_storage! {
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-        const Symbol: RTokenIdentifier = T::Symbol::get();
-
         fn deposit_event() = default;
 
         #[weight = 195_000_000]
         pub fn liquidity_stake(origin, value: BalanceOf<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(value > Zero::zero(), Error::<T>::StakeZero);
-            let total_staked = <TotalStaked<T>>::get();
-            let new_total_staked = total_staked.checked_add(&value).ok_or(Error::<T>::Overflow)?;
+            ensure!(staking::EraElectionStatus::<T>::get().is_closed(), staking::Error::<T>::CallNotAllowed);
 
-            let total_issuance = T::RCurrency::total_issuance();
+            let pot = Self::account_id_1();
+            let total_balance = T::Currency::total_balance(&pot);
+            let total_rbalance = T::RCurrency::total_issuance(SYMBOL);
+
             let mut rvalue: RBalanceOf<T> = Zero::zero();
-            if total_staked == Zero::zero() || total_issuance == Zero::zero() {
+            if total_balance == Zero::zero() || total_rbalance == Zero::zero() {
                 rvalue = value.saturated_into::<u128>().saturated_into::<RBalanceOf<T>>();
             } else {
                 let a = value.saturated_into::<u128>();
-                let b = total_issuance.saturated_into::<u128>();
-                let c = total_staked.saturated_into::<u128>();
+                let b = total_rbalance.saturated_into::<u128>();
+                let c = total_balance.saturated_into::<u128>();
                 rvalue = multiply_by_rational(a, b, c).ok().unwrap().saturated_into::<RBalanceOf<T>>();
             }
-            let new_total_issuance = total_issuance.checked_add(&rvalue).ok_or(Error::<T>::Overflow)?;
+            let new_total_rbalance = total_rbalance.checked_add(&rvalue).ok_or(Error::<T>::Overflow)?;
             let mut new_staked: BalanceOf<T> = value;
             if let Some(staked) = <LiquidityStaked<T>>::get(&who) {
                 new_staked = staked.checked_add(&value).ok_or(Error::<T>::Overflow)?;
             }
 
-            let pot = Self::account_id_1();
+            let total_staked = <TotalStaked<T>>::get();
+            let new_total_staked = total_staked.checked_add(&value).ok_or(Error::<T>::Overflow)?;
+            
             T::Currency::transfer(&who, &pot, value.into(), KeepAlive)?;
-            T::RCurrency::deposit_into(&who, rvalue);
-            T::RCurrency::issue(rvalue);
+            T::RCurrency::mint(&who, SYMBOL, rvalue);
             <TotalStaked<T>>::put(new_total_staked);
             <LiquidityStaked<T>>::insert(&who, new_staked);
             
@@ -144,6 +146,30 @@ decl_module! {
             let controller: T::AccountId = Self::account_id_1();
             staking::Module::<T>::update_ledger(&controller, &item);
             Ok(())
+        }
+        
+        #[weight = 100_000_000]
+		pub fn nominate(origin, targets: Vec<<T::Lookup as StaticLookup>::Source>) {
+            ensure_root(origin)?;
+            ensure!(staking::EraElectionStatus::<T>::get().is_closed(), staking::Error::<T>::CallNotAllowed);
+
+			let controller: T::AccountId = Self::account_id_1();
+			let ledger = staking::Ledger::<T>::get(&controller).ok_or(staking::Error::<T>::NotController)?;
+			let stash = &ledger.stash;
+			ensure!(!targets.is_empty(), staking::Error::<T>::EmptyTargets);
+			let targets = targets.into_iter()
+				.take(MAX_NOMINATIONS)
+				.map(|t| T::Lookup::lookup(t))
+				.collect::<result::Result<Vec<T::AccountId>, _>>()?;
+
+			let nominations = Nominations {
+				targets,
+				// initial nominations are considered submitted at era 0. See `Nominations` doc
+				submitted_in: staking::CurrentEra::get().unwrap_or(0),
+				suppressed: false,
+			};
+
+            staking::Nominators::<T>::insert(stash, &nominations);
 		}
     }
 }

@@ -15,6 +15,8 @@ use sp_runtime::{
 use frame_system::{self as system, ensure_signed, ensure_root};
 pub mod traits;
 
+pub type RTokenIdentifier = traits::RTokenIdentifier;
+
 pub trait Trait: system::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
@@ -28,16 +30,18 @@ decl_event!(
 		<T as frame_system::Trait>::AccountId,
 		<T as Trait>::Balance
 	{
-		/// An account was created with some free balance. \[account, free_balance\]
-		Endowed(AccountId, Balance),
-		/// Transfer succeeded. \[from, to, value\]
-        Transfer(AccountId, AccountId, Balance),
+		/// Transfer succeeded. \[from, to, symbol, value\]
+        Transfer(AccountId, AccountId, RTokenIdentifier, Balance),
         /// A balance was set by root. \[who, free, reserved\]
-		BalanceSet(AccountId, Balance, Balance),
+		BalanceSet(AccountId, Balance, RTokenIdentifier, Balance),
 		/// Some balance was reserved (moved from free to reserved). \[who, value\]
-		Reserved(AccountId, Balance),
+		Reserved(AccountId, RTokenIdentifier, Balance),
 		/// Some balance was unreserved (moved from reserved to free). \[who, value\]
-		Unreserved(AccountId, Balance),
+		Unreserved(AccountId, RTokenIdentifier, Balance),
+		/// Some balance was deposited
+		Minted(AccountId, RTokenIdentifier, Balance),
+		/// Some balance was withdraswed
+		Burned(AccountId, RTokenIdentifier, Balance),
 	}
 );
 
@@ -61,20 +65,14 @@ pub struct AccountRData<Balance> {
 	pub reserved: Balance,
 }
 
-/// Rtoken Identifier
-#[derive(Encode, Decode)]
-pub enum RTokenIdentifier {
-	/// FIS
-	FIS,
-}
-
 decl_storage! {
 	trait Store for Module<T: Trait> as RTokenBalances {
 		/// The total units issued in the system.
-        pub TotalIssuance get(fn total_issuance): T::Balance;
+        pub TotalIssuance get(fn total_issuance): map hasher(blake2_128_concat) RTokenIdentifier => T::Balance;
 
 		/// NOTE: This is only used in the case that this module is used to store balances.
-        pub Account get(fn account): map hasher(blake2_128_concat) T::AccountId => Option<AccountRData<T::Balance>>;
+		pub Account get(fn account):
+			double_map hasher(blake2_128_concat) RTokenIdentifier, hasher(blake2_128_concat) T::AccountId => Option<AccountRData<T::Balance>>;
 	}
 }
 
@@ -87,34 +85,25 @@ decl_module! {
 		pub fn transfer(
 			origin,
 			dest: <T::Lookup as StaticLookup>::Source,
+			symbol: RTokenIdentifier,
 			#[compact] value: T::Balance
 		) {
 			let transactor = ensure_signed(origin)?;
 			let dest = T::Lookup::lookup(dest)?;
-            <Self as traits::Currency<_>>::transfer(&transactor, &dest, value)?;
+            <Self as traits::Currency<_>>::transfer(&transactor, &dest, symbol, value)?;
         }
 
         /// Set the balances of a given account.
         #[weight = 195_000_000]
         fn set_balance(
             origin,
-            who: <T::Lookup as StaticLookup>::Source,
-            #[compact] new_free: T::Balance,
-            #[compact] new_reserved: T::Balance
+			who: <T::Lookup as StaticLookup>::Source,
+			symbol: RTokenIdentifier,
+            #[compact] value: T::Balance,
         ) {
             ensure_root(origin)?;
             let who = T::Lookup::lookup(who)?;
-
-            let new_free = if new_free < Zero::zero() { Zero::zero() } else { new_free };
-            let new_reserved = if new_reserved < Zero::zero() { Zero::zero() } else { new_reserved };
-
-            let (free, reserved) = Self::mutate_account(&who, |account| {
-                account.free = new_free;
-                account.reserved = new_reserved;
-
-                (account.free, account.reserved)
-            });
-            Self::deposit_event(RawEvent::BalanceSet(who, free, reserved));
+			<Self as traits::Currency<_>>::mint(&who, symbol, value)?;
 		}
     }
 }
@@ -122,9 +111,10 @@ decl_module! {
 impl<T: Trait> Module<T> {
     pub fn mutate_account<R>(
 		who: &T::AccountId,
+		symbol: RTokenIdentifier,
 		f: impl FnOnce(&mut AccountRData<T::Balance>) -> R
 	) -> R {
-		Self::try_mutate_account(who, |a| -> Result<R, Infallible> { Ok(f(a)) })
+		Self::try_mutate_account(who, symbol, |a| -> Result<R, Infallible> { Ok(f(a)) })
 			.expect("Error is infallible; qed")
 	}
 
@@ -133,9 +123,10 @@ impl<T: Trait> Module<T> {
 	/// the caller will do this.
 	fn try_mutate_account<R, E>(
 		who: &T::AccountId,
+		symbol: RTokenIdentifier,
 		f: impl FnOnce(&mut AccountRData<T::Balance>) -> Result<R, E>
 	) -> Result<R, E> {
-        Account::<T>::try_mutate_exists(who, |maybe_value| {
+        Account::<T>::try_mutate_exists(symbol, who, |maybe_value| {
             let mut maybe_data = maybe_value.take().unwrap_or_default();
 			f(&mut maybe_data).map(|result| {
                 *maybe_value = Some(maybe_data);
@@ -152,48 +143,8 @@ impl<T: Trait> traits::Currency<T::AccountId> for Module<T> where
 {
 	type Balance = T::Balance;
 
-	fn total_issuance() -> Self::Balance {
-		<TotalIssuance<T>>::get()
-	}
-
-	// Burn funds from the total issuance
-	fn burn(mut amount: Self::Balance) {
-		if amount.is_zero() { return }
-		<TotalIssuance<T>>::mutate(|issued| {
-			*issued = issued.checked_sub(&amount).unwrap_or_else(|| {
-                amount = *issued;
-                Zero::zero()
-			});
-        });
-	}
-
-	// Create new funds into the total issuance
-	fn issue(mut amount: Self::Balance) {
-		if amount.is_zero() { return }
-		<TotalIssuance<T>>::mutate(|issued|
-			*issued = issued.checked_add(&amount).unwrap_or_else(|| {
-                amount = Self::Balance::max_value() - *issued;
-                Self::Balance::max_value()
-			})
-        );
-	}
-
-	// Ensure that an account can withdraw from their free balance given any existing withdrawal
-	// restrictions like locks and vesting balance.
-	// Is a no-op if amount to be withdrawn is zero.
-	//
-	// # <weight>
-	// Despite iterating over a list of locks, they are limited by the number of
-	// lock IDs, which means the number of runtime modules that intend to use and create locks.
-	// # </weight>
-	fn ensure_can_withdraw(
-		amount: T::Balance,
-		new_balance: T::Balance,
-	) -> DispatchResult {
-		if amount.is_zero() { return Ok(()) }
-		let min_balance = Zero::zero();
-		ensure!(new_balance >= min_balance, Error::<T>::LiquidityRestrictions);
-		Ok(())
+	fn total_issuance(symbol: RTokenIdentifier) -> Self::Balance {
+		<TotalIssuance<T>>::get(symbol)
 	}
 
 	// Transfer some free balance from `transactor` to `dest`, respecting existence requirements.
@@ -201,30 +152,24 @@ impl<T: Trait> traits::Currency<T::AccountId> for Module<T> where
 	fn transfer(
 		transactor: &T::AccountId,
 		dest: &T::AccountId,
+		symbol: RTokenIdentifier,
 		value: Self::Balance,
 	) -> DispatchResult {
         if value.is_zero() || transactor == dest { return Ok(()) }
         
-		Self::try_mutate_account(dest, |to_account_rdata| -> DispatchResult {
-			Self::try_mutate_account(transactor, |from_account_rdata| -> DispatchResult {
+		Self::try_mutate_account(dest, symbol, |to_account_rdata| -> DispatchResult {
+			Self::try_mutate_account(transactor, symbol, |from_account_rdata| -> DispatchResult {
 				from_account_rdata.free = from_account_rdata.free.checked_sub(&value)
 					.ok_or(Error::<T>::InsufficientBalance)?;
 
-				// NOTE: total stake being stored in the same type means that this could never overflow
-				// but better to be safe than sorry.
 				to_account_rdata.free = to_account_rdata.free.checked_add(&value).ok_or(Error::<T>::Overflow)?;
-
-				Self::ensure_can_withdraw(
-					value,
-					from_account_rdata.free,
-                )?;
                 
 				Ok(())
 			})
 		})?;
 
 		// Emit transfer event.
-		Self::deposit_event(RawEvent::Transfer(transactor.clone(), dest.clone(), value));
+		Self::deposit_event(RawEvent::Transfer(transactor.clone(), dest.clone(), symbol.clone(), value));
 
 		Ok(())
 	}
@@ -232,36 +177,53 @@ impl<T: Trait> traits::Currency<T::AccountId> for Module<T> where
 	/// Deposit some `value` into the free balance of an existing target account `who`.
 	///
 	/// Is a no-op if the `value` to be deposited is zero.
-	fn deposit_into(
+	fn mint(
 		who: &T::AccountId,
+		symbol: RTokenIdentifier,
 		value: Self::Balance
 	) -> DispatchResult {
 		if value.is_zero() { return Ok(()) }
 
-		Self::try_mutate_account(who, |account_rdata| -> DispatchResult {
+		Self::try_mutate_account(who, symbol, |account_rdata| -> DispatchResult {
 			account_rdata.free = account_rdata.free.checked_add(&value).ok_or(Error::<T>::Overflow)?;
 			Ok(())
-		})
+		})?;
+
+		<TotalIssuance<T>>::mutate(symbol, |issued|
+			*issued = issued.checked_add(&value).unwrap_or_else(|| {
+                Self::Balance::max_value()
+			})
+        );
+
+		// deposit into event.
+		Self::deposit_event(RawEvent::Minted(who.clone(), symbol.clone(), value));
+		Ok(())
 	}
 
 	/// Deposit some `value` into the free balance of an existing target account `who`.
 	///
 	/// Is a no-op if the `value` to be deposited is zero.
-	fn withdraw_from(
+	fn burn(
 		who: &T::AccountId,
+		symbol: RTokenIdentifier,
 		value: Self::Balance
 	) -> DispatchResult {
 		if value.is_zero() { return Ok(()) }
-
-		Self::try_mutate_account(who, |account_rdata| -> DispatchResult {
+		
+		Self::try_mutate_account(who, symbol, |account_rdata| -> DispatchResult {
 			account_rdata.free = account_rdata.free.checked_sub(&value).ok_or(Error::<T>::InsufficientBalance)?;
 
-			Self::ensure_can_withdraw(
-				value,
-				account_rdata.free,
-			)?;
-
 			Ok(())
-		})
+		})?;
+
+		<TotalIssuance<T>>::mutate(symbol, |issued| {
+			*issued = issued.checked_sub(&value).unwrap_or_else(|| {
+                Zero::zero()
+			});
+        });
+
+		// withdraw from event.
+		Self::deposit_event(RawEvent::Burned(who.clone(), symbol.clone(), value));
+		Ok(())
 	}
 }
