@@ -34,7 +34,7 @@ use sp_core::{
 	OpaqueMetadata,
 };
 pub use node_primitives::{AccountId, Signature};
-use node_primitives::{AccountIndex, Balance, BlockNumber, Hash, Index, Moment, RBalance};
+use node_primitives::{AccountIndex, Balance, BlockNumber, Hash, Index, Moment};
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
 	Permill, Perbill, Perquintill, Percent, ApplyExtrinsicResult,
@@ -58,6 +58,7 @@ pub use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 use pallet_session::{historical as pallet_session_historical};
 use sp_inherents::{InherentData, CheckInherentsResult};
 use static_assertions::const_assert;
+use rtoken_balances::RTokenIdentifier;
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -342,15 +343,20 @@ impl pallet_balances::Trait for Runtime {
 	type WeightInfo = weights::pallet_balances::WeightInfo;
 }
 
-type RtokenFis = rtoken_balances::Instance1;
-impl rtoken_balances::Trait<RtokenFis> for Runtime {
+impl rtoken_balances::Trait for Runtime {
 	type Event = Event;
-	type Balance = RBalance;
+	type Balance = Balance;
+}
+
+parameter_types! {
+	pub const RTokenFIS: RTokenIdentifier = RTokenIdentifier::FIS;
 }
 
 impl fis_staking::Trait for Runtime {
 	type Event = Event;
-	type Currency = Balances;
+	// type Currency = Balances;
+	type RCurrency = RBalances;
+	type Symbol = RTokenFIS;
 }
 
 parameter_types! {
@@ -871,7 +877,7 @@ construct_runtime!(
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 		Proxy: pallet_proxy::{Module, Call, Storage, Event<T>},
 		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
-		RFis: rtoken_balances::<Instance1>::{Module, Call, Storage, Event<T>},
+		RBalances: rtoken_balances::{Module, Call, Storage, Event<T>},
 		FisStaking: fis_staking::{Module, Call, Storage, Event<T>},
 	}
 );

@@ -58,14 +58,6 @@ pub type Block = generic::Block<Header, OpaqueExtrinsic>;
 /// Block ID.
 pub type BlockId = generic::BlockId<Block>;
 
-/// token name
-pub enum RToken {
-	/// FIS
-	FIS,
-}
-///rtoken balance of an account
-pub type RBalance = u128;
-
 /// Custom validity errors used in Stafi while validating transactions.
 #[repr(u8)]
 pub enum ValidityError {

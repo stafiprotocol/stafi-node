@@ -46,4 +46,23 @@ pub trait Currency<AccountId> {
 
     /// The total amount of issuance in the system.
 	fn total_issuance() -> Self::Balance;
+
+	/// Deposit some `value` into the free balance of a target account `who`.
+	///
+	/// Is a no-op if the `value` to be deposited is zero.
+	fn deposit_into(
+		who: &AccountId,
+		value: Self::Balance,
+	) -> DispatchResult;
+
+	/// Withdraw some `value` from the free balance of a target account `who`.
+	///
+	/// Is a no-op if the `value` to be withdrawed is zero.
+	fn withdraw_from(
+		who: &AccountId,
+		value: Self::Balance,
+	) -> DispatchResult;
+
+
+
 }

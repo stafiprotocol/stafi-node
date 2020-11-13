@@ -13,20 +13,20 @@ use sp_runtime::{
 	},
 };
 use frame_system::{self as system, ensure_signed, ensure_root};
-pub mod currency;
+pub mod traits;
 
-pub trait Trait<I: Instance=DefaultInstance>: system::Trait {
+pub trait Trait: system::Trait {
     /// The overarching event type.
-    type Event: From<Event<Self, I>> + Into<<Self as frame_system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 	/// The balance of an account.
 	type Balance: Parameter + Member + AtLeast32BitUnsigned + Codec + Default + Copy +
         MaybeSerializeDeserialize + Debug;
 }
 
 decl_event!(
-	pub enum Event<T, I: Instance = DefaultInstance> where
+	pub enum Event<T> where
 		<T as frame_system::Trait>::AccountId,
-		<T as Trait<I>>::Balance
+		<T as Trait>::Balance
 	{
 		/// An account was created with some free balance. \[account, free_balance\]
 		Endowed(AccountId, Balance),
@@ -42,7 +42,7 @@ decl_event!(
 );
 
 decl_error! {
-	pub enum Error for Module<T: Trait<I>, I: Instance> {
+	pub enum Error for Module<T: Trait> {
 		/// Account liquidity restrictions prevent withdrawal
 		LiquidityRestrictions,
 		/// Got an overflow after adding
@@ -61,8 +61,15 @@ pub struct AccountRData<Balance> {
 	pub reserved: Balance,
 }
 
+/// Rtoken Identifier
+#[derive(Encode, Decode)]
+pub enum RTokenIdentifier {
+	/// FIS
+	FIS,
+}
+
 decl_storage! {
-	trait Store for Module<T: Trait<I>, I: Instance=DefaultInstance> as RTokenBalances {
+	trait Store for Module<T: Trait> as RTokenBalances {
 		/// The total units issued in the system.
         pub TotalIssuance get(fn total_issuance): T::Balance;
 
@@ -72,9 +79,7 @@ decl_storage! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait<I>, I: Instance = DefaultInstance> for enum Call where origin: T::Origin {
-        type Error = Error<T, I>;
-
+	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 		fn deposit_event() = default;
 
 		/// Transfer some liquid free balance to another account.
@@ -86,7 +91,7 @@ decl_module! {
 		) {
 			let transactor = ensure_signed(origin)?;
 			let dest = T::Lookup::lookup(dest)?;
-            <Self as currency::Currency<_>>::transfer(&transactor, &dest, value)?;
+            <Self as traits::Currency<_>>::transfer(&transactor, &dest, value)?;
         }
 
         /// Set the balances of a given account.
@@ -110,11 +115,11 @@ decl_module! {
                 (account.free, account.reserved)
             });
             Self::deposit_event(RawEvent::BalanceSet(who, free, reserved));
-        }
+		}
     }
 }
 
-impl<T: Trait<I>, I: Instance> Module<T, I> {
+impl<T: Trait> Module<T> {
     pub fn mutate_account<R>(
 		who: &T::AccountId,
 		f: impl FnOnce(&mut AccountRData<T::Balance>) -> R
@@ -130,7 +135,7 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 		who: &T::AccountId,
 		f: impl FnOnce(&mut AccountRData<T::Balance>) -> Result<R, E>
 	) -> Result<R, E> {
-        Account::<T, I>::try_mutate_exists(who, |maybe_value| {
+        Account::<T>::try_mutate_exists(who, |maybe_value| {
             let mut maybe_data = maybe_value.take().unwrap_or_default();
 			f(&mut maybe_data).map(|result| {
                 *maybe_value = Some(maybe_data);
@@ -142,19 +147,19 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 	}
 }
 
-impl<T: Trait<I>, I: Instance> currency::Currency<T::AccountId> for Module<T, I> where
+impl<T: Trait> traits::Currency<T::AccountId> for Module<T> where
 	T::Balance: MaybeSerializeDeserialize + Debug
 {
 	type Balance = T::Balance;
 
 	fn total_issuance() -> Self::Balance {
-		<TotalIssuance<T, I>>::get()
+		<TotalIssuance<T>>::get()
 	}
 
 	// Burn funds from the total issuance
 	fn burn(mut amount: Self::Balance) {
 		if amount.is_zero() { return }
-		<TotalIssuance<T, I>>::mutate(|issued| {
+		<TotalIssuance<T>>::mutate(|issued| {
 			*issued = issued.checked_sub(&amount).unwrap_or_else(|| {
                 amount = *issued;
                 Zero::zero()
@@ -165,7 +170,7 @@ impl<T: Trait<I>, I: Instance> currency::Currency<T::AccountId> for Module<T, I>
 	// Create new funds into the total issuance
 	fn issue(mut amount: Self::Balance) {
 		if amount.is_zero() { return }
-		<TotalIssuance<T, I>>::mutate(|issued|
+		<TotalIssuance<T>>::mutate(|issued|
 			*issued = issued.checked_add(&amount).unwrap_or_else(|| {
                 amount = Self::Balance::max_value() - *issued;
                 Self::Balance::max_value()
@@ -187,7 +192,7 @@ impl<T: Trait<I>, I: Instance> currency::Currency<T::AccountId> for Module<T, I>
 	) -> DispatchResult {
 		if amount.is_zero() { return Ok(()) }
 		let min_balance = Zero::zero();
-		ensure!(new_balance >= min_balance, Error::<T, I>::LiquidityRestrictions);
+		ensure!(new_balance >= min_balance, Error::<T>::LiquidityRestrictions);
 		Ok(())
 	}
 
@@ -203,11 +208,11 @@ impl<T: Trait<I>, I: Instance> currency::Currency<T::AccountId> for Module<T, I>
 		Self::try_mutate_account(dest, |to_account_rdata| -> DispatchResult {
 			Self::try_mutate_account(transactor, |from_account_rdata| -> DispatchResult {
 				from_account_rdata.free = from_account_rdata.free.checked_sub(&value)
-					.ok_or(Error::<T, I>::InsufficientBalance)?;
+					.ok_or(Error::<T>::InsufficientBalance)?;
 
 				// NOTE: total stake being stored in the same type means that this could never overflow
 				// but better to be safe than sorry.
-				to_account_rdata.free = to_account_rdata.free.checked_add(&value).ok_or(Error::<T, I>::Overflow)?;
+				to_account_rdata.free = to_account_rdata.free.checked_add(&value).ok_or(Error::<T>::Overflow)?;
 
 				Self::ensure_can_withdraw(
 					value,
@@ -222,5 +227,41 @@ impl<T: Trait<I>, I: Instance> currency::Currency<T::AccountId> for Module<T, I>
 		Self::deposit_event(RawEvent::Transfer(transactor.clone(), dest.clone(), value));
 
 		Ok(())
+	}
+
+	/// Deposit some `value` into the free balance of an existing target account `who`.
+	///
+	/// Is a no-op if the `value` to be deposited is zero.
+	fn deposit_into(
+		who: &T::AccountId,
+		value: Self::Balance
+	) -> DispatchResult {
+		if value.is_zero() { return Ok(()) }
+
+		Self::try_mutate_account(who, |account_rdata| -> DispatchResult {
+			account_rdata.free = account_rdata.free.checked_add(&value).ok_or(Error::<T>::Overflow)?;
+			Ok(())
+		})
+	}
+
+	/// Deposit some `value` into the free balance of an existing target account `who`.
+	///
+	/// Is a no-op if the `value` to be deposited is zero.
+	fn withdraw_from(
+		who: &T::AccountId,
+		value: Self::Balance
+	) -> DispatchResult {
+		if value.is_zero() { return Ok(()) }
+
+		Self::try_mutate_account(who, |account_rdata| -> DispatchResult {
+			account_rdata.free = account_rdata.free.checked_sub(&value).ok_or(Error::<T>::InsufficientBalance)?;
+
+			Self::ensure_can_withdraw(
+				value,
+				account_rdata.free,
+			)?;
+
+			Ok(())
+		})
 	}
 }
