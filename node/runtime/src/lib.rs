@@ -345,18 +345,17 @@ impl pallet_balances::Trait for Runtime {
 
 impl rtoken_balances::Trait for Runtime {
 	type Event = Event;
-	type Balance = Balance;
+	type RBalance = u128;
 }
 
-// parameter_types! {
-// 	pub const RTokenFIS: RTokenIdentifier = RTokenIdentifier::FIS;
-// }
+impl rtoken_rate::Trait for Runtime {
+	type Event = Event;
+}
 
-impl fis_staking::Trait for Runtime {
+impl rfis::Trait for Runtime {
 	type Event = Event;
 	// type Currency = Balances;
 	type RCurrency = RBalances;
-	// type Symbol = RTokenFIS;
 }
 
 parameter_types! {
@@ -878,7 +877,8 @@ construct_runtime!(
 		Proxy: pallet_proxy::{Module, Call, Storage, Event<T>},
 		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
 		RBalances: rtoken_balances::{Module, Call, Storage, Event<T>},
-		FisStaking: fis_staking::{Module, Call, Storage, Event<T>},
+		RTokenRate: rtoken_rate::{Module, Call, Storage, Event},
+		RFis: rfis::{Module, Call, Storage, Event<T>},
 	}
 );
 

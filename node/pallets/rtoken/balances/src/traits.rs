@@ -5,17 +5,25 @@ use sp_runtime::{
 		MaybeSerializeDeserialize, AtLeast32BitUnsigned
 	},
 };
-
-/// Rtoken Identifier
-#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug)]
-pub enum RTokenIdentifier {
-	/// FIS
-	FIS,
-}
+use node_primitives::RSymbol;
 
 pub trait Currency<AccountId> {
-    type Balance: AtLeast32BitUnsigned + FullCodec + Copy + MaybeSerializeDeserialize + Debug +
-    Default;
+    type RBalance: AtLeast32BitUnsigned + FullCodec + Copy + MaybeSerializeDeserialize + Debug +
+	Default;
+
+	/// The 'free' balance of a given account.
+	fn free_balance(who: &AccountId, symbol: RSymbol) -> Self::RBalance;
+	
+	/// Returns `Ok` iff the account is able to make a withdrawal of the given amount
+	/// for the given reason. Basically, it's just a dry-run of `withdraw`.
+	///
+	/// `Err(...)` with the reason why not otherwise.
+	fn ensure_can_withdraw(
+		who: &AccountId,
+		symbol: RSymbol,
+		_amount: Self::RBalance,
+		new_balance: Self::RBalance,
+	) -> DispatchResult;
     
     /// Transfer some liquid free balance to another staker.
 	///
@@ -24,12 +32,12 @@ pub trait Currency<AccountId> {
 	fn transfer(
 		source: &AccountId,
 		dest: &AccountId,
-		symbol: RTokenIdentifier,
-		value: Self::Balance,
+		symbol: RSymbol,
+		value: Self::RBalance,
     ) -> DispatchResult;
 
     /// The total amount of issuance in the system.
-	fn total_issuance(symbol: RTokenIdentifier) -> Self::Balance;
+	fn total_issuance(symbol: RSymbol) -> Self::RBalance;
 
 	/// mint some `value` into the free balance of a target account `who`.
 	///
@@ -37,8 +45,8 @@ pub trait Currency<AccountId> {
 	/// this will also change total issuance
 	fn mint(
 		who: &AccountId,
-		symbol: RTokenIdentifier,
-		value: Self::Balance,
+		symbol: RSymbol,
+		value: Self::RBalance,
 	) -> DispatchResult;
 
 	/// Withdraw some `value` from the free balance of a target account `who`.
@@ -47,10 +55,7 @@ pub trait Currency<AccountId> {
 	/// this will also change total issuance 
 	fn burn(
 		who: &AccountId,
-		symbol: RTokenIdentifier,
-		value: Self::Balance,
+		symbol: RSymbol,
+		value: Self::RBalance,
 	) -> DispatchResult;
-
-
-
 }

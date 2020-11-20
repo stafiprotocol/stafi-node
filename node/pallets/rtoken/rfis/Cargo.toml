@@ -1,5 +1,5 @@
 [package]
-name = "fis-staking"
+name = "rfis"
 version = "0.3.2"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
@@ -14,7 +14,7 @@ serde = { version = "1.0.102", optional = true }
 sp-std = { branch = "master", default-features = false, git = "https://github.com/stafiprotocol/stafi-blockchain.git" }
 sp-runtime = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-core = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-arithmetic = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+# sp-arithmetic = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
 # frame dependencies
 frame-support = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
@@ -24,6 +24,7 @@ pallet-staking = { branch = "master", default-features = false, git = 'https://g
 
 node-primitives = { path = "../../../primitives", default-features = false }
 rtoken-balances = { path = "../balances", default-features = false}
+rtoken-rate = { path = "../rate", default-features = false}
 
 [features]
 default = ["std"]
@@ -33,10 +34,10 @@ std = [
   "sp-std/std",
   "sp-runtime/std",
   "sp-core/std",
-  "sp-arithmetic/std",
   "frame-support/std",
   "frame-system/std",
   "pallet-balances/std",
   "pallet-staking/std",
   "rtoken-balances/std",
+  "rtoken-rate/std",
 ]

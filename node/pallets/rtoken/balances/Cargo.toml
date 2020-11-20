@@ -19,6 +19,8 @@ sp-core = { branch = "master", default-features = false, git = 'https://github.c
 frame-support = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 frame-system = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
+node-primitives = { path = "../../../primitives", default-features = false }
+
 [features]
 default = ["std"]
 std = [
