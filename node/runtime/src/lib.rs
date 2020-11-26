@@ -356,6 +356,7 @@ impl rfis::Trait for Runtime {
 	type Event = Event;
 	// type Currency = Balances;
 	type RCurrency = RBalances;
+	type UnsignedPriority = RFisUnsignedPriority;
 }
 
 parameter_types! {
@@ -674,6 +675,7 @@ parameter_types! {
 	pub const ImOnlineUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
 	/// We prioritize im-online heartbeats over election solution submission.
 	pub const StakingUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
+	pub const RFisUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 3;
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
@@ -878,7 +880,7 @@ construct_runtime!(
 		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
 		RBalances: rtoken_balances::{Module, Call, Storage, Event<T>},
 		RTokenRate: rtoken_rate::{Module, Call, Storage, Event},
-		RFis: rfis::{Module, Call, Storage, Event<T>},
+		RFis: rfis::{Module, Call, Storage, Event<T>, ValidateUnsigned},
 	}
 );
 

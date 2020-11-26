@@ -78,25 +78,12 @@ decl_module! {
 			origin,
 			dest: <T::Lookup as StaticLookup>::Source,
 			symbol: RSymbol,
-			#[compact] value: T::RBalance
+			value: T::RBalance
 		) {
 			let transactor = ensure_signed(origin)?;
 			let dest = T::Lookup::lookup(dest)?;
             <Self as traits::Currency<_>>::transfer(&transactor, &dest, symbol, value)?;
         }
-
-        /// Set the balances of a given account.
-        #[weight = 195_000_000]
-        fn set_balance(
-            origin,
-			who: <T::Lookup as StaticLookup>::Source,
-			symbol: RSymbol,
-            #[compact] value: T::RBalance,
-        ) {
-            ensure_root(origin)?;
-            let who = T::Lookup::lookup(who)?;
-			<Self as traits::Currency<_>>::mint(&who, symbol, value)?;
-		}
     }
 }
 
