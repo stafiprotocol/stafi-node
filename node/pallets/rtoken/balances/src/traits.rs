@@ -1,18 +1,9 @@
-use sp_std::{prelude::*, fmt::Debug};
-use codec::{FullCodec, Encode, Decode};
-use sp_runtime::{
-	RuntimeDebug, DispatchResult, traits::{
-		MaybeSerializeDeserialize, AtLeast32BitUnsigned
-	},
-};
+use sp_runtime::{DispatchResult};
 use node_primitives::RSymbol;
 
 pub trait Currency<AccountId> {
-    type RBalance: AtLeast32BitUnsigned + FullCodec + Copy + MaybeSerializeDeserialize + Debug +
-	Default;
-
 	/// The 'free' balance of a given account.
-	fn free_balance(who: &AccountId, symbol: RSymbol) -> Self::RBalance;
+	fn free_balance(who: &AccountId, symbol: RSymbol) -> u128;
 	
 	/// Returns `Ok` iff the account is able to make a withdrawal of the given amount
 	/// for the given reason. Basically, it's just a dry-run of `withdraw`.
@@ -21,8 +12,8 @@ pub trait Currency<AccountId> {
 	fn ensure_can_withdraw(
 		who: &AccountId,
 		symbol: RSymbol,
-		_amount: Self::RBalance,
-		new_balance: Self::RBalance,
+		_amount: u128,
+		new_balance: u128,
 	) -> DispatchResult;
     
     /// Transfer some liquid free balance to another staker.
@@ -33,11 +24,11 @@ pub trait Currency<AccountId> {
 		source: &AccountId,
 		dest: &AccountId,
 		symbol: RSymbol,
-		value: Self::RBalance,
+		value: u128,
     ) -> DispatchResult;
 
     /// The total amount of issuance in the system.
-	fn total_issuance(symbol: RSymbol) -> Self::RBalance;
+	fn total_issuance(symbol: RSymbol) -> u128;
 
 	/// mint some `value` into the free balance of a target account `who`.
 	///
@@ -46,7 +37,7 @@ pub trait Currency<AccountId> {
 	fn mint(
 		who: &AccountId,
 		symbol: RSymbol,
-		value: Self::RBalance,
+		value: u128,
 	) -> DispatchResult;
 
 	/// Withdraw some `value` from the free balance of a target account `who`.
@@ -56,6 +47,6 @@ pub trait Currency<AccountId> {
 	fn burn(
 		who: &AccountId,
 		symbol: RSymbol,
-		value: Self::RBalance,
+		value: u128,
 	) -> DispatchResult;
 }

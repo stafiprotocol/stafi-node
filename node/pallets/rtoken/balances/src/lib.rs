@@ -1,18 +1,17 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 use sp_std::prelude::*;
-use sp_std::{cmp, result, mem, fmt::Debug, convert::Infallible};
-use codec::{Codec, Encode, Decode};
+use sp_std::{convert::Infallible};
+use codec::{Encode, Decode};
 use frame_support::{
-	StorageValue, Parameter, decl_event, decl_storage, decl_module, decl_error, ensure,
+	decl_event, decl_storage, decl_module, decl_error, ensure,
 };
 use sp_runtime::{
-	RuntimeDebug, DispatchResult, DispatchError,
+	RuntimeDebug, DispatchResult,
 	traits::{
-		Zero, AtLeast32BitUnsigned, StaticLookup, Member, CheckedAdd, CheckedSub,
-		MaybeSerializeDeserialize, Saturating, Bounded,
+		Zero, StaticLookup,
 	},
 };
-use frame_system::{self as system, ensure_signed, ensure_root};
+use frame_system::{self as system, ensure_signed};
 use node_primitives::RSymbol;
 
 pub mod traits;
@@ -20,22 +19,18 @@ pub mod traits;
 pub trait Trait: system::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
-	/// The balance of an account.
-	type RBalance: Parameter + Member + AtLeast32BitUnsigned + Codec + Default + Copy +
-        MaybeSerializeDeserialize + Debug;
 }
 
 decl_event!(
 	pub enum Event<T> where
 		<T as frame_system::Trait>::AccountId,
-		<T as Trait>::RBalance
 	{
 		/// Transfer succeeded. \[from, to, symbol, value\]
-        Transfer(AccountId, AccountId, RSymbol, RBalance),
+        Transfer(AccountId, AccountId, RSymbol, u128),
 		/// Some balance was deposited
-		Minted(AccountId, RSymbol, RBalance),
-		/// Some balance was withdraswed
-		Burned(AccountId, RSymbol, RBalance),
+		Minted(AccountId, RSymbol, u128),
+		/// Some balance was burned
+		Burned(AccountId, RSymbol, u128),
 	}
 );
 
@@ -52,19 +47,19 @@ decl_error! {
 
 /// All balance information for an account.
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug)]
-pub struct AccountRData<RBalance> {
+pub struct AccountRData {
 	/// Non-reserved part of the balance.
-	pub free: RBalance,
+	pub free: u128,
 }
 
 decl_storage! {
 	trait Store for Module<T: Trait> as RBalances {
 		/// The total units issued in the system.
-        pub TotalIssuance get(fn total_issuance): map hasher(blake2_128_concat) RSymbol => T::RBalance;
+        pub TotalIssuance get(fn total_issuance): map hasher(blake2_128_concat) RSymbol => u128;
 
 		/// NOTE: This is only used in the case that this module is used to store balances.
 		pub Account get(fn account):
-			double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) T::AccountId => Option<AccountRData<T::RBalance>>;
+			double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) T::AccountId => Option<AccountRData>;
 	}
 }
 
@@ -78,7 +73,7 @@ decl_module! {
 			origin,
 			dest: <T::Lookup as StaticLookup>::Source,
 			symbol: RSymbol,
-			value: T::RBalance
+			value: u128
 		) {
 			let transactor = ensure_signed(origin)?;
 			let dest = T::Lookup::lookup(dest)?;
@@ -91,7 +86,7 @@ impl<T: Trait> Module<T> {
     pub fn mutate_account<R>(
 		who: &T::AccountId,
 		symbol: RSymbol,
-		f: impl FnOnce(&mut AccountRData<T::RBalance>) -> R
+		f: impl FnOnce(&mut AccountRData) -> R
 	) -> R {
 		Self::try_mutate_account(who, symbol, |a| -> Result<R, Infallible> { Ok(f(a)) })
 			.expect("Error is infallible; qed")
@@ -103,7 +98,7 @@ impl<T: Trait> Module<T> {
 	fn try_mutate_account<R, E>(
 		who: &T::AccountId,
 		symbol: RSymbol,
-		f: impl FnOnce(&mut AccountRData<T::RBalance>) -> Result<R, E>
+		f: impl FnOnce(&mut AccountRData) -> Result<R, E>
 	) -> Result<R, E> {
         Account::<T>::try_mutate_exists(symbol, who, |maybe_value| {
             let mut maybe_data = maybe_value.take().unwrap_or_default();
@@ -117,21 +112,18 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> traits::Currency<T::AccountId> for Module<T> where
-	T::RBalance: MaybeSerializeDeserialize + Debug
+impl<T: Trait> traits::Currency<T::AccountId> for Module<T>
 {
-	type RBalance = T::RBalance;
-
-	fn free_balance(who: &T::AccountId, symbol: RSymbol) -> Self::RBalance {
+	fn free_balance(who: &T::AccountId, symbol: RSymbol) -> u128 {
 		if let Some(rdata) = <Account<T>>::get(symbol, &who) {
 			rdata.free
 		} else {
-			Zero::zero()
+			0
 		}
 	}
 
-	fn total_issuance(symbol: RSymbol) -> Self::RBalance {
-		<TotalIssuance<T>>::get(symbol)
+	fn total_issuance(symbol: RSymbol) -> u128 {
+		<TotalIssuance>::get(symbol)
 	}
 
 	// Ensure that an account can withdraw from their free balance given any existing withdrawal
@@ -140,8 +132,8 @@ impl<T: Trait> traits::Currency<T::AccountId> for Module<T> where
 	fn ensure_can_withdraw(
 		_who: &T::AccountId,
 		_symbol: RSymbol,
-		amount: T::RBalance,
-		new_balance: T::RBalance,
+		amount: u128,
+		new_balance: u128,
 	) -> DispatchResult {
 		if amount.is_zero() { return Ok(()) }
 		// let min_balance = <Account<T>>::get(symbol, &who).unwrap_or_default().frozen;
@@ -155,16 +147,16 @@ impl<T: Trait> traits::Currency<T::AccountId> for Module<T> where
 		transactor: &T::AccountId,
 		dest: &T::AccountId,
 		symbol: RSymbol,
-		value: Self::RBalance,
+		value: u128,
 	) -> DispatchResult {
         if value.is_zero() || transactor == dest { return Ok(()) }
         
 		Self::try_mutate_account(dest, symbol, |to_account_rdata| -> DispatchResult {
 			Self::try_mutate_account(transactor, symbol, |from_account_rdata| -> DispatchResult {
-				from_account_rdata.free = from_account_rdata.free.checked_sub(&value)
+				from_account_rdata.free = from_account_rdata.free.checked_sub(value)
 					.ok_or(Error::<T>::InsufficientBalance)?;
 
-				to_account_rdata.free = to_account_rdata.free.checked_add(&value).ok_or(Error::<T>::Overflow)?;
+				to_account_rdata.free = to_account_rdata.free.checked_add(value).ok_or(Error::<T>::Overflow)?;
 
 				Self::ensure_can_withdraw(transactor, symbol, value, from_account_rdata.free)?;
                 
@@ -184,18 +176,18 @@ impl<T: Trait> traits::Currency<T::AccountId> for Module<T> where
 	fn mint(
 		who: &T::AccountId,
 		symbol: RSymbol,
-		value: Self::RBalance
+		value: u128
 	) -> DispatchResult {
 		if value.is_zero() { return Ok(()) }
 
 		Self::try_mutate_account(who, symbol, |account_rdata| -> DispatchResult {
-			account_rdata.free = account_rdata.free.checked_add(&value).ok_or(Error::<T>::Overflow)?;
+			account_rdata.free = account_rdata.free.checked_add(value).ok_or(Error::<T>::Overflow)?;
 			Ok(())
 		})?;
 
-		<TotalIssuance<T>>::mutate(symbol, |issued|
-			*issued = issued.checked_add(&value).unwrap_or_else(|| {
-                Self::RBalance::max_value()
+		<TotalIssuance>::mutate(symbol, |issued|
+			*issued = issued.checked_add(value).unwrap_or_else(|| {
+                u128::max_value()
 			})
         );
 
@@ -210,20 +202,20 @@ impl<T: Trait> traits::Currency<T::AccountId> for Module<T> where
 	fn burn(
 		who: &T::AccountId,
 		symbol: RSymbol,
-		value: Self::RBalance
+		value: u128
 	) -> DispatchResult {
 		if value.is_zero() { return Ok(()) }
 		
 		Self::try_mutate_account(who, symbol, |account_rdata| -> DispatchResult {
-			account_rdata.free = account_rdata.free.checked_sub(&value).ok_or(Error::<T>::InsufficientBalance)?;
+			account_rdata.free = account_rdata.free.checked_sub(value).ok_or(Error::<T>::InsufficientBalance)?;
 			Self::ensure_can_withdraw(who, symbol, value, account_rdata.free)?;
 
 			Ok(())
 		})?;
 
-		<TotalIssuance<T>>::mutate(symbol, |issued| {
-			*issued = issued.checked_sub(&value).unwrap_or_else(|| {
-                Zero::zero()
+		<TotalIssuance>::mutate(symbol, |issued| {
+			*issued = issued.checked_sub(value).unwrap_or_else(|| {
+                0
 			});
         });
 

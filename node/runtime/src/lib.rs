@@ -345,7 +345,6 @@ impl pallet_balances::Trait for Runtime {
 
 impl rtoken_balances::Trait for Runtime {
 	type Event = Event;
-	type RBalance = u128;
 }
 
 impl rtoken_rate::Trait for Runtime {
@@ -354,7 +353,7 @@ impl rtoken_rate::Trait for Runtime {
 
 impl rfis::Trait for Runtime {
 	type Event = Event;
-	// type Currency = Balances;
+	type Currency = Balances;
 	type RCurrency = RBalances;
 	type UnsignedPriority = RFisUnsignedPriority;
 }

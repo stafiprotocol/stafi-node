@@ -1,25 +1,24 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use sp_std::{result, prelude::*};
-use codec::{Codec, Encode, Decode};
+use sp_std::prelude::*;
 use frame_support::{
-    debug, Parameter, decl_error, decl_event, decl_module, decl_storage,
+    debug, decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchResult},
     ensure,
-    traits::{Currency, Get, ExistenceRequirement::{KeepAlive, AllowDeath}},
+    traits::{Currency, ReservableCurrency, Get, ExistenceRequirement::{AllowDeath}},
 };
 use frame_system::{
     self as system, ensure_signed, ensure_root, ensure_none,
     offchain::{SendTransactionTypes, SubmitTransaction},
 };
 use sp_runtime::{
-    ModuleId, RuntimeDebug,
+    ModuleId, Percent,
     traits::{
-        Convert, Zero, AccountIdConversion, CheckedSub,CheckedAdd, SaturatedConversion, Saturating, StaticLookup,
+        Convert, Zero, AccountIdConversion, CheckedSub, SaturatedConversion, Saturating, StaticLookup,
     },
     transaction_validity::{
-		TransactionValidityError, TransactionValidity, ValidTransaction, InvalidTransaction,
+		TransactionValidity, ValidTransaction, InvalidTransaction,
 		TransactionSource, TransactionPriority, TransactionLongevity,
 	},
 };
@@ -35,13 +34,17 @@ const POOL_ID_1: ModuleId = ModuleId(*b"rFISpot1");
 const SYMBOL: RSymbol = RSymbol::RFIS;
 pub const MAX_ONBOARD_VALIDATORS: usize = 300;
 pub const RFIS_MAX_NOMINATIONS: usize = MAX_NOMINATIONS;
-pub const BondingDuration: EraIndex = 1;
+pub const BONDING_DURATION: EraIndex = 1;
+pub const TIP_FEE: Percent = Percent::from_percent(10);
 
-type BalanceOf<T> = staking::BalanceOf<T>;
-type RBalanceOf<T> = <<T as Trait>::RCurrency as RCurrency<<T as frame_system::Trait>::AccountId>>::RBalance;
+pub type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+pub type StakeBalanceOf<T> = staking::BalanceOf<T>;
 
 pub trait Trait: system::Trait + staking::Trait + SendTransactionTypes<Call<Self>> + session::Trait + rtoken_rate::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+
+    /// The rfis balance.
+	type Currency: ReservableCurrency<Self::AccountId>;
 
     /// currency of rtoken
     type RCurrency: RCurrency<Self::AccountId>;
@@ -53,13 +56,13 @@ pub trait Trait: system::Trait + staking::Trait + SendTransactionTypes<Call<Self
 decl_event! {
     pub enum Event<T> where
         Balance = BalanceOf<T>,
-        RBalance = RBalanceOf<T>,
+        StakeBalance = StakeBalanceOf<T>,
         <T as frame_system::Trait>::AccountId
-    {
+    {   
         /// liquidity stake record
-        LiquidityBond(AccountId, Balance, RBalance),
+        LiquidityBond(AccountId, StakeBalance, u128),
         /// liquidity unbond record
-        LiquidityUnBond(AccountId, Balance, RBalance),
+        LiquidityUnBond(AccountId, Balance, u128),
         /// liquidity withdraw unbond
         LiquidityWithdrawUnBond(AccountId, Balance),
         /// validator onboard
@@ -99,6 +102,9 @@ decl_storage! {
         pub Unbonding get(fn unbonding): map hasher(twox_64_concat) T::AccountId => Option<Vec<UnlockChunk<BalanceOf<T>>>>;
         pub OnboardValidators get(fn registered_validators): Vec<T::AccountId>;
         pub NominationUpdated get(fn nomination_updated): map hasher(blake2_128_concat) EraIndex => bool = false;
+
+        /// Recipient account for fees
+        pub Receiver get(fn receiver): Option<T::AccountId>;
     }
 }
 
@@ -108,19 +114,18 @@ decl_module! {
 
         fn on_finalize() {
             let stash = Self::account_id_1();
-
             if let Some(active_era) = staking::ActiveEra::get() {
                 let op_rate = rtoken_rate::EraRate::get(SYMBOL, active_era.index);
                 if  op_rate.is_none() {
                     let era = active_era.index.saturating_sub(1);
                     if era > 0 {
-                        let stashs: Vec<T::AccountId> = [stash.clone()].to_vec();
-                        Self::claim_rewards(era, stashs);
+                        Self::claim_rewards(era, &stash);
                     }
+
+                    let balance = <T as Trait>::Currency::reserved_balance(&stash).saturated_into::<u128>();
+                    let rbalance = T::RCurrency::total_issuance(SYMBOL);
                     
-                    let total_balance = T::Currency::total_balance(&stash).saturated_into::<u128>();
-                    let total_rbalance = T::RCurrency::total_issuance(SYMBOL).saturated_into::<u128>();
-                    let rate =  rtoken_rate::Module::<T>::set_rate(SYMBOL, total_balance, total_rbalance);
+                    let rate =  rtoken_rate::Module::<T>::set_rate(SYMBOL, balance, rbalance);
                     rtoken_rate::EraRate::insert(SYMBOL, active_era.index, rate);
                 }
             }
@@ -180,6 +185,15 @@ decl_module! {
             Ok(())
         }
 
+        /// set commission
+        #[weight = 100_000_000]
+        pub fn set_receiver(origin, new_receiver: <T::Lookup as StaticLookup>::Source) -> DispatchResult {
+            ensure_root(origin)?;
+            let dest = T::Lookup::lookup(new_receiver)?;
+            <Receiver<T>>::put(dest);
+            Ok(())
+        }
+
         /// onboard as an validator which may be nominated by the pot
         #[weight = 100_000_000]
         pub fn onboard(origin) -> DispatchResult {
@@ -212,7 +226,7 @@ decl_module! {
 
         /// liquidity bond fis to get rfis
         #[weight = 100_000_000]
-        pub fn liquidity_bond(origin, value: BalanceOf<T>) -> DispatchResult {
+        pub fn liquidity_bond(origin, value: StakeBalanceOf<T>) -> DispatchResult {
             ensure!(!value.is_zero(), Error::<T>::LiquidityBondZero);
             ensure!(staking::EraElectionStatus::<T>::get().is_closed(), staking::Error::<T>::CallNotAllowed);
             let controller = Self::account_id_1();
@@ -220,12 +234,12 @@ decl_module! {
             let who = ensure_signed(origin)?;
 
             let v = value.saturated_into::<u128>();
-            let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(SYMBOL, v).saturated_into::<RBalanceOf<T>>();
+            let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(SYMBOL, v);
             
-            T::Currency::transfer(&who, &controller, value.into(), KeepAlive)?;
+            <T as staking::Trait>::Currency::transfer(&who, &controller, value, AllowDeath)?;
             T::RCurrency::mint(&who, SYMBOL, rbalance)?;
             
-            Self::bond_extra(&controller, &mut ledger, value.into());
+            Self::bond_extra(&controller, &mut ledger, value);
 
             Self::deposit_event(RawEvent::LiquidityBond(who, value, rbalance));
 
@@ -234,12 +248,12 @@ decl_module! {
 
         /// liquitidy unbond to redeem fis with rfis
         #[weight = 100_000_000]
-        pub fn liquidity_unbond(origin, value: RBalanceOf<T>) -> DispatchResult {
+        pub fn liquidity_unbond(origin, value: u128) -> DispatchResult {
             ensure!(!value.is_zero(), Error::<T>::LiquidityUnbondZero);
             ensure!(staking::EraElectionStatus::<T>::get().is_closed(), staking::Error::<T>::CallNotAllowed);
             let who = ensure_signed(origin)?;
             let free = T::RCurrency::free_balance(&who, SYMBOL);
-            free.checked_sub(&value).ok_or(Error::<T>::InsufficientBalance)?;
+            free.checked_sub(value).ok_or(Error::<T>::InsufficientBalance)?;
             
             let controller = Self::account_id_1();
             let mut ledger = staking::Ledger::<T>::get(&controller).ok_or(staking::Error::<T>::NotController)?;
@@ -248,14 +262,16 @@ decl_module! {
             // better to take unbond into on_finalize.
             ensure!(unbonding.len() < MAX_UNLOCKING_CHUNKS, staking::Error::<T>::NoMoreChunks);
 
-            let era = staking::CurrentEra::get().unwrap_or(0) + BondingDuration;
-            let v = value.saturated_into::<u128>();
-            let balance = rtoken_rate::Module::<T>::rtoken_to_token(SYMBOL, v).saturated_into::<BalanceOf<T>>();
-            ledger.active -= balance;
+            let era = staking::CurrentEra::get().unwrap_or(0) + BONDING_DURATION;
+            let v = rtoken_rate::Module::<T>::rtoken_to_token(SYMBOL, value);
+            let balance = v.saturated_into::<BalanceOf<T>>();
+            let stake_balance = v.saturated_into::<StakeBalanceOf<T>>();
+            
+            ledger.active -= stake_balance;
             if let Some(chunk) = ledger.unlocking.iter_mut().find(|chunk| chunk.era == era) {
-                chunk.value += balance;
+                chunk.value += stake_balance;
             } else {
-                ledger.unlocking.push(UnlockChunk { value: balance, era });
+                ledger.unlocking.push(UnlockChunk { value: stake_balance, era });
             }
             
             if let Some(chunk) = unbonding.iter_mut().find(|chunk| chunk.era == era) {
@@ -285,15 +301,14 @@ decl_module! {
             let unbonding = <Unbonding<T>>::get(&who).unwrap_or(vec![]);
             let mut total: BalanceOf<T> = Zero::zero();
             let new_unbonding: Vec<UnlockChunk<BalanceOf<T>>> = unbonding.into_iter()
-                .filter(|chunk| if chunk.era > current_era {
+                .filter(|chunk| if chunk.era < current_era {
                     total = total.saturating_add(chunk.value);
                     false
                 } else {
                     true
                 }).collect();
             staking::Module::<T>::update_ledger(&controller, &ledger);
-            // todo: should be keep alive.
-            T::Currency::transfer(&controller, &who, total, AllowDeath)?;
+            <T as Trait>::Currency::transfer(&controller, &who, total, AllowDeath)?;
             <Unbonding<T>>::insert(&who, new_unbonding);
             Self::deposit_event(RawEvent::LiquidityWithdrawUnBond(who, total));
             Ok(())
@@ -368,8 +383,8 @@ impl<T: Trait> Module<T> {
         POOL_ID_1.into_account()
     }
 
-    fn bond_extra(controller: &T::AccountId, ledger: &mut StakingLedger<T::AccountId, BalanceOf<T>>, max_additional: BalanceOf<T>) {
-        let balance = T::Currency::free_balance(&controller);
+    fn bond_extra(controller: &T::AccountId, ledger: &mut StakingLedger<T::AccountId, StakeBalanceOf<T>>, max_additional: StakeBalanceOf<T>) {
+        let balance = <T as staking::Trait>::Currency::free_balance(&controller);
 
 		if let Some(extra) = balance.checked_sub(&ledger.total) {
 			let extra = extra.min(max_additional);
@@ -379,13 +394,11 @@ impl<T: Trait> Module<T> {
 		}
     }
 
-    fn claim_rewards(era: EraIndex, stashs: Vec<T::AccountId>) {
-        for stash in &stashs {
-            if let Some(nominations) = staking::Nominators::<T>::get(&stash) {
-                for t in nominations.targets {
-                    staking::Module::<T>::do_payout_stakers(t, era);
-                    //todos deal DispatchResult of do_payout_stakers
-                    // 记录下来没有成功的erahe stashs
+    fn claim_rewards(era: EraIndex, stash: &T::AccountId) {
+        if let Some(nominations) = staking::Nominators::<T>::get(&stash) {
+            for t in nominations.targets {
+                if let Err(e) = staking::Module::<T>::do_payout_stakers(t.clone(), era) {
+                    debug::info!("do payout stakers err: {:?}, ValidatorAccountId: {:?}, era: {:?}", e, t, era);
                 }
             }
         }
