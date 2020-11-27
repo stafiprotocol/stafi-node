@@ -97,6 +97,7 @@ decl_storage! {
         pub Unbonding get(fn unbonding): map hasher(twox_64_concat) T::AccountId => Option<Vec<UnlockChunk<BalanceOf<T>>>>;
         pub OnboardValidators get(fn registered_validators): Vec<T::AccountId>;
         pub NominationUpdated get(fn nomination_updated): map hasher(blake2_128_concat) EraIndex => bool = false;
+        pub PaidOut get(fn paid_out): map hasher(blake2_128_concat) EraIndex => Option<Vec<T::AccountId>>;
 
         /// Recipient account for fees
         pub Receiver get(fn receiver): Option<T::AccountId>;
@@ -113,13 +114,23 @@ decl_module! {
                 let op_rate = rtoken_rate::EraRate::get(SYMBOL, active_era.index);
                 if  op_rate.is_none() {
                     let era = active_era.index.saturating_sub(1);
+                    let before_claim = Self::total_bonded();
                     if era > 0 {
                         Self::claim_rewards(era, &stash);
                     }
+                    let after_claim = Self::total_bonded();
+                    let op_receiver = Self::receiver();
+                    if after_claim > before_claim && op_receiver.is_some() {
+                        let fee = (TIP_FEE * (after_claim - before_claim)).saturated_into::<u128>();
+                        let rfis = rtoken_rate::Module::<T>::token_to_rtoken(SYMBOL, fee);
+                        let receiver = op_receiver.unwrap();
+                        if let Err(e) = T::RCurrency::mint(&receiver, SYMBOL, rfis) {
+                            debug::info!("rfis commission err: {:?}", e);
+                        }
+                    }
 
-                    let balance = Self::total_bonded().saturated_into::<u128>();
+                    let balance = after_claim.saturated_into::<u128>();
                     let rbalance = T::RCurrency::total_issuance(SYMBOL);
-                    
                     let rate =  rtoken_rate::Module::<T>::set_rate(SYMBOL, balance, rbalance);
                     rtoken_rate::EraRate::insert(SYMBOL, active_era.index, rate);
                 }
@@ -127,40 +138,48 @@ decl_module! {
         }
 
         fn offchain_worker(block: T::BlockNumber) {
+            // if !sp_io::offchain::is_validator() {
+            //     debug::info!("the node isn't a validator");
+            //     return;
+            // }
+
             let op_current_era = staking::CurrentEra::get();
             if op_current_era.is_none() {
                 debug::info!("invalid current era");
                 return;
             }
-            let era = op_current_era.unwrap();
-            if <NominationUpdated>::get(era) {
+            let current_era = op_current_era.unwrap();
+            if <NominationUpdated>::get(current_era) {
                 debug::info!("nomination already updated");
                 return;
             }
             
             let mut onboards = <OnboardValidators<T>>::get();
-            // if !sp_io::offchain::is_validator() {
-            //     debug::info!("the node isn't a validator");
-            //     return;
-            // }
-            
             if onboards.is_empty() {
                 debug::info!("no validator onboard");
                 return;
-            } 
-            // else {
-            //     onboards = onboards.into_iter().filter(|v| staking::ErasStakers::<T>::contains_key(era, &v)).collect();
-            //     if onboards.is_empty() {
-            //         debug::info!("no validator onboard in era stakers");
-            //         return;
-            //     }
-            // }
-            onboards.sort_by(|a, b| staking::ErasStakers::<T>::get(era, &a).total.cmp(&staking::ErasStakers::<T>::get(era, &b).total));
-            if onboards.len() > RFIS_MAX_NOMINATIONS {
-                onboards.resize_with(RFIS_MAX_NOMINATIONS, Default::default);
+            }
+            
+            let stash = Self::account_id_1();
+            let op_nominations = staking::Nominators::<T>::get(&stash);
+            let mut nominators: Vec<T::AccountId> = vec![];
+            if let Some(nominations) = op_nominations {
+                nominators = nominations.targets;
             }
 
-            let call = Call::submit_nomination_unsigned(onboards).into();
+            nominators = nominators.into_iter().filter(|n| onboards.contains(&n)).collect();
+            if nominators.len() == RFIS_MAX_NOMINATIONS {
+                debug::info!("enough nominations");
+                return;
+            }
+            onboards = onboards.into_iter().filter(|v| !nominators.contains(&v) && staking::ErasStakers::<T>::contains_key(current_era, &v)).collect();
+            onboards.sort_by(|a, b| staking::ErasStakers::<T>::get(current_era, &a).total.cmp(&staking::ErasStakers::<T>::get(current_era, &b).total));
+            if onboards.len() + nominators.len() > RFIS_MAX_NOMINATIONS {
+                onboards = onboards.into_iter().take(RFIS_MAX_NOMINATIONS - nominators.len()).collect();
+            }
+            nominators.extend_from_slice(&onboards);
+
+            let call = Call::submit_nomination_unsigned(nominators).into();
             if let Err(e) = SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call) {
                 debug::info!("failed to submit nomination unsigned: {:?}", e);
             }
@@ -192,9 +211,9 @@ decl_module! {
         /// onboard as an validator which may be nominated by the pot
         #[weight = 100_000_000]
         pub fn onboard(origin) -> DispatchResult {
+            let who = ensure_signed(origin)?;
             let mut onboards = <OnboardValidators<T>>::get();
             ensure!(onboards.len() <= MAX_ONBOARD_VALIDATORS, Error::<T>::ValidatorLimitReached);
-            let who = ensure_signed(origin)?;
             let location = onboards.binary_search(&who).err().ok_or(Error::<T>::AlreadyOnboard)?;
             let validator_id = <T as session::Trait>::ValidatorIdOf::convert(who.clone()).ok_or(Error::<T>::NoAssociatedValidatorId)?;
             session::Module::<T>::load_keys(&validator_id).ok_or(Error::<T>::NoSessionKey)?;
@@ -222,11 +241,11 @@ decl_module! {
         /// liquidity bond fis to get rfis
         #[weight = 100_000_000]
         pub fn liquidity_bond(origin, value: BalanceOf<T>) -> DispatchResult {
+            let who = ensure_signed(origin)?;
             ensure!(!value.is_zero(), Error::<T>::LiquidityBondZero);
             ensure!(staking::EraElectionStatus::<T>::get().is_closed(), staking::Error::<T>::CallNotAllowed);
             let controller = Self::account_id_1();
             let mut ledger = staking::Ledger::<T>::get(&controller).ok_or(Error::<T>::PoolUnbond)?;
-            let who = ensure_signed(origin)?;
 
             let v = value.saturated_into::<u128>();
             let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(SYMBOL, v);
@@ -254,7 +273,6 @@ decl_module! {
             let mut ledger = staking::Ledger::<T>::get(&controller).ok_or(staking::Error::<T>::NotController)?;
             ensure!(ledger.unlocking.len() < MAX_UNLOCKING_CHUNKS, staking::Error::<T>::NoMoreChunks);
             let mut unbonding = <Unbonding<T>>::get(&who).unwrap_or(vec![]);
-            // better to take unbond into on_finalize.
             ensure!(unbonding.len() < MAX_UNLOCKING_CHUNKS, staking::Error::<T>::NoMoreChunks);
 
             let era = staking::CurrentEra::get().unwrap_or(0) + BONDING_DURATION;
@@ -355,7 +373,7 @@ impl<T: Trait> Module<T> {
             return Zero::zero()
         }
         let ledger = op_ledger.unwrap();
-        return ledger.active
+        ledger.active
     }
 
     fn bond_extra(controller: &T::AccountId, ledger: &mut StakingLedger<T::AccountId, BalanceOf<T>>, max_additional: BalanceOf<T>) {
@@ -371,11 +389,16 @@ impl<T: Trait> Module<T> {
 
     fn claim_rewards(era: EraIndex, stash: &T::AccountId) {
         if let Some(nominations) = staking::Nominators::<T>::get(&stash) {
+            let mut paid_out = <PaidOut<T>>::get(era).unwrap_or_default();
             for t in nominations.targets {
                 if let Err(e) = staking::Module::<T>::do_payout_stakers(t.clone(), era) {
-                    debug::info!("do payout stakers err: {:?}, ValidatorAccountId: {:?}, era: {:?}", e, t, era);
+                    debug::info!("do payout stakers err: {:?}, ValidatorAccountId: {:?}, era: {:?}", e, &t, era);
+                    if !paid_out.contains(&t) {
+                        paid_out.push(t);
+                    }
                 }
             }
+            <PaidOut<T>>::insert(era, paid_out);
         }
     }
 
