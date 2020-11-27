@@ -6,7 +6,7 @@ use frame_support::{
     debug, decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchResult},
     ensure,
-    traits::{Currency, ReservableCurrency, Get, ExistenceRequirement::{AllowDeath}},
+    traits::{Currency, Get, ExistenceRequirement::{AllowDeath}},
 };
 use frame_system::{
     self as system, ensure_signed, ensure_root, ensure_none,
@@ -37,14 +37,10 @@ pub const RFIS_MAX_NOMINATIONS: usize = MAX_NOMINATIONS;
 pub const BONDING_DURATION: EraIndex = 1;
 pub const TIP_FEE: Percent = Percent::from_percent(10);
 
-pub type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
-pub type StakeBalanceOf<T> = staking::BalanceOf<T>;
+pub type BalanceOf<T> = staking::BalanceOf<T>;
 
 pub trait Trait: system::Trait + staking::Trait + SendTransactionTypes<Call<Self>> + session::Trait + rtoken_rate::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
-
-    /// The rfis balance.
-	type Currency: ReservableCurrency<Self::AccountId>;
 
     /// currency of rtoken
     type RCurrency: RCurrency<Self::AccountId>;
@@ -56,11 +52,10 @@ pub trait Trait: system::Trait + staking::Trait + SendTransactionTypes<Call<Self
 decl_event! {
     pub enum Event<T> where
         Balance = BalanceOf<T>,
-        StakeBalance = StakeBalanceOf<T>,
         <T as frame_system::Trait>::AccountId
     {   
         /// liquidity stake record
-        LiquidityBond(AccountId, StakeBalance, u128),
+        LiquidityBond(AccountId, Balance, u128),
         /// liquidity unbond record
         LiquidityUnBond(AccountId, Balance, u128),
         /// liquidity withdraw unbond
@@ -122,7 +117,7 @@ decl_module! {
                         Self::claim_rewards(era, &stash);
                     }
 
-                    let balance = <T as Trait>::Currency::reserved_balance(&stash).saturated_into::<u128>();
+                    let balance = Self::total_bonded().saturated_into::<u128>();
                     let rbalance = T::RCurrency::total_issuance(SYMBOL);
                     
                     let rate =  rtoken_rate::Module::<T>::set_rate(SYMBOL, balance, rbalance);
@@ -226,7 +221,7 @@ decl_module! {
 
         /// liquidity bond fis to get rfis
         #[weight = 100_000_000]
-        pub fn liquidity_bond(origin, value: StakeBalanceOf<T>) -> DispatchResult {
+        pub fn liquidity_bond(origin, value: BalanceOf<T>) -> DispatchResult {
             ensure!(!value.is_zero(), Error::<T>::LiquidityBondZero);
             ensure!(staking::EraElectionStatus::<T>::get().is_closed(), staking::Error::<T>::CallNotAllowed);
             let controller = Self::account_id_1();
@@ -236,7 +231,7 @@ decl_module! {
             let v = value.saturated_into::<u128>();
             let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(SYMBOL, v);
             
-            <T as staking::Trait>::Currency::transfer(&who, &controller, value, AllowDeath)?;
+            T::Currency::transfer(&who, &controller, value, AllowDeath)?;
             T::RCurrency::mint(&who, SYMBOL, rbalance)?;
             
             Self::bond_extra(&controller, &mut ledger, value);
@@ -263,15 +258,12 @@ decl_module! {
             ensure!(unbonding.len() < MAX_UNLOCKING_CHUNKS, staking::Error::<T>::NoMoreChunks);
 
             let era = staking::CurrentEra::get().unwrap_or(0) + BONDING_DURATION;
-            let v = rtoken_rate::Module::<T>::rtoken_to_token(SYMBOL, value);
-            let balance = v.saturated_into::<BalanceOf<T>>();
-            let stake_balance = v.saturated_into::<StakeBalanceOf<T>>();
-            
-            ledger.active -= stake_balance;
+            let balance = rtoken_rate::Module::<T>::rtoken_to_token(SYMBOL, value).saturated_into::<BalanceOf<T>>();
+            ledger.active -= balance;
             if let Some(chunk) = ledger.unlocking.iter_mut().find(|chunk| chunk.era == era) {
-                chunk.value += stake_balance;
+                chunk.value += balance;
             } else {
-                ledger.unlocking.push(UnlockChunk { value: stake_balance, era });
+                ledger.unlocking.push(UnlockChunk { value: balance, era });
             }
             
             if let Some(chunk) = unbonding.iter_mut().find(|chunk| chunk.era == era) {
@@ -296,7 +288,6 @@ decl_module! {
             let controller = Self::account_id_1();
             let current_era = staking::CurrentEra::get().ok_or(staking::Error::<T>::InvalidEraToReward)?;
             let mut ledger = staking::Ledger::<T>::get(&controller).ok_or(staking::Error::<T>::NotController)?;
-            // let (stash, old_total) = (ledger.stash.clone(), ledger.total);
             ledger = ledger.consolidate_unlocked(current_era);
             let unbonding = <Unbonding<T>>::get(&who).unwrap_or(vec![]);
             let mut total: BalanceOf<T> = Zero::zero();
@@ -308,7 +299,7 @@ decl_module! {
                     true
                 }).collect();
             staking::Module::<T>::update_ledger(&controller, &ledger);
-            <T as Trait>::Currency::transfer(&controller, &who, total, AllowDeath)?;
+            T::Currency::transfer(&controller, &who, total, AllowDeath)?;
             <Unbonding<T>>::insert(&who, new_unbonding);
             Self::deposit_event(RawEvent::LiquidityWithdrawUnBond(who, total));
             Ok(())
@@ -335,7 +326,6 @@ decl_module! {
             system::Module::<T>::inc_ref(&stash);
 
             let value = Zero::zero();
-			// Self::deposit_event(RawEvent::Bonded(stash.clone(), value));
 			let item = StakingLedger {
 				stash,
 				total: value,
@@ -348,31 +338,6 @@ decl_module! {
             staking::Module::<T>::update_ledger(&controller, &item);
             Ok(())
         }
-        
-        // /// manually nominate
-        // #[weight = 100_000_000]
-		// pub fn nominate(origin, targets: Vec<<T::Lookup as StaticLookup>::Source>) {
-        //     ensure_root(origin)?;
-        //     ensure!(staking::EraElectionStatus::<T>::get().is_closed(), staking::Error::<T>::CallNotAllowed);
-
-		// 	let controller = Self::account_id_1();
-		// 	let ledger = staking::Ledger::<T>::get(&controller).ok_or(staking::Error::<T>::NotController)?;
-		// 	let stash = &ledger.stash;
-		// 	ensure!(!targets.is_empty(), staking::Error::<T>::EmptyTargets);
-		// 	let targets = targets.into_iter()
-		// 		.take(MAX_NOMINATIONS)
-		// 		.map(|t| T::Lookup::lookup(t))
-		// 		.collect::<result::Result<Vec<T::AccountId>, _>>()?;
-
-		// 	let nominations = Nominations {
-		// 		targets,
-		// 		// initial nominations are considered submitted at era 0. See `Nominations` doc
-		// 		submitted_in: staking::CurrentEra::get().unwrap_or(0),
-		// 		suppressed: false,
-		// 	};
-
-        //     staking::Nominators::<T>::insert(stash, &nominations);
-		// }
     }
 }
 
@@ -383,7 +348,17 @@ impl<T: Trait> Module<T> {
         POOL_ID_1.into_account()
     }
 
-    fn bond_extra(controller: &T::AccountId, ledger: &mut StakingLedger<T::AccountId, StakeBalanceOf<T>>, max_additional: StakeBalanceOf<T>) {
+    fn total_bonded() -> BalanceOf<T> {
+        let controller = Self::account_id_1();
+        let op_ledger = staking::Ledger::<T>::get(&controller);
+        if op_ledger.is_none() {
+            return Zero::zero()
+        }
+        let ledger = op_ledger.unwrap();
+        return ledger.active
+    }
+
+    fn bond_extra(controller: &T::AccountId, ledger: &mut StakingLedger<T::AccountId, BalanceOf<T>>, max_additional: BalanceOf<T>) {
         let balance = <T as staking::Trait>::Currency::free_balance(&controller);
 
 		if let Some(extra) = balance.checked_sub(&ledger.total) {
