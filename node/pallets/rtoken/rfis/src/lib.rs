@@ -34,7 +34,6 @@ const POOL_ID_1: ModuleId = ModuleId(*b"rFISpot1");
 const SYMBOL: RSymbol = RSymbol::RFIS;
 pub const MAX_ONBOARD_VALIDATORS: usize = 300;
 pub const RFIS_MAX_NOMINATIONS: usize = MAX_NOMINATIONS;
-pub const BONDING_DURATION: EraIndex = 1;
 pub const TIP_FEE: Percent = Percent::from_percent(10);
 
 pub type BalanceOf<T> = staking::BalanceOf<T>;
@@ -61,9 +60,9 @@ decl_event! {
         /// liquidity withdraw unbond
         LiquidityWithdrawUnBond(AccountId, Balance),
         /// validator onboard
-        ValidatorOnboard(AccountId),
+        ValidatorOnboard(AccountId, AccountId),
         /// validator deregistered
-        ValidatorOffboard(AccountId),
+        ValidatorOffboard(AccountId, AccountId),
     }
 }
 
@@ -211,30 +210,33 @@ decl_module! {
         /// onboard as an validator which may be nominated by the pot
         #[weight = 100_000_000]
         pub fn onboard(origin) -> DispatchResult {
-            let who = ensure_signed(origin)?;
+            let controller = ensure_signed(origin)?;
+            let ledger = staking::Ledger::<T>::get(&controller).ok_or(staking::Error::<T>::NotController)?;
+            let stash = &ledger.stash;
+            let validator_id = <T as session::Trait>::ValidatorIdOf::convert(controller.clone()).ok_or(Error::<T>::NoAssociatedValidatorId)?;
+            session::Module::<T>::load_keys(&validator_id).ok_or(Error::<T>::NoSessionKey)?;
             let mut onboards = <OnboardValidators<T>>::get();
             ensure!(onboards.len() <= MAX_ONBOARD_VALIDATORS, Error::<T>::ValidatorLimitReached);
-            let location = onboards.binary_search(&who).err().ok_or(Error::<T>::AlreadyOnboard)?;
-            let validator_id = <T as session::Trait>::ValidatorIdOf::convert(who.clone()).ok_or(Error::<T>::NoAssociatedValidatorId)?;
-            session::Module::<T>::load_keys(&validator_id).ok_or(Error::<T>::NoSessionKey)?;
-
-            onboards.insert(location, who.clone());
+            let location = onboards.binary_search(&stash).err().ok_or(Error::<T>::AlreadyOnboard)?;
+            onboards.insert(location, stash.clone());
 			<OnboardValidators<T>>::put(onboards);
 
-            Self::deposit_event(RawEvent::ValidatorOnboard(who));
+            Self::deposit_event(RawEvent::ValidatorOnboard(controller, stash.clone()));
             Ok(())
         }
 
         /// offboard
         #[weight = 100_000_000]
         pub fn offboard(origin) -> DispatchResult {
-            let who = ensure_signed(origin)?;
+            let controller = ensure_signed(origin)?;
+            let ledger = staking::Ledger::<T>::get(&controller).ok_or(staking::Error::<T>::NotController)?;
+            let stash = &ledger.stash;
             let mut onboards = <OnboardValidators<T>>::get();
-            let location = onboards.binary_search(&who).ok().ok_or(Error::<T>::NotOnboard)?;
+            let location = onboards.binary_search(&stash).ok().ok_or(Error::<T>::NotOnboard)?;
             onboards.remove(location);
             <OnboardValidators<T>>::put(onboards);
             
-            Self::deposit_event(RawEvent::ValidatorOffboard(who));
+            Self::deposit_event(RawEvent::ValidatorOffboard(controller, stash.clone()));
             Ok(())
         }
 
@@ -275,7 +277,7 @@ decl_module! {
             let mut unbonding = <Unbonding<T>>::get(&who).unwrap_or(vec![]);
             ensure!(unbonding.len() < MAX_UNLOCKING_CHUNKS, staking::Error::<T>::NoMoreChunks);
 
-            let era = staking::CurrentEra::get().unwrap_or(0) + BONDING_DURATION;
+            let era = staking::CurrentEra::get().unwrap_or(0) + T::BondingDuration::get();
             let balance = rtoken_rate::Module::<T>::rtoken_to_token(SYMBOL, value).saturated_into::<BalanceOf<T>>();
             ledger.active -= balance;
             if let Some(chunk) = ledger.unlocking.iter_mut().find(|chunk| chunk.era == era) {
