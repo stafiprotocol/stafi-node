@@ -23,7 +23,7 @@ use sp_runtime::{
 	},
 };
 use pallet_staking::{
-    self as staking, MAX_NOMINATIONS, MAX_UNLOCKING_CHUNKS, Nominations,
+    self as staking, MAX_NOMINATIONS, Nominations,
     RewardDestination, StakingLedger, EraIndex, UnlockChunk,
 };
 use pallet_session as session;
@@ -128,6 +128,8 @@ decl_error! {
         NotOnboard,
         /// no session key
         NoSessionKey,
+        /// get curreent era err
+        NoCurrentEra,
         /// not current era
         NotCurrentEra,
         /// Total_bonded_before not submitted
@@ -159,9 +161,9 @@ decl_storage! {
         /// Paidouts: (era, validator) => bool
         Paidouts get(fn paidouts):
             double_map hasher(blake2_128_concat) EraIndex, hasher(twox_64_concat) T::AccountId => Option<bool>;
-        /// Unbonding, (origin, pool) => [UnlockChunks]
+        /// Unbonding: (origin, pool) => [UnlockChunks]
         pub Unbonding get(fn unbonding): map hasher(twox_64_concat) (T::AccountId, T::AccountId) => Option<Vec<UnlockChunk<BalanceOf<T>>>>;
-        /// Nominated (era, pool) => targets
+        /// Nominated: (era, pool) => targets
         Nominated get(fn nominated):
             double_map hasher(blake2_128_concat) EraIndex, hasher(twox_64_concat) T::AccountId => Option<Vec<T::AccountId>>;
     }
@@ -352,6 +354,15 @@ decl_module! {
             }
             let era = op_active.unwrap().index;
 
+            for p in Self::bonded_pools() {
+                if staking::Ledger::<T>::get(&p).unwrap().unlocking.iter().any(|chunk| chunk.era <= era) {
+                    let call = Call::submit_unlocks(era, p).into();
+                    if let Err(e) = SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call) {
+                        debug::info!("failed to submit unlocks: {:?}", e);
+                    }
+                }
+            }
+
             if Self::total_bonded_before_payout(&era).is_none() {
                 let before = Self::total_bonded();
                 let call = Call::submit_total_bonded_before(era, before).into();
@@ -364,7 +375,7 @@ decl_module! {
             let last_era = era.saturating_sub(1);
             // ensure one block won't deal more than one pool
             let mut wait_next_block = false;
-            for p in Self::pools() {
+            for p in Self::bonded_pools() {
                 let op_nominations = staking::Nominators::<T>::get(&p);
                 if op_nominations.is_none() {
                     debug::info!("{:?} has none nominations", &p);
@@ -399,7 +410,7 @@ decl_module! {
                 return;
             }
 
-            let mut pools: Vec<T::AccountId> = Self::pools().into_iter().filter(|p| Self::nominated(&era, &p).is_none()).collect();
+            let mut pools: Vec<T::AccountId> = Self::bonded_pools().into_iter().filter(|p| Self::nominated(&era, &p).is_none()).collect();
             if pools.is_empty() {
                 debug::info!("no pool need to nominate");
                 return;
@@ -445,19 +456,16 @@ decl_module! {
             }
         }
 
-        /// submit new nomination
-        #[weight = 100_000_000]
-        fn submit_nomination(origin, era: EraIndex, pool: T::AccountId, targets: Vec<T::AccountId>) -> DispatchResult {
+        /// unlock
+        #[weight = 10_000]
+        pub fn submit_unlocks(origin, era: EraIndex, pool: T::AccountId) -> DispatchResult {
             ensure_none(origin)?;
-            ensure!(staking::EraElectionStatus::<T>::get().is_closed(), staking::Error::<T>::CallNotAllowed);
-            let current_era = staking::CurrentEra::get().ok_or(staking::Error::<T>::InvalidEraToReward)?;
+            let current_era = staking::CurrentEra::get().ok_or(Error::<T>::NoCurrentEra)?;
             ensure!(era == current_era, Error::<T>::NotCurrentEra);
-            let ledger = staking::Ledger::<T>::get(&pool).ok_or(staking::Error::<T>::NotController)?;
-			let stash = &ledger.stash;
-            Self::update_nominations(current_era, &targets, stash);
-            <Nominated<T>>::insert(era, pool, targets.to_vec());
+            let mut ledger = staking::Ledger::<T>::get(&pool).ok_or(staking::Error::<T>::NotController)?;
+            ledger = ledger.consolidate_unlocked(era);
+            staking::Module::<T>::update_ledger(&pool, &ledger);
 
-            Self::deposit_event(RawEvent::NominationUpdated(current_era, targets, stash.clone()));
             Ok(())
         }
 
@@ -465,7 +473,7 @@ decl_module! {
         #[weight = 10_000]
         pub fn submit_total_bonded_before(origin, era: EraIndex, total: BalanceOf<T>) -> DispatchResult {
             ensure_none(origin)?;
-            let current_era = staking::CurrentEra::get().ok_or(staking::Error::<T>::InvalidEraToReward)?;
+            let current_era = staking::CurrentEra::get().ok_or(Error::<T>::NoCurrentEra)?;
             ensure!(era == current_era, Error::<T>::NotCurrentEra);
             <TotalBondedBeforePayout<T>>::insert(era, total);
 
@@ -486,12 +494,28 @@ decl_module! {
         #[weight = 10_000]
         pub fn submit_total_bonded_after(origin, era: EraIndex, total: BalanceOf<T>) -> DispatchResult {
             ensure_none(origin)?;
-            let current_era = staking::CurrentEra::get().ok_or(staking::Error::<T>::InvalidEraToReward)?;
+            let current_era = staking::CurrentEra::get().ok_or(Error::<T>::NoCurrentEra)?;
             ensure!(era == current_era, Error::<T>::NotCurrentEra);
             ensure!(Self::total_bonded_before_payout(era).is_some(), Error::<T>::TotalBondedBeforeNotSubmitted);
             <TotalBondedAfterPayout<T>>::insert(era, total);
 
             Self::deposit_event(RawEvent::TotalBondedAfterPayout(era, total));
+            Ok(())
+        }
+
+        /// submit new nomination
+        #[weight = 100_000_000]
+        fn submit_nomination(origin, era: EraIndex, pool: T::AccountId, targets: Vec<T::AccountId>) -> DispatchResult {
+            ensure_none(origin)?;
+            ensure!(staking::EraElectionStatus::<T>::get().is_closed(), staking::Error::<T>::CallNotAllowed);
+            let current_era = staking::CurrentEra::get().ok_or(Error::<T>::NoCurrentEra)?;
+            ensure!(era == current_era, Error::<T>::NotCurrentEra);
+            let ledger = staking::Ledger::<T>::get(&pool).ok_or(staking::Error::<T>::NotController)?;
+			let stash = &ledger.stash;
+            Self::update_nominations(current_era, &targets, stash);
+            <Nominated<T>>::insert(era, pool, targets.to_vec());
+
+            Self::deposit_event(RawEvent::NominationUpdated(current_era, targets, stash.clone()));
             Ok(())
         }
 
@@ -567,9 +591,11 @@ decl_module! {
 
             let free = T::RCurrency::free_balance(&who, SYMBOL);
             free.checked_sub(value).ok_or(Error::<T>::InsufficientBalance)?;
-            ensure!(ledger.unlocking.len() < MAX_UNLOCKING_CHUNKS, staking::Error::<T>::NoMoreChunks);
+
+            let max_chunks = usize::from(T::BondingDuration::get() as u16).saturating_add(2);
+            ensure!(ledger.unlocking.len() < max_chunks, staking::Error::<T>::NoMoreChunks);
             let mut unbonding = <Unbonding<T>>::get((&who, &controller)).unwrap_or(vec![]);
-            ensure!(unbonding.len() < MAX_UNLOCKING_CHUNKS, staking::Error::<T>::NoMoreChunks);
+            ensure!(unbonding.len() < max_chunks, staking::Error::<T>::NoMoreChunks);
 
             let era = staking::CurrentEra::get().unwrap_or(0) + T::BondingDuration::get();
             let balance = rtoken_rate::Module::<T>::rtoken_to_token(SYMBOL, value).saturated_into::<BalanceOf<T>>();
@@ -602,21 +628,17 @@ decl_module! {
             ensure!(staking::EraElectionStatus::<T>::get().is_closed(), staking::Error::<T>::CallNotAllowed);
             let controller = T::Lookup::lookup(pool)?;
             ensure!(Self::is_in_pools(&controller), Error::<T>::PoolNotFound);
-            let current_era = staking::CurrentEra::get().ok_or(staking::Error::<T>::InvalidEraToReward)?;
-            let mut ledger = staking::Ledger::<T>::get(&controller).ok_or(staking::Error::<T>::NotController)?;
-            ledger = ledger.consolidate_unlocked(current_era);
+            let current_era = staking::CurrentEra::get().ok_or(Error::<T>::NoCurrentEra)?;
             let unbonding = <Unbonding<T>>::get((&who, &controller)).unwrap_or(vec![]);
-
             let mut total: BalanceOf<T> = Zero::zero();
             let new_unbonding: Vec<UnlockChunk<BalanceOf<T>>> = unbonding.into_iter()
-                .filter(|chunk| if chunk.era < current_era {
+                .filter(|chunk| if chunk.era > current_era {
+                    true
+                } else {
                     total = total.saturating_add(chunk.value);
                     false
-                } else {
-                    true
                 }).collect();
             
-            staking::Module::<T>::update_ledger(&controller, &ledger);
             T::Currency::transfer(&controller, &who, total, AllowDeath)?;
             <Unbonding<T>>::insert((&who, &controller), new_unbonding);
             Self::deposit_event(RawEvent::LiquidityWithdrawUnBond(who, controller, total));
@@ -651,7 +673,11 @@ impl<T: Trait> Module<T> {
     }
 
     fn total_bonded() -> BalanceOf<T> {
-        Self::pools().into_iter().fold(Zero::zero(), |acc, p| acc + Self::bonded_of(&p))
+        Self::bonded_pools().into_iter().fold(Zero::zero(), |acc, p| acc + Self::bonded_of(&p))
+    }
+
+    fn bonded_pools() -> Vec<T::AccountId> {
+        Self::pools().into_iter().filter(|p| staking::Ledger::<T>::get(&p).is_some()).collect()
     }
 
     fn nominatable_validators(current_era: EraIndex) -> Vec<T::AccountId> {
@@ -689,6 +715,19 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 
     fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
         match call {
+            Call::submit_unlocks(era, pool) => {
+                if !Self::is_in_pools(pool) {
+                    log!(debug, "rejecting submit_unlocks as the pool is not in pools");
+                    return InvalidTransaction::Call.into();
+                }
+
+                ValidTransaction::with_tag_prefix("RfisOffchain_Unlocks")
+				.priority(<T as Trait>::UnsignedPriority::get())
+				.and_provides(era)
+				.longevity(DEFAULT_LONGEVITY)
+				.propagate(true)
+				.build()
+            },
             Call::submit_total_bonded_before(era, _) => {
                 if Self::total_bonded_before_payout(era).is_some() {
                     log!(debug, "rejecting total_bonded_before_payout because total_bonded_before is already submitted.");
