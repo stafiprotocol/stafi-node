@@ -156,9 +156,9 @@ decl_storage! {
         TotalBondedBeforePayout get(fn total_bonded_before_payout): map hasher(blake2_128_concat) EraIndex => Option<BalanceOf<T>>;
         TotalBondedAfterPayout get(fn total_bonded_after_payout): map hasher(blake2_128_concat) EraIndex => Option<BalanceOf<T>>;
 
-        /// Paidouts: (era, (pool, validator)) => bool
+        /// Paidouts: (era, validator) => bool
         Paidouts get(fn paidouts):
-            double_map hasher(blake2_128_concat) EraIndex, hasher(twox_64_concat) (T::AccountId, T::AccountId) => Option<bool>;
+            double_map hasher(blake2_128_concat) EraIndex, hasher(twox_64_concat) T::AccountId => Option<bool>;
         /// Unbonding, (origin, pool) => [UnlockChunks]
         pub Unbonding get(fn unbonding): map hasher(twox_64_concat) (T::AccountId, T::AccountId) => Option<Vec<UnlockChunk<BalanceOf<T>>>>;
         /// Nominated (era, pool) => targets
@@ -290,8 +290,8 @@ decl_module! {
             ensure_root(origin)?;
             let min = Self::min_nomination_num();
             ensure!(new_num >= min && usize::from(new_num) <= MAX_NOMINATIONS, "max_nomination_num should in [min_nomination_num, MAX_NOMINATIONS]");
-            MinNominationNum::put(new_num);
-            Self::deposit_event(RawEvent::MinNominationNumSet(new_num));
+            MaxNominationNum::put(new_num);
+            Self::deposit_event(RawEvent::MaxNominationNumSet(new_num));
             Ok(())
         }
 
@@ -345,13 +345,12 @@ decl_module! {
             //     return;
             // }
 
-            let op_current_era = staking::CurrentEra::get();
-            if op_current_era.is_none() {
-                debug::info!("invalid current era");
+            let op_active = staking::ActiveEra::get();
+            if op_active.is_none() {
+                debug::info!("active era is none");
                 return;
             }
-            let era = op_current_era.unwrap();
-            debug::info!("current era: {:?}", era);
+            let era = op_active.unwrap().index;
 
             if Self::total_bonded_before_payout(&era).is_none() {
                 let before = Self::total_bonded();
@@ -363,7 +362,6 @@ decl_module! {
             }
 
             let last_era = era.saturating_sub(1);
-            debug::info!("last era: {:?}", last_era);
             // ensure one block won't deal more than one pool
             let mut wait_next_block = false;
             for p in Self::pools() {
@@ -379,12 +377,7 @@ decl_module! {
                 }
 
                 for t in nominations.targets {
-                    if Self::paidouts(last_era, (&p, &t)).is_none() && Self::is_validator(last_era, &t) {
-                        if let Err(e) = staking::Module::<T>::do_payout_stakers(t.clone(), last_era) {
-                            debug::info!("do payout stakers err: {:?}, ValidatorAccountId: {:?}, era: {:?}", e, &t, era);
-                            return
-                        }
-
+                    if Self::paidouts(last_era, &t).is_none() && Self::is_validator(last_era, &t) {
                         wait_next_block = true;
                         let call = Call::submit_paidouts(last_era, p.clone(), t).into();
                         if let Err(e) = SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call) {
@@ -482,11 +475,10 @@ decl_module! {
 
         /// pay out result
         #[weight = 10_000]
-        pub fn submit_paidouts(origin, era: EraIndex, pool: T::AccountId, validator: T::AccountId) -> DispatchResult {
-            debug::info!("submit_paidouts, era: {:?}, pool: {:?}, validator: {:?}", era, pool, validator);
+        pub fn submit_paidouts(origin, era: EraIndex, _pool: T::AccountId, validator: T::AccountId) -> DispatchResult {
             ensure_none(origin)?;
             let result = staking::Module::<T>::do_payout_stakers(validator.clone(), era).is_ok();
-            <Paidouts<T>>::insert(era, (pool, validator), result);
+            <Paidouts<T>>::insert(era, validator, result);
             Ok(())
         }
 
