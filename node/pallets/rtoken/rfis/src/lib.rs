@@ -359,6 +359,9 @@ decl_module! {
                     let call = Call::submit_unlocks(era, p).into();
                     if let Err(e) = SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call) {
                         debug::info!("failed to submit unlocks: {:?}", e);
+                    } else {
+                        // wait for next block
+                        return;
                     }
                 }
             }
