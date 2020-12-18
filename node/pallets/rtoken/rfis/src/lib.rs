@@ -6,7 +6,7 @@ use frame_support::{
     debug, decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchResult},
     ensure,
-    traits::{Currency, Get, ExistenceRequirement::{AllowDeath}},
+    traits::{Currency, Get, ExistenceRequirement::{AllowDeath, KeepAlive}},
 };
 use frame_system::{
     self as system, ensure_signed, ensure_root, ensure_none,
@@ -134,6 +134,12 @@ decl_error! {
         NotCurrentEra,
         /// Total_bonded_before not submitted
         TotalBondedBeforeNotSubmitted,
+        /// Has No Unbonding
+        HasNoUnbonding,
+        /// Nominate Switch Closed
+        NominateSwitchClosed,
+        /// Pool Already Unlocked
+        PoolAlreadyUnlocked,
     }
 }
 
@@ -162,10 +168,12 @@ decl_storage! {
         Paidouts get(fn paidouts):
             double_map hasher(blake2_128_concat) EraIndex, hasher(twox_64_concat) T::AccountId => Option<bool>;
         /// Unbonding: (origin, pool) => [UnlockChunks]
-        pub Unbonding get(fn unbonding): map hasher(twox_64_concat) (T::AccountId, T::AccountId) => Option<Vec<UnlockChunk<BalanceOf<T>>>>;
+        pub Unbonding get(fn unbonding): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) T::AccountId => Option<Vec<UnlockChunk<BalanceOf<T>>>>;
         /// Nominated: (era, pool) => targets
         Nominated get(fn nominated):
             double_map hasher(blake2_128_concat) EraIndex, hasher(twox_64_concat) T::AccountId => Option<Vec<T::AccountId>>;
+        /// unlocked_pools
+        UnlockedPools get(fn unlocked_pools): map hasher(blake2_128_concat) EraIndex => Option<Vec<T::AccountId>>;
     }
 }
 
@@ -183,7 +191,6 @@ decl_module! {
             let era = op_active.unwrap().index;
 
             if rtoken_rate::EraRate::get(SYMBOL, era).is_some() {
-                debug::info!("era rate has already been set up");
                 return;
             }
 
@@ -354,14 +361,17 @@ decl_module! {
             }
             let era = op_active.unwrap().index;
 
-            for p in Self::bonded_pools() {
-                if staking::Ledger::<T>::get(&p).unwrap().unlocking.iter().any(|chunk| chunk.era <= era) {
-                    let call = Call::submit_unlocks(era, p).into();
-                    if let Err(e) = SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call) {
-                        debug::info!("failed to submit unlocks: {:?}", e);
-                    } else {
-                        // wait for next block
-                        return;
+            let unlocked_pools = Self::unlocked_pools(&era).unwrap_or(vec![]);
+            if unlocked_pools.len() < Self::bonded_pools().len() {
+                for p in Self::bonded_pools() {
+                    if !unlocked_pools.contains(&p) && staking::Ledger::<T>::get(&p).unwrap().unlocking.iter().any(|chunk| chunk.era <= era) {
+                        let call = Call::submit_unlocks(era, p).into();
+                        if let Err(e) = SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call) {
+                            debug::info!("failed to submit unlocks: {:?}", e);
+                        } else {
+                            // wait for next block
+                            return;
+                        }
                     }
                 }
             }
@@ -378,29 +388,31 @@ decl_module! {
             let last_era = era.saturating_sub(1);
             // ensure one block won't deal more than one pool
             let mut wait_next_block = false;
-            for p in Self::bonded_pools() {
-                let op_nominations = staking::Nominators::<T>::get(&p);
-                if op_nominations.is_none() {
-                    debug::info!("{:?} has none nominations", &p);
-                    continue;
-                }
-                let nominations = op_nominations.unwrap();
-                if nominations.targets.is_empty() {
-                    debug::info!("nominations targets of {:?} is empty", &p);
-                    continue;
-                }
-
-                for t in nominations.targets {
-                    if Self::paidouts(last_era, &t).is_none() && Self::is_validator(last_era, &t) {
-                        wait_next_block = true;
-                        let call = Call::submit_paidouts(last_era, p.clone(), t).into();
-                        if let Err(e) = SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call) {
-                            debug::info!("failed to submit paidouts: {:?}", e);
+            if Self::total_bonded_after_payout(era).is_none() {
+                for p in Self::bonded_pools() {
+                    let op_nominations = staking::Nominators::<T>::get(&p);
+                    if op_nominations.is_none() {
+                        debug::info!("{:?} has none nominations", &p);
+                        continue;
+                    }
+                    let nominations = op_nominations.unwrap();
+                    if nominations.targets.is_empty() {
+                        debug::info!("nominations targets of {:?} is empty", &p);
+                        continue;
+                    }
+    
+                    for t in nominations.targets {
+                        if Self::paidouts(last_era, &t).is_none() && Self::is_validator(last_era, &t) {
+                            wait_next_block = true;
+                            let call = Call::submit_paidouts(last_era, p.clone(), t).into();
+                            if let Err(e) = SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call) {
+                                debug::info!("failed to submit paidouts: {:?}", e);
+                            }
                         }
                     }
-                }
-                if wait_next_block {
-                    return;
+                    if wait_next_block {
+                        return;
+                    }
                 }
             }
 
@@ -413,14 +425,14 @@ decl_module! {
                 return;
             }
 
-            let mut pools: Vec<T::AccountId> = Self::bonded_pools().into_iter().filter(|p| Self::nominated(&era, &p).is_none()).collect();
-            if pools.is_empty() {
-                debug::info!("no pool need to nominate");
+            if !Self::nominate_switch() {
+                debug::info!("nominate switch is off");
                 return;
             }
 
-            if !Self::nominate_switch() {
-                debug::info!("nominate switch is off");
+            let mut pools: Vec<T::AccountId> = Self::bonded_pools().into_iter().filter(|p| Self::nominated(&era, &p).is_none()).collect();
+            if pools.is_empty() {
+                debug::info!("no pool need to nominate");
                 return;
             }
 
@@ -465,9 +477,13 @@ decl_module! {
             ensure_none(origin)?;
             let current_era = staking::CurrentEra::get().ok_or(Error::<T>::NoCurrentEra)?;
             ensure!(era == current_era, Error::<T>::NotCurrentEra);
+            let mut unlocked_pools = Self::unlocked_pools(&era).unwrap_or(vec![]);
+            ensure!(!unlocked_pools.contains(&pool), Error::<T>::PoolAlreadyUnlocked);
             let mut ledger = staking::Ledger::<T>::get(&pool).ok_or(staking::Error::<T>::NotController)?;
             ledger = ledger.consolidate_unlocked(era);
             staking::Module::<T>::update_ledger(&pool, &ledger);
+            unlocked_pools.push(pool);
+            <UnlockedPools<T>>::insert(era, unlocked_pools);
 
             Ok(())
         }
@@ -586,6 +602,7 @@ decl_module! {
         #[weight = 100_000_000]
         pub fn liquidity_unbond(origin, pool: <T::Lookup as StaticLookup>::Source, value: u128) -> DispatchResult {
             let who = ensure_signed(origin)?;
+            ensure!(Self::nominate_switch(), Error::<T>::NominateSwitchClosed);
             ensure!(!value.is_zero(), Error::<T>::LiquidityUnbondZero);
             ensure!(staking::EraElectionStatus::<T>::get().is_closed(), staking::Error::<T>::CallNotAllowed);
             let controller = T::Lookup::lookup(pool)?;
@@ -597,7 +614,7 @@ decl_module! {
 
             let max_chunks = usize::from(T::BondingDuration::get() as u16).saturating_add(2);
             ensure!(ledger.unlocking.len() < max_chunks, staking::Error::<T>::NoMoreChunks);
-            let mut unbonding = <Unbonding<T>>::get((&who, &controller)).unwrap_or(vec![]);
+            let mut unbonding = <Unbonding<T>>::get(&who, &controller).unwrap_or(vec![]);
             ensure!(unbonding.len() < max_chunks, staking::Error::<T>::NoMoreChunks);
 
             let era = staking::CurrentEra::get().unwrap_or(0) + T::BondingDuration::get();
@@ -618,7 +635,7 @@ decl_module! {
 
             T::RCurrency::burn(&who, SYMBOL, value)?;
             staking::Module::<T>::update_ledger(&controller, &ledger);
-            <Unbonding<T>>::insert((&who, &controller), unbonding);
+            <Unbonding<T>>::insert(&who, &controller, unbonding);
             Self::deposit_event(RawEvent::LiquidityUnBond(who, controller, value, balance));
 
             Ok(())
@@ -632,7 +649,8 @@ decl_module! {
             let controller = T::Lookup::lookup(pool)?;
             ensure!(Self::is_in_pools(&controller), Error::<T>::PoolNotFound);
             let current_era = staking::CurrentEra::get().ok_or(Error::<T>::NoCurrentEra)?;
-            let unbonding = <Unbonding<T>>::get((&who, &controller)).unwrap_or(vec![]);
+            let unbonding = <Unbonding<T>>::get(&who, &controller).unwrap_or(vec![]);
+            ensure!(!unbonding.is_empty(), Error::<T>::HasNoUnbonding);
             let mut total: BalanceOf<T> = Zero::zero();
             let new_unbonding: Vec<UnlockChunk<BalanceOf<T>>> = unbonding.into_iter()
                 .filter(|chunk| if chunk.era > current_era {
@@ -642,8 +660,12 @@ decl_module! {
                     false
                 }).collect();
             
-            T::Currency::transfer(&controller, &who, total, AllowDeath)?;
-            <Unbonding<T>>::insert((&who, &controller), new_unbonding);
+            T::Currency::transfer(&controller, &who, total, KeepAlive)?;
+            if new_unbonding.is_empty() {
+                <Unbonding<T>>::remove(&who, &controller);
+            } else {
+                <Unbonding<T>>::insert(&who, &controller, new_unbonding);
+            }
             Self::deposit_event(RawEvent::LiquidityWithdrawUnBond(who, controller, total));
             Ok(())
         }
