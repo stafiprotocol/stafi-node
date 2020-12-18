@@ -575,6 +575,7 @@ decl_module! {
         #[weight = 100_000_000]
         pub fn liquidity_bond(origin, pool: <T::Lookup as StaticLookup>::Source, value: BalanceOf<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
+            ensure!(Self::nominate_switch(), Error::<T>::NominateSwitchClosed);
             ensure!(!value.is_zero(), Error::<T>::LiquidityBondZero);
             ensure!(staking::EraElectionStatus::<T>::get().is_closed(), staking::Error::<T>::CallNotAllowed);
             let controller = T::Lookup::lookup(pool)?;
@@ -602,7 +603,6 @@ decl_module! {
         #[weight = 100_000_000]
         pub fn liquidity_unbond(origin, pool: <T::Lookup as StaticLookup>::Source, value: u128) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            ensure!(Self::nominate_switch(), Error::<T>::NominateSwitchClosed);
             ensure!(!value.is_zero(), Error::<T>::LiquidityUnbondZero);
             ensure!(staking::EraElectionStatus::<T>::get().is_closed(), staking::Error::<T>::CallNotAllowed);
             let controller = T::Lookup::lookup(pool)?;
