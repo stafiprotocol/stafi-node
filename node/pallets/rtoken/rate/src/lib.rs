@@ -9,7 +9,7 @@ use sp_arithmetic::{helpers_128bit::multiply_by_rational};
 use node_primitives::{RSymbol};
 
 pub type RateType = u64;
-pub const RATEBASE: RateType = 1_000_000_000;
+pub const RATEBASE: RateType = 1_000_000_000_000;
 
 pub trait Trait: system::Trait {
     type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
