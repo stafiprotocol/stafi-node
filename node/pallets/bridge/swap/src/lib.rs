@@ -13,7 +13,7 @@
 
 use sp_std::prelude::*;
 use bridge_common::{self as bridge, ResourceId};
-use frame_support::traits::{Currency, ExistenceRequirement::AllowDeath, ExistenceRequirement::KeepAlive, Get};
+use frame_support::traits::{Currency, ExistenceRequirement::AllowDeath, ExistenceRequirement::KeepAlive, EnsureOrigin,Get};
 use frame_support::{decl_error, decl_module, dispatch::DispatchResult, ensure};
 use frame_system::{self as system, ensure_signed};
 use sp_runtime::{traits::{Zero, Saturating}};
@@ -31,6 +31,8 @@ type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as frame_system::Trai
 pub trait Trait: system::Trait + bridge::Trait {
     /// The currency mechanism.
     type Currency: Currency<Self::AccountId>;
+    /// Specifies the origin check provided by the bridge for calls that can only be called by the bridge pallet
+    type BridgeOrigin: EnsureOrigin<Self::Origin, Success = Self::AccountId>;
 
     // Ids can be defined by the runtime and passed in, perhaps from blake2b_128 hashes.
     type NativeTokenId: Get<ResourceId>;
@@ -83,6 +85,15 @@ decl_module! {
 
             let resource_id = T::NativeTokenId::get();
             <bridge::Module<T>>::transfer_fungible(source, dest_id, resource_id, recipient, U256::from(amount.saturated_into()))
+        }
+
+        /// Allows the bridge to swap native token back
+        #[weight = 195_000_000]
+        pub fn transfer_native_back(origin, recipient: T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+            let bridge_id = T::BridgeOrigin::ensure_origin(origin)?;
+            T::Currency::transfer(&bridge_id, &recipient, amount, KeepAlive)?;
+
+            Ok(())
         }
     }
 }

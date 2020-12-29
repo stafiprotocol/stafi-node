@@ -826,13 +826,16 @@ impl pallet_vesting::Trait for Runtime {
 }
 
 parameter_types! {
-    pub const ChainIdentity: ChainId = 1;
+	pub const ChainIdentity: ChainId = 1;
+	pub const ProposalLifetime: BlockNumber = 1000;
 }
 
 impl bridge_common::Trait for Runtime {
 	type Event = Event;
 	type AdminOrigin = EnsureRoot<AccountId>;
+	type Proposal = Call;
 	type ChainIdentity = ChainIdentity;
+	type ProposalLifetime = ProposalLifetime;
 }
 
 parameter_types! {
@@ -841,6 +844,7 @@ parameter_types! {
 
 impl bridge_swap::Trait for Runtime {
 	type Currency = Balances;
+	type BridgeOrigin = bridge_common::EnsureBridge<Runtime>;
 	type NativeTokenId = NativeTokenId;
 }
 
