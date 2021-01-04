@@ -15,7 +15,7 @@ use frame_system::{
 use sp_runtime::{
     ModuleId, Percent, Perbill,
     traits::{
-        Convert, Zero, AccountIdConversion, CheckedSub, SaturatedConversion, Saturating, StaticLookup,
+        Convert, Zero, AccountIdConversion, CheckedAdd, CheckedSub, SaturatedConversion, Saturating, StaticLookup
     },
     transaction_validity::{
 		TransactionValidity, ValidTransaction, InvalidTransaction,
@@ -29,11 +29,13 @@ use pallet_staking::{
 use pallet_session as session;
 use rtoken_balances::{traits::{Currency as RCurrency}};
 use node_primitives::{RSymbol};
+use sp_arithmetic::{helpers_128bit::multiply_by_rational};
 
 const SYMBOL: RSymbol = RSymbol::RFIS;
 const MODULEID_LEN: usize = 8;
 const MAX_ONBOARD_VALIDATORS: usize = 300;
 const DEFAULT_LONGEVITY: u64 = 600;
+const UNBOND_COMMISSION_BASE: u16 = 1000;
 
 pub(crate) const LOG_TARGET: &'static str = "rfis";
 
@@ -174,6 +176,9 @@ decl_storage! {
             double_map hasher(blake2_128_concat) EraIndex, hasher(twox_64_concat) T::AccountId => Option<Vec<T::AccountId>>;
         /// unlocked_pools
         UnlockedPools get(fn unlocked_pools): map hasher(blake2_128_concat) EraIndex => Option<Vec<T::AccountId>>;
+
+        /// Unbond commission
+        UnbondCommission get(fn unbond_commission): u16 = 2;
     }
 }
 
@@ -345,6 +350,15 @@ decl_module! {
             ensure_root(origin)?;
             let dest = T::Lookup::lookup(new_receiver)?;
             <Receiver<T>>::put(dest);
+            Ok(())
+        }
+
+        /// set unbond commission, which the denominator is 1000
+        #[weight = 10_000]
+        pub fn set_unbond_commission(origin, new_commission: u16) -> DispatchResult {
+            ensure_root(origin)?;
+            ensure!(new_commission < UNBOND_COMMISSION_BASE, "new commission too large");
+            UnbondCommission::put(new_commission);
             Ok(())
         }
 
@@ -583,7 +597,7 @@ decl_module! {
             let mut ledger = staking::Ledger::<T>::get(&controller).ok_or(Error::<T>::PoolUnbond)?;
 
             let limit = Self::pool_balance_limit();
-            let bonded = Self::bonded_of(&controller) + value;
+            let bonded = Self::bonded_of(&controller).checked_add(&value).ok_or(Error::<T>::Overflow)?;
             ensure!(limit.is_zero() || bonded <= limit, Error::<T>::PoolLimitReached);
 
             let v = value.saturated_into::<u128>();
@@ -604,6 +618,8 @@ decl_module! {
         pub fn liquidity_unbond(origin, pool: <T::Lookup as StaticLookup>::Source, value: u128) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(!value.is_zero(), Error::<T>::LiquidityUnbondZero);
+            let op_receiver = Self::receiver();
+            ensure!(op_receiver.is_some(), "No receiver to get unbond commission fee");
             ensure!(staking::EraElectionStatus::<T>::get().is_closed(), staking::Error::<T>::CallNotAllowed);
             let controller = T::Lookup::lookup(pool)?;
             ensure!(Self::is_in_pools(&controller), Error::<T>::PoolNotFound);
@@ -618,11 +634,13 @@ decl_module! {
             ensure!(unbonding.len() < max_chunks, staking::Error::<T>::NoMoreChunks);
 
             let era = staking::CurrentEra::get().unwrap_or(0) + T::BondingDuration::get();
-            let balance = rtoken_rate::Module::<T>::rtoken_to_token(SYMBOL, value).saturated_into::<BalanceOf<T>>();
+            let fee = Self::unbond_fee(value);
+            let left_value = value - fee;
+            let balance = rtoken_rate::Module::<T>::rtoken_to_token(SYMBOL, left_value).saturated_into::<BalanceOf<T>>();
             ensure!(ledger.active >= balance, Error::<T>::InsufficientBalance);
             ledger.active -= balance;
             if let Some(chunk) = ledger.unlocking.iter_mut().find(|chunk| chunk.era == era) {
-                chunk.value += balance;
+                chunk.value.checked_add(&balance).ok_or(Error::<T>::Overflow)?;
             } else {
                 ledger.unlocking.push(UnlockChunk { value: balance, era });
             }
@@ -633,10 +651,12 @@ decl_module! {
                 unbonding.push(UnlockChunk { value: balance, era });
             }
 
-            T::RCurrency::burn(&who, SYMBOL, value)?;
+            let receiver = op_receiver.unwrap();
+            T::RCurrency::transfer(&who, &receiver, SYMBOL, fee)?;
+            T::RCurrency::burn(&who, SYMBOL, left_value)?;
             staking::Module::<T>::update_ledger(&controller, &ledger);
             <Unbonding<T>>::insert(&who, &controller, unbonding);
-            Self::deposit_event(RawEvent::LiquidityUnBond(who, controller, value, balance));
+            Self::deposit_event(RawEvent::LiquidityUnBond(who, controller, left_value, balance));
 
             Ok(())
         }
@@ -731,6 +751,10 @@ impl<T: Trait> Module<T> {
 
     fn is_validator(era: EraIndex, t: &T::AccountId) -> bool {
         staking::ErasRewardPoints::<T>::get(&era).individual.contains_key(&t)
+    }
+    
+    fn unbond_fee(value: u128) -> u128 {
+        multiply_by_rational(value, Self::unbond_commission().into(), UNBOND_COMMISSION_BASE.into()).unwrap_or(0)
     }
 }
 
