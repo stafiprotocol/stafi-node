@@ -12,9 +12,10 @@
 //! Tests for the module.
 
 use super::*;
-use super::mock::*;
+use super::mock::{*, Call};
 use frame_support::{assert_ok, assert_noop};
 use node_primitives::{ETH_CHAIN_ID};
+use sp_runtime::traits::BadOrigin;
 
 #[test]
 fn transfer_native_should_work() {
@@ -72,4 +73,85 @@ fn transfer_native_should_work() {
 		assert_eq!(Balances::free_balance(BridgeCommon::account_id()), 80);
 		assert_eq!(Balances::free_balance(&recipient_account), chain_fees);
 	});
+}
+
+#[test]
+fn transfer_native_back_should_work() {
+    new_test_ext().execute_with(|| {
+        let recipient = RELAYER_A;
+		let bridge_id: u64 = BridgeCommon::account_id();
+
+		assert_noop!(
+			BridgeSwap::transfer_native_back(Origin::signed(1), recipient, 100),
+			BadOrigin,
+		);
+
+		assert_ok!(Balances::transfer(Origin::signed(1), bridge_id, 100));
+
+        // transfer_native_back
+        assert_ok!(BridgeSwap::transfer_native_back(
+            Origin::signed(bridge_id),
+            recipient,
+            100
+        ));
+    })
+}
+
+fn make_transfer_proposal(to: u64, amount: u64) -> Call {
+    Call::BridgeSwap(crate::Call::transfer_native_back(to, amount.into()))
+}
+
+#[test]
+fn transfer_native_back_proposal() {
+    new_test_ext().execute_with(|| {
+        let prop_id = 1;
+        let src_id = 2;
+        let r_id = bridge_common::derive_resource_id(src_id, b"transfer");
+        let resource = b"BridgeSwap.transfer_native_back".to_vec();
+		let proposal = make_transfer_proposal(RELAYER_A, 10);
+		
+		assert_ok!(Balances::transfer(Origin::signed(1), BridgeCommon::account_id(), 100));
+
+        assert_ok!(BridgeCommon::set_threshold(Origin::root(), TEST_THRESHOLD));
+        assert_ok!(BridgeCommon::add_relayer(Origin::root(), RELAYER_A));
+        assert_ok!(BridgeCommon::add_relayer(Origin::root(), RELAYER_B));
+        assert_ok!(BridgeCommon::add_relayer(Origin::root(), RELAYER_C));
+        assert_ok!(BridgeCommon::whitelist_chain(Origin::root(), src_id));
+        assert_ok!(BridgeCommon::add_resource(Origin::root(), r_id, resource));
+
+        // Create proposal (& vote)
+        assert_ok!(BridgeCommon::acknowledge_proposal(
+            Origin::signed(RELAYER_A),
+            prop_id,
+            src_id,
+            r_id,
+            Box::new(proposal.clone())
+        ));
+        let prop = BridgeCommon::votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
+        let expected = bridge::ProposalVotes {
+            voted: vec![RELAYER_A],
+            status: bridge_common::ProposalStatus::Active,
+            expiry: ProposalLifetime::get() as u64,
+        };
+        assert_eq!(prop, expected);
+
+        // Third relayer votes in favour
+        assert_ok!(BridgeCommon::acknowledge_proposal(
+            Origin::signed(RELAYER_C),
+            prop_id,
+            src_id,
+            r_id,
+            Box::new(proposal.clone())
+        ));
+        let prop = BridgeCommon::votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
+        let expected = bridge::ProposalVotes {
+            voted: vec![RELAYER_A, RELAYER_C],
+            status: bridge::ProposalStatus::Executed,
+            expiry: ProposalLifetime::get() as u64,
+        };
+        assert_eq!(prop, expected);
+
+        assert_eq!(Balances::free_balance(RELAYER_A), 10);
+        assert_eq!(Balances::free_balance(BridgeCommon::account_id()), 90);
+    })
 }

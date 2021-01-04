@@ -67,16 +67,19 @@ pub struct ProposalVotes<AccountId, BlockNumber> {
 }
 
 impl<A: PartialEq, B: PartialOrd + Default> ProposalVotes<A, B> {
-    /// Attempts to mark the proposal as approve or rejected.
-    /// Returns true if the status changes from active.
+    /// derivate next status according to threshold and now
     fn derivate(&mut self, threshold: u32, now: B) -> ProposalStatus {
-        if !self.is_completed() && self.expiry <= now {
+        if self.is_completed() {
+            self.status.clone()
+        } else if self.expiry <= now {
             self.status = ProposalStatus::Expired;
-        } else if self.status == ProposalStatus::Active && self.voted.len() >= threshold as usize {
+            ProposalStatus::Expired
+        } else if self.voted.len() >= threshold as usize {
             self.status = ProposalStatus::Passed;
+            ProposalStatus::Passed
+        } else {
+            self.status.clone()
         }
-
-        self.status.clone()
     }
 
     /// Returns true if the proposal has been rejected or approved, otherwise false.
@@ -515,10 +518,15 @@ impl<T: Trait> Module<T> {
 
         // Ensure the proposal isn't complete and relayer hasn't already voted
         ensure!(!votes.is_completed(), Error::<T>::ProposalAlreadyCompleted);
-        ensure!(!votes.is_expired(now), Error::<T>::ProposalExpired);
         ensure!(!votes.has_voted(&who), Error::<T>::RelayerAlreadyVoted);
+        if votes.is_expired(now) {
+            votes.status = ProposalStatus::Expired;
+            <Votes<T>>::insert(src_id, (nonce, prop.clone()), votes.clone());
+        }
+        ensure!(!votes.is_expired(now), Error::<T>::ProposalExpired);
 
         votes.voted.push(who.clone());
+        votes.derivate(Self::relayer_threshold(), now);
         <Votes<T>>::insert(src_id, (nonce, prop.clone()), votes);
 
         Self::deposit_event(RawEvent::VoteFor(src_id, nonce, who.clone()));
@@ -531,12 +539,7 @@ impl<T: Trait> Module<T> {
         ensure!(op_votes.is_some(), Error::<T>::ProposalDoesNotExist);
 
         let mut votes = op_votes.unwrap();
-        let now = system::Module::<T>::block_number();
-
-        let status = votes.derivate(Self::relayer_threshold(), now);
-        <Votes<T>>::insert(src_id, (nonce, prop.clone()), votes.clone());
-
-        match status {
+        match votes.status {
             ProposalStatus::Passed => {
                 Self::deposit_event(RawEvent::ProposalPassed(src_id, nonce));
                 let call = prop.clone();

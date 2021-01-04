@@ -12,8 +12,23 @@
 //! Tests for the module.
 
 use super::*;
-use super::mock::*;
+use super::mock::{*, Call};
 use frame_support::{assert_ok, assert_noop};
+
+#[test]
+fn derive_ids() {
+    let chain = 1;
+    let id = [
+        0x21, 0x60, 0x5f, 0x71, 0x84, 0x5f, 0x37, 0x2a, 0x9e, 0xd8, 0x42, 0x53, 0xd2, 0xd0, 0x24,
+        0xb7, 0xb1, 0x09, 0x99, 0xf4,
+    ];
+    let r_id = derive_resource_id(chain, &id);
+    let expected = [
+        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x21, 0x60, 0x5f, 0x71, 0x84, 0x5f,
+        0x37, 0x2a, 0x9e, 0xd8, 0x42, 0x53, 0xd2, 0xd0, 0x24, 0xb7, 0xb1, 0x09, 0x99, 0xf4, chain,
+    ];
+    assert_eq!(r_id, expected);
+}
 
 #[test]
 fn whitelist_chain_should_work() {
@@ -34,6 +49,65 @@ fn whitelist_chain_should_work() {
 			Error::<Test>::ChainAlreadyWhitelisted,
 		);
 	});
+}
+
+#[test]
+fn set_get_threshold() {
+    new_test_ext().execute_with(|| {
+        assert_eq!(<RelayerThreshold>::get(), 1);
+
+        assert_ok!(BridgeCommon::set_threshold(Origin::root(), TEST_THRESHOLD));
+		assert_eq!(<RelayerThreshold>::get(), TEST_THRESHOLD);
+
+        assert_ok!(BridgeCommon::set_threshold(Origin::root(), 5));
+		assert_eq!(<RelayerThreshold>::get(), 5);
+    })
+}
+
+#[test]
+fn setup_resources() {
+    new_test_ext().execute_with(|| {
+        let id: ResourceId = [1; 32];
+        let method = "Pallet.do_something".as_bytes().to_vec();
+        let method2 = "Pallet.do_somethingElse".as_bytes().to_vec();
+
+        assert_ok!(BridgeCommon::add_resource(Origin::root(), id, method.clone()));
+        assert_eq!(BridgeCommon::resources(id), Some(method));
+
+        assert_ok!(BridgeCommon::add_resource(Origin::root(), id, method2.clone()));
+        assert_eq!(BridgeCommon::resources(id), Some(method2));
+
+        assert_ok!(BridgeCommon::remove_resource(Origin::root(), id));
+        assert_eq!(BridgeCommon::resources(id), None);
+    })
+}
+
+#[test]
+fn add_remove_relayer() {
+    new_test_ext().execute_with(|| {
+        assert_ok!(BridgeCommon::set_threshold(Origin::root(), TEST_THRESHOLD));
+        assert_eq!(BridgeCommon::relayer_count(), 0);
+
+        assert_ok!(BridgeCommon::add_relayer(Origin::root(), RELAYER_A));
+        assert_ok!(BridgeCommon::add_relayer(Origin::root(), RELAYER_B));
+        assert_ok!(BridgeCommon::add_relayer(Origin::root(), RELAYER_C));
+        assert_eq!(BridgeCommon::relayer_count(), 3);
+
+        // Already exists
+        assert_noop!(
+            BridgeCommon::add_relayer(Origin::root(), RELAYER_A),
+            Error::<Test>::RelayerAlreadyExists
+        );
+
+        // Confirm removal
+        assert_ok!(BridgeCommon::remove_relayer(Origin::root(), RELAYER_B));
+        assert_eq!(BridgeCommon::relayer_count(), 2);
+        assert_noop!(
+            BridgeCommon::remove_relayer(Origin::root(), RELAYER_B),
+            Error::<Test>::RelayerInvalid
+        );
+        assert_eq!(BridgeCommon::relayer_count(), 2);
+    })
 }
 
 #[test]
@@ -113,3 +187,126 @@ fn set_is_pasued_should_work() {
 		assert_eq!(BridgeCommon::is_paused(), false);
 	});
 }
+
+fn make_proposal(r: Vec<u8>) -> mock::Call {
+    Call::System(system::Call::remark(r))
+}
+
+#[test]
+fn create_sucessful_proposal() {
+    let src_id = 2;
+    let r_id = derive_resource_id(src_id, b"remark");
+
+    new_test_ext_initialized(src_id, r_id, b"System.remark".to_vec()).execute_with(|| {
+        let prop_id = 1;
+		let proposal = make_proposal(vec![10]);
+
+        // Create proposal (& vote)
+        assert_ok!(BridgeCommon::acknowledge_proposal(
+            Origin::signed(RELAYER_A),
+            prop_id,
+            src_id,
+            r_id,
+            Box::new(proposal.clone())
+        ));
+        let prop = BridgeCommon::votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
+        let expected = ProposalVotes {
+            voted: vec![RELAYER_A],
+            status: ProposalStatus::Active,
+            expiry: ProposalLifetime::get() as u64,
+        };
+        assert_eq!(prop, expected);
+
+        // Third relayer votes in favour
+        assert_ok!(BridgeCommon::acknowledge_proposal(
+            Origin::signed(RELAYER_C),
+            prop_id,
+            src_id,
+            r_id,
+            Box::new(proposal.clone())
+        ));
+        let prop = BridgeCommon::votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
+        let expected = ProposalVotes {
+            voted: vec![RELAYER_A, RELAYER_C],
+            status: ProposalStatus::Executed,
+            expiry: ProposalLifetime::get() as u64,
+        };
+        assert_eq!(prop, expected);
+    })
+}
+
+#[test]
+fn proposal_expires_should_work() {
+    let src_id = 2;
+    let r_id = derive_resource_id(src_id, b"remark");
+
+    new_test_ext_initialized(src_id, r_id, b"System.remark".to_vec()).execute_with(|| {
+        let prop_id = 1;
+        let proposal = make_proposal(vec![10]);
+
+        // Create proposal (& vote)
+        assert_ok!(BridgeCommon::acknowledge_proposal(
+            Origin::signed(RELAYER_A),
+            prop_id,
+            src_id,
+            r_id,
+            Box::new(proposal.clone())
+        ));
+        let prop = BridgeCommon::votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
+        let expected = ProposalVotes {
+            voted: vec![RELAYER_A],
+            status: ProposalStatus::Active,
+            expiry: ProposalLifetime::get() as u64,
+        };
+        assert_eq!(prop, expected);
+
+        // Increment enough blocks such that now == expiry
+		System::set_block_number((ProposalLifetime::get() + 1) as u64);
+		let now = System::block_number();
+		let votes = BridgeCommon::votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
+		assert_eq!(votes.is_expired(now), true);
+
+		BridgeCommon::acknowledge_proposal(
+            Origin::signed(RELAYER_B),
+            prop_id,
+            src_id,
+            r_id,
+            Box::new(proposal.clone())
+        );
+
+		// assert_ok!(
+        //     BridgeCommon::acknowledge_proposal(
+        //         Origin::signed(RELAYER_B),
+        //         prop_id,
+        //         src_id,
+        //         r_id,
+        //         Box::new(proposal.clone())
+        //     )
+        // );
+
+        // Attempt to submit a vote should fail
+        // assert_noop!(
+        //     BridgeCommon::acknowledge_proposal(
+        //         Origin::signed(RELAYER_B),
+        //         prop_id,
+        //         src_id,
+        //         r_id,
+        //         Box::new(proposal.clone())
+        //     ),
+        //     Error::<Test>::ProposalExpired
+        // );
+
+        // Proposal state should changed
+        let prop = BridgeCommon::votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
+        let expected = ProposalVotes {
+            voted: vec![RELAYER_A],
+            status: ProposalStatus::Expired,
+            expiry: ProposalLifetime::get() as u64,
+        };
+        assert_eq!(prop, expected);
+    })
+}
+
+// fn last_event() -> TestEvent {
+// 	system::Module::<Test>::events().pop().map(|e| e.event).expect("Event expected")
+// }
