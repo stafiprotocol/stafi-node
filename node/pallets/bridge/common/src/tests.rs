@@ -13,7 +13,9 @@
 
 use super::*;
 use super::mock::{*, Call};
-use frame_support::{assert_ok, assert_noop};
+use frame_support::{assert_ok, assert_noop, assert_err};
+use sp_runtime::traits::BadOrigin;
+use node_primitives::{RSymbol};
 
 #[test]
 fn derive_ids() {
@@ -35,7 +37,7 @@ fn whitelist_chain_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
 			BridgeCommon::whitelist_chain(Origin::signed(42), 2),
-			sp_runtime::traits::BadOrigin,
+			BadOrigin,
 		);
 		assert_noop!(
 			BridgeCommon::whitelist_chain(Origin::root(), 1),
@@ -59,8 +61,15 @@ fn set_get_threshold() {
         assert_ok!(BridgeCommon::set_threshold(Origin::root(), TEST_THRESHOLD));
 		assert_eq!(<RelayerThreshold>::get(), TEST_THRESHOLD);
 
-        assert_ok!(BridgeCommon::set_threshold(Origin::root(), 5));
-		assert_eq!(<RelayerThreshold>::get(), 5);
+        assert_noop!(
+            BridgeCommon::set_threshold(Origin::signed(42), 5),
+            BadOrigin
+        );
+
+        assert_noop!(
+            BridgeCommon::set_threshold(Origin::root(), 0),
+            Error::<Test>::InvalidThreshold
+        );
     })
 }
 
@@ -74,8 +83,15 @@ fn setup_resources() {
         assert_ok!(BridgeCommon::add_resource(Origin::root(), id, method.clone()));
         assert_eq!(BridgeCommon::resources(id), Some(method));
 
-        assert_ok!(BridgeCommon::add_resource(Origin::root(), id, method2.clone()));
-        assert_eq!(BridgeCommon::resources(id), Some(method2));
+        assert_noop!(
+            BridgeCommon::add_resource(Origin::signed(42), id, method2.clone()),
+            BadOrigin
+        );
+
+        assert_noop!(
+            BridgeCommon::remove_resource(Origin::signed(42), id),
+            BadOrigin
+        );
 
         assert_ok!(BridgeCommon::remove_resource(Origin::root(), id));
         assert_eq!(BridgeCommon::resources(id), None);
@@ -89,9 +105,18 @@ fn add_remove_relayer() {
         assert_eq!(BridgeCommon::relayer_count(), 0);
 
         assert_ok!(BridgeCommon::add_relayer(Origin::root(), RELAYER_A));
+        
+        assert_noop!(
+            BridgeCommon::add_relayer(Origin::signed(42), RELAYER_B),
+            BadOrigin
+        );
         assert_ok!(BridgeCommon::add_relayer(Origin::root(), RELAYER_B));
         assert_ok!(BridgeCommon::add_relayer(Origin::root(), RELAYER_C));
         assert_eq!(BridgeCommon::relayer_count(), 3);
+        assert_noop!(
+            BridgeCommon::add_relayer(Origin::root(), RELAYER_C),
+            Error::<Test>::RelayerAlreadyExists
+        );
 
         // Already exists
         assert_noop!(
@@ -100,6 +125,10 @@ fn add_remove_relayer() {
         );
 
         // Confirm removal
+        assert_noop!(
+            BridgeCommon::remove_relayer(Origin::signed(42), RELAYER_B),
+            BadOrigin
+        );
         assert_ok!(BridgeCommon::remove_relayer(Origin::root(), RELAYER_B));
         assert_eq!(BridgeCommon::relayer_count(), 2);
         assert_noop!(
@@ -108,6 +137,30 @@ fn add_remove_relayer() {
         );
         assert_eq!(BridgeCommon::relayer_count(), 2);
     })
+}
+
+#[test]
+fn map_resource_to_rsymbol_should_work() {
+    new_test_ext().execute_with(|| {
+        let rid: ResourceId = [1; 32];
+        let sym: RSymbol = RSymbol::RFIS;
+
+        assert_noop!(
+			BridgeCommon::map_resource_and_rsymbol(Origin::signed(42), rid, sym),
+			sp_runtime::traits::BadOrigin,
+        );
+        assert_ok!(BridgeCommon::map_resource_and_rsymbol(Origin::root(), rid, sym));
+        assert_eq!(BridgeCommon::resource_rsymbol(rid), Some(sym));
+        assert_eq!(BridgeCommon::rsymbol_resource(sym), Some(rid));
+        
+        assert_noop!(
+			BridgeCommon::unmap_resource_and_rsymbol(Origin::signed(42), rid, sym),
+			sp_runtime::traits::BadOrigin,
+        );
+        assert_ok!(BridgeCommon::unmap_resource_and_rsymbol(Origin::root(), rid, sym));
+        assert_eq!(BridgeCommon::resource_rsymbol(rid).is_none(), true);
+        assert_eq!(BridgeCommon::rsymbol_resource(sym).is_none(), true);
+    });
 }
 
 #[test]
@@ -155,6 +208,27 @@ fn set_chain_fees_should_work() {
 		assert_eq!(BridgeCommon::chain_fees(2), None);
 		assert_ok!(BridgeCommon::set_chain_fees(Origin::signed(42), 2, 10));
 		assert_eq!(BridgeCommon::chain_fees(2), Some(10));
+	});
+}
+
+#[test]
+fn set_chain_resource_fee_should_work() {
+	new_test_ext().execute_with(|| {
+        let rid: ResourceId = [1; 32];
+
+		assert_noop!(
+			BridgeCommon::set_chain_resource_fee(Origin::signed(42), 2, rid, 10),
+			Error::<Test>::InvalidChainId,
+		);
+		assert_ok!(BridgeCommon::whitelist_chain(Origin::root(), 2));
+		assert_noop!(
+			BridgeCommon::set_chain_resource_fee(Origin::signed(42), 2, rid, 10),
+			Error::<Test>::InvalidProxyAccount,
+		);
+		assert_ok!(BridgeCommon::set_proxy_accounts(Origin::root(), 42));
+		assert_eq!(BridgeCommon::chain_resource_fee(2, rid), None);
+		assert_ok!(BridgeCommon::set_chain_resource_fee(Origin::signed(42), 2, rid, 10));
+		assert_eq!(BridgeCommon::chain_resource_fee(2, rid), Some(10));
 	});
 }
 
@@ -266,35 +340,17 @@ fn proposal_expires_should_work() {
 		let votes = BridgeCommon::votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();
 		assert_eq!(votes.is_expired(now), true);
 
-		BridgeCommon::acknowledge_proposal(
-            Origin::signed(RELAYER_B),
-            prop_id,
-            src_id,
-            r_id,
-            Box::new(proposal.clone())
-        );
-
-		// assert_ok!(
-        //     BridgeCommon::acknowledge_proposal(
-        //         Origin::signed(RELAYER_B),
-        //         prop_id,
-        //         src_id,
-        //         r_id,
-        //         Box::new(proposal.clone())
-        //     )
-        // );
-
         // Attempt to submit a vote should fail
-        // assert_noop!(
-        //     BridgeCommon::acknowledge_proposal(
-        //         Origin::signed(RELAYER_B),
-        //         prop_id,
-        //         src_id,
-        //         r_id,
-        //         Box::new(proposal.clone())
-        //     ),
-        //     Error::<Test>::ProposalExpired
-        // );
+        assert_err!(
+            BridgeCommon::acknowledge_proposal(
+                Origin::signed(RELAYER_B),
+                prop_id,
+                src_id,
+                r_id,
+                Box::new(proposal.clone())
+            ),
+            Error::<Test>::ProposalExpired
+        );
 
         // Proposal state should changed
         let prop = BridgeCommon::votes(src_id, (prop_id.clone(), proposal.clone())).unwrap();

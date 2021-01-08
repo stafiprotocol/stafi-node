@@ -89,7 +89,7 @@ decl_module! {
 
         /// Allows the bridge to swap native token back
         #[weight = 195_000_000]
-        pub fn transfer_native_back(origin, recipient: T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+        pub fn transfer_native_back(origin, recipient: T::AccountId, amount: BalanceOf<T>, _resource_id: ResourceId) -> DispatchResult {
             let bridge_id = T::BridgeOrigin::ensure_origin(origin)?;
             T::Currency::transfer(&bridge_id, &recipient, amount, KeepAlive)?;
 

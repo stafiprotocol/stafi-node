@@ -79,26 +79,24 @@ fn transfer_native_should_work() {
 fn transfer_native_back_should_work() {
     new_test_ext().execute_with(|| {
         let recipient = RELAYER_A;
-		let bridge_id: u64 = BridgeCommon::account_id();
+        let bridge_id: u64 = BridgeCommon::account_id();
+        let rid: ResourceId = [1; 32];
 
 		assert_noop!(
-			BridgeSwap::transfer_native_back(Origin::signed(1), recipient, 100),
+			BridgeSwap::transfer_native_back(Origin::signed(1), recipient, 100, rid),
 			BadOrigin,
 		);
 
 		assert_ok!(Balances::transfer(Origin::signed(1), bridge_id, 100));
 
         // transfer_native_back
-        assert_ok!(BridgeSwap::transfer_native_back(
-            Origin::signed(bridge_id),
-            recipient,
-            100
-        ));
+        assert_ok!(BridgeSwap::transfer_native_back(Origin::signed(bridge_id), recipient, 100, rid));
     })
 }
 
 fn make_transfer_proposal(to: u64, amount: u64) -> Call {
-    Call::BridgeSwap(crate::Call::transfer_native_back(to, amount.into()))
+    let rid: ResourceId = [1; 32];
+    Call::BridgeSwap(crate::Call::transfer_native_back(to, amount.into(), rid))
 }
 
 #[test]

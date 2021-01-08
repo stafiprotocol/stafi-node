@@ -26,7 +26,7 @@ use sp_runtime::{
     RuntimeDebug, ModuleId,
     traits::{AccountIdConversion, StaticLookup, Dispatchable}
 };
-use node_primitives::{ChainId, Balance};
+use node_primitives::{ChainId, Balance, RSymbol};
 
 #[cfg(test)]
 mod mock;
@@ -197,7 +197,7 @@ decl_storage! {
         /// All whitelisted chains and their respective transaction counts
         pub ChainNonces get(fn chains): map hasher(twox_64_concat) ChainId => Option<DepositNonce>;
 
-        /// All whitelisted chains and their respective transaction fees
+        /// fee to cover the commission happened on other chains such as ethereum
         pub ChainFees get(fn chain_fees): map hasher(twox_64_concat) ChainId => Option<Balance>;
 
         /// Proxy accounts for setting chain fees
@@ -225,7 +225,17 @@ decl_storage! {
             => Option<ProposalVotes<T::AccountId, T::BlockNumber>>;
 
         /// Utilized by the bridge software to map resource IDs to actual methods
-        pub Resources get(fn resources): map hasher(blake2_128_concat) ResourceId => Option<Vec<u8>>
+        pub Resources get(fn resources): map hasher(blake2_128_concat) ResourceId => Option<Vec<u8>>;
+
+        /// rId => Rsymbol
+        pub ResourceRsymbol get(fn resource_rsymbol): map hasher(blake2_128_concat) ResourceId => Option<RSymbol>;
+        /// Rsymbol => ResourceId
+        pub RsymbolResource get(fn rsymbol_resource): map hasher(blake2_128_concat) RSymbol => Option<ResourceId>;
+
+        /// fee to cover the commission happened on other chains such as ethereum
+        /// chainId, ResourceId => Balance
+        pub ChainResourceFee get(fn chain_resource_fee):
+            double_map hasher(twox_64_concat) ChainId, hasher(blake2_128_concat) ResourceId => Option<Balance>;
     }
 }
 
@@ -319,6 +329,28 @@ decl_module! {
             Ok(())
         }
 
+        /// Map resourceId to Rsymbol
+        #[weight = 10_000]
+        pub fn map_resource_and_rsymbol(origin, resource_id: ResourceId, sym: RSymbol) -> DispatchResult {
+            Self::ensure_admin(origin)?;
+
+            <ResourceRsymbol>::insert(&resource_id, &sym);
+            <RsymbolResource>::insert(&sym, &resource_id);
+
+            Ok(())
+        }
+
+        /// Unmap resourceId to Rsymbol
+        #[weight = 10_000]
+        pub fn unmap_resource_and_rsymbol(origin, resource_id: ResourceId, sym: RSymbol) -> DispatchResult {
+            Self::ensure_admin(origin)?;
+
+            <ResourceRsymbol>::remove(&resource_id);
+            <RsymbolResource>::remove(&sym);
+
+            Ok(())
+        }
+
         /// Commits a vote in favour of the provided proposal.
         ///
         /// If a proposal with the given nonce and source chain ID does not already exist, it will
@@ -328,11 +360,11 @@ decl_module! {
         /// - weight of proposed call, regardless of whether execution is performed
         /// # </weight>
         #[weight = (call.get_dispatch_info().weight + 195_000_000, call.get_dispatch_info().class, Pays::Yes)]
-        pub fn acknowledge_proposal(origin, nonce: DepositNonce, src_id: ChainId, r_id: ResourceId, call: Box<T::Proposal>) -> DispatchResult {
+        pub fn acknowledge_proposal(origin, nonce: DepositNonce, src_id: ChainId, resource_id: ResourceId, call: Box<T::Proposal>) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(Self::is_relayer(&who), Error::<T>::MustBeRelayer);
             ensure!(Self::chain_whitelisted(src_id), Error::<T>::ChainNotWhitelisted);
-            ensure!(Self::resources(r_id).is_some(), Error::<T>::ResourceDoesNotExist);
+            ensure!(Self::resources(resource_id).is_some(), Error::<T>::ResourceDoesNotExist);
 
             Self::commit_vote(who, nonce, src_id, call.clone())?;
             Self::try_resolve_proposal(nonce, src_id, call)
@@ -390,6 +422,18 @@ decl_module! {
             <ChainFees>::insert(id, fees);
 
             Self::deposit_event(RawEvent::ChainFeesSet(id, fees));
+            Ok(())
+        }
+
+        /// Set Chain Resource Fee
+        #[weight = 10_000]
+        pub fn set_chain_resource_fee(origin, id: ChainId, resource_id: ResourceId, fee: Balance) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+
+            ensure!(Self::chain_whitelisted(id), Error::<T>::InvalidChainId);
+            ensure!(<ProxyAccounts<T>>::contains_key(&who), Error::<T>::InvalidProxyAccount);
+
+            <ChainResourceFee>::insert(id, resource_id, fee);
             Ok(())
         }
 
