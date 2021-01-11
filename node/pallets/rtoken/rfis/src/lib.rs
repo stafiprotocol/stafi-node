@@ -78,7 +78,7 @@ decl_event! {
         /// liquidity stake record
         LiquidityBond(AccountId, AccountId, Balance, u128),
         /// liquidity unbond record
-        LiquidityUnBond(AccountId, AccountId, u128, Balance),
+        LiquidityUnBond(AccountId, AccountId, u128, u128, Balance),
         /// liquidity withdraw unbond
         LiquidityWithdrawUnBond(AccountId, AccountId, Balance),
         /// validator onboard
@@ -656,7 +656,7 @@ decl_module! {
             T::RCurrency::burn(&who, SYMBOL, left_value)?;
             staking::Module::<T>::update_ledger(&controller, &ledger);
             <Unbonding<T>>::insert(&who, &controller, unbonding);
-            Self::deposit_event(RawEvent::LiquidityUnBond(who, controller, left_value, balance));
+            Self::deposit_event(RawEvent::LiquidityUnBond(who, controller, value, left_value, balance));
 
             Ok(())
         }
