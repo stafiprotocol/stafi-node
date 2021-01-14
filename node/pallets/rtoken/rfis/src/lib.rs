@@ -13,7 +13,7 @@ use frame_system::{
     offchain::{SendTransactionTypes, SubmitTransaction},
 };
 use sp_runtime::{
-    ModuleId, Percent, Perbill,
+    ModuleId, Perbill,
     traits::{
         Convert, Zero, AccountIdConversion, CheckedAdd, CheckedSub, SaturatedConversion, Saturating, StaticLookup
     },
@@ -29,13 +29,11 @@ use pallet_staking::{
 use pallet_session as session;
 use rtoken_balances::{traits::{Currency as RCurrency}};
 use node_primitives::{RSymbol};
-use sp_arithmetic::{helpers_128bit::multiply_by_rational};
 
 const SYMBOL: RSymbol = RSymbol::RFIS;
 const MODULEID_LEN: usize = 8;
 const MAX_ONBOARD_VALIDATORS: usize = 300;
 const DEFAULT_LONGEVITY: u64 = 600;
-const UNBOND_COMMISSION_BASE: u16 = 1000;
 
 pub(crate) const LOG_TARGET: &'static str = "rfis";
 
@@ -70,7 +68,7 @@ decl_event! {
         /// NewPool
         NewPool(Vec<u8>, AccountId),
         /// Commission has been updated.
-        CommissionUpdated(Percent, Percent),
+        CommissionUpdated(Perbill, Perbill),
         /// max validator commission updated
         MaxValidatorCommissionUpdated(Perbill, Perbill),
         /// Pool balance limit has been updated
@@ -152,8 +150,8 @@ decl_storage! {
         PoolBalanceLimit get(fn pool_balance_limit): BalanceOf<T>;
         /// Recipient account for fees
         Receiver get(fn receiver): Option<T::AccountId>;
-        /// commission
-        Commission get(fn commission): Percent = Percent::from_percent(10);
+        /// commission of staking fis rewards
+        Commission get(fn commission): Perbill = Perbill::from_percent(10);
         /// max validator commission
         MaxValidatorCommission get(fn max_validator_commission): Perbill = Perbill::from_percent(20);
         /// switch of nomination
@@ -178,7 +176,7 @@ decl_storage! {
         UnlockedPools get(fn unlocked_pools): map hasher(blake2_128_concat) EraIndex => Option<Vec<T::AccountId>>;
 
         /// Unbond commission
-        UnbondCommission get(fn unbond_commission): u16 = 2;
+        UnbondCommission get(fn unbond_commission): Perbill = Perbill::from_parts(2000000);
     }
 }
 
@@ -311,10 +309,10 @@ decl_module! {
 
         /// Update commission
 		#[weight = 10_000]
-		fn set_commission(origin, new_percent: u8) -> DispatchResult {
+		fn set_commission(origin, new_part: u32) -> DispatchResult {
             ensure_root(origin)?;
             let old_commission = Self::commission();
-            let new_commission = Percent::from_percent(new_percent);
+            let new_commission = Perbill::from_parts(new_part);
 			Commission::put(new_commission);
 
 			Self::deposit_event(RawEvent::CommissionUpdated(old_commission, new_commission));
@@ -323,10 +321,10 @@ decl_module! {
 
         /// set max validator commission
 		#[weight = 10_000]
-		fn set_max_validator_commission(origin, new_percent: u32) -> DispatchResult {
+		fn set_max_validator_commission(origin, new_part: u32) -> DispatchResult {
             ensure_root(origin)?;
             let old_commission = Self::max_validator_commission();
-            let new_commission = Perbill::from_percent(new_percent);
+            let new_commission = Perbill::from_parts(new_part);
 			MaxValidatorCommission::put(new_commission);
 
 			Self::deposit_event(RawEvent::MaxValidatorCommissionUpdated(old_commission, new_commission));
@@ -355,10 +353,11 @@ decl_module! {
 
         /// set unbond commission, which the denominator is 1000
         #[weight = 10_000]
-        pub fn set_unbond_commission(origin, new_commission: u16) -> DispatchResult {
+        pub fn set_unbond_commission(origin, new_part: u32) -> DispatchResult {
             ensure_root(origin)?;
-            ensure!(new_commission < UNBOND_COMMISSION_BASE, "new commission too large");
+            let new_commission = Perbill::from_parts(new_part);
             UnbondCommission::put(new_commission);
+
             Ok(())
         }
 
@@ -754,7 +753,7 @@ impl<T: Trait> Module<T> {
     }
     
     fn unbond_fee(value: u128) -> u128 {
-        multiply_by_rational(value, Self::unbond_commission().into(), UNBOND_COMMISSION_BASE.into()).unwrap_or(0)
+        Self::unbond_commission() * value
     }
 }
 

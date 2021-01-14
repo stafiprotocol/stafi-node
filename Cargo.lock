@@ -5589,7 +5589,6 @@ dependencies = [
  "rtoken-balances",
  "rtoken-rate",
  "serde",
- "sp-arithmetic",
  "sp-core",
  "sp-io",
  "sp-runtime",
