@@ -351,7 +351,7 @@ decl_module! {
             Ok(())
         }
 
-        /// set unbond commission, which the denominator is 1000
+        /// set unbond commission
         #[weight = 10_000]
         pub fn set_unbond_commission(origin, new_part: u32) -> DispatchResult {
             ensure_root(origin)?;
