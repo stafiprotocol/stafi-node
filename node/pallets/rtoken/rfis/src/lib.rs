@@ -13,9 +13,9 @@ use frame_system::{
     offchain::{SendTransactionTypes, SubmitTransaction},
 };
 use sp_runtime::{
-    ModuleId, Percent, Perbill,
+    ModuleId, Perbill,
     traits::{
-        Convert, Zero, AccountIdConversion, CheckedSub, SaturatedConversion, Saturating, StaticLookup,
+        Convert, Zero, AccountIdConversion, CheckedAdd, CheckedSub, SaturatedConversion, Saturating, StaticLookup
     },
     transaction_validity::{
 		TransactionValidity, ValidTransaction, InvalidTransaction,
@@ -68,7 +68,7 @@ decl_event! {
         /// NewPool
         NewPool(Vec<u8>, AccountId),
         /// Commission has been updated.
-        CommissionUpdated(Percent, Percent),
+        CommissionUpdated(Perbill, Perbill),
         /// max validator commission updated
         MaxValidatorCommissionUpdated(Perbill, Perbill),
         /// Pool balance limit has been updated
@@ -76,7 +76,7 @@ decl_event! {
         /// liquidity stake record
         LiquidityBond(AccountId, AccountId, Balance, u128),
         /// liquidity unbond record
-        LiquidityUnBond(AccountId, AccountId, u128, Balance),
+        LiquidityUnBond(AccountId, AccountId, u128, u128, Balance),
         /// liquidity withdraw unbond
         LiquidityWithdrawUnBond(AccountId, AccountId, Balance),
         /// validator onboard
@@ -150,8 +150,8 @@ decl_storage! {
         PoolBalanceLimit get(fn pool_balance_limit): BalanceOf<T>;
         /// Recipient account for fees
         Receiver get(fn receiver): Option<T::AccountId>;
-        /// commission
-        Commission get(fn commission): Percent = Percent::from_percent(10);
+        /// commission of staking fis rewards
+        Commission get(fn commission): Perbill = Perbill::from_percent(10);
         /// max validator commission
         MaxValidatorCommission get(fn max_validator_commission): Perbill = Perbill::from_percent(20);
         /// switch of nomination
@@ -174,6 +174,9 @@ decl_storage! {
             double_map hasher(blake2_128_concat) EraIndex, hasher(twox_64_concat) T::AccountId => Option<Vec<T::AccountId>>;
         /// unlocked_pools
         UnlockedPools get(fn unlocked_pools): map hasher(blake2_128_concat) EraIndex => Option<Vec<T::AccountId>>;
+
+        /// Unbond commission
+        UnbondCommission get(fn unbond_commission): Perbill = Perbill::from_parts(2000000);
     }
 }
 
@@ -306,10 +309,10 @@ decl_module! {
 
         /// Update commission
 		#[weight = 10_000]
-		fn set_commission(origin, new_percent: u8) -> DispatchResult {
+		fn set_commission(origin, new_part: u32) -> DispatchResult {
             ensure_root(origin)?;
             let old_commission = Self::commission();
-            let new_commission = Percent::from_percent(new_percent);
+            let new_commission = Perbill::from_parts(new_part);
 			Commission::put(new_commission);
 
 			Self::deposit_event(RawEvent::CommissionUpdated(old_commission, new_commission));
@@ -318,10 +321,10 @@ decl_module! {
 
         /// set max validator commission
 		#[weight = 10_000]
-		fn set_max_validator_commission(origin, new_percent: u32) -> DispatchResult {
+		fn set_max_validator_commission(origin, new_part: u32) -> DispatchResult {
             ensure_root(origin)?;
             let old_commission = Self::max_validator_commission();
-            let new_commission = Perbill::from_percent(new_percent);
+            let new_commission = Perbill::from_parts(new_part);
 			MaxValidatorCommission::put(new_commission);
 
 			Self::deposit_event(RawEvent::MaxValidatorCommissionUpdated(old_commission, new_commission));
@@ -345,6 +348,16 @@ decl_module! {
             ensure_root(origin)?;
             let dest = T::Lookup::lookup(new_receiver)?;
             <Receiver<T>>::put(dest);
+            Ok(())
+        }
+
+        /// set unbond commission
+        #[weight = 10_000]
+        pub fn set_unbond_commission(origin, new_part: u32) -> DispatchResult {
+            ensure_root(origin)?;
+            let new_commission = Perbill::from_parts(new_part);
+            UnbondCommission::put(new_commission);
+
             Ok(())
         }
 
@@ -583,7 +596,7 @@ decl_module! {
             let mut ledger = staking::Ledger::<T>::get(&controller).ok_or(Error::<T>::PoolUnbond)?;
 
             let limit = Self::pool_balance_limit();
-            let bonded = Self::bonded_of(&controller) + value;
+            let bonded = Self::bonded_of(&controller).checked_add(&value).ok_or(Error::<T>::Overflow)?;
             ensure!(limit.is_zero() || bonded <= limit, Error::<T>::PoolLimitReached);
 
             let v = value.saturated_into::<u128>();
@@ -604,6 +617,8 @@ decl_module! {
         pub fn liquidity_unbond(origin, pool: <T::Lookup as StaticLookup>::Source, value: u128) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(!value.is_zero(), Error::<T>::LiquidityUnbondZero);
+            let op_receiver = Self::receiver();
+            ensure!(op_receiver.is_some(), "No receiver to get unbond commission fee");
             ensure!(staking::EraElectionStatus::<T>::get().is_closed(), staking::Error::<T>::CallNotAllowed);
             let controller = T::Lookup::lookup(pool)?;
             ensure!(Self::is_in_pools(&controller), Error::<T>::PoolNotFound);
@@ -618,11 +633,13 @@ decl_module! {
             ensure!(unbonding.len() < max_chunks, staking::Error::<T>::NoMoreChunks);
 
             let era = staking::CurrentEra::get().unwrap_or(0) + T::BondingDuration::get();
-            let balance = rtoken_rate::Module::<T>::rtoken_to_token(SYMBOL, value).saturated_into::<BalanceOf<T>>();
+            let fee = Self::unbond_fee(value);
+            let left_value = value - fee;
+            let balance = rtoken_rate::Module::<T>::rtoken_to_token(SYMBOL, left_value).saturated_into::<BalanceOf<T>>();
             ensure!(ledger.active >= balance, Error::<T>::InsufficientBalance);
             ledger.active -= balance;
             if let Some(chunk) = ledger.unlocking.iter_mut().find(|chunk| chunk.era == era) {
-                chunk.value += balance;
+                chunk.value.checked_add(&balance).ok_or(Error::<T>::Overflow)?;
             } else {
                 ledger.unlocking.push(UnlockChunk { value: balance, era });
             }
@@ -633,10 +650,12 @@ decl_module! {
                 unbonding.push(UnlockChunk { value: balance, era });
             }
 
-            T::RCurrency::burn(&who, SYMBOL, value)?;
+            let receiver = op_receiver.unwrap();
+            T::RCurrency::transfer(&who, &receiver, SYMBOL, fee)?;
+            T::RCurrency::burn(&who, SYMBOL, left_value)?;
             staking::Module::<T>::update_ledger(&controller, &ledger);
             <Unbonding<T>>::insert(&who, &controller, unbonding);
-            Self::deposit_event(RawEvent::LiquidityUnBond(who, controller, value, balance));
+            Self::deposit_event(RawEvent::LiquidityUnBond(who, controller, value, left_value, balance));
 
             Ok(())
         }
@@ -731,6 +750,10 @@ impl<T: Trait> Module<T> {
 
     fn is_validator(era: EraIndex, t: &T::AccountId) -> bool {
         staking::ErasRewardPoints::<T>::get(&era).individual.contains_key(&t)
+    }
+    
+    fn unbond_fee(value: u128) -> u128 {
+        Self::unbond_commission() * value
     }
 }
 
