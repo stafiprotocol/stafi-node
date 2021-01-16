@@ -31,7 +31,6 @@ use rtoken_balances::{traits::{Currency as RCurrency}};
 use node_primitives::{RSymbol};
 
 const SYMBOL: RSymbol = RSymbol::RFIS;
-const MODULEID_LEN: usize = 8;
 const MAX_ONBOARD_VALIDATORS: usize = 300;
 const DEFAULT_LONGEVITY: u64 = 600;
 
@@ -225,12 +224,10 @@ decl_module! {
         #[weight = 100_000_000]
         pub fn add_new_pool(origin, module_id: Vec<u8>) -> DispatchResult {
             ensure_root(origin)?;
-            ensure!(module_id.len() == MODULEID_LEN, Error::<T>::ModuleIDLengthNotEight);
-            let mut a: [u8;MODULEID_LEN] = [0;MODULEID_LEN];
-            for (i, e) in module_id.iter().enumerate() {
-                a[i] = *e;
-            }
-            let pool = ModuleId(a).into_account();
+            ensure!(module_id.len() == 8, Error::<T>::ModuleIDLengthNotEight);
+            let mut r = [0u8; 8];
+            r.copy_from_slice(&module_id);
+            let pool = ModuleId(r).into_account();
             let mut pools = Self::pools();
             let location = pools.binary_search(&pool).err().ok_or(Error::<T>::ModuleIDRepeated)?;
             pools.insert(location, pool.clone());
