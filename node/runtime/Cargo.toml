@@ -1,6 +1,6 @@
 [package]
 name = "node-runtime"
-version = "0.3.2"
+version = "0.3.3"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
 build = "build.rs"
@@ -33,6 +33,7 @@ sp-keyring = { branch = "master", optional = true, git = 'https://github.com/sta
 sp-session = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-transaction-pool = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-version = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-io = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
 # frame dependencies
 frame-executive = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
@@ -73,15 +74,18 @@ pallet-transaction-payment = { branch = "master", default-features = false, git 
 pallet-transaction-payment-rpc-runtime-api = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 pallet-vesting = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
-rtoken-balances = { version = "0.3.2", default-features = false, path = "../pallets/rtoken/balances" }
-rtoken-rate = { version = "0.3.2", default-features = false, path = "../pallets/rtoken/rate" }
-rfis = { version = "0.3.2", default-features = false, path = "../pallets/rtoken/rfis" }
+rtoken-balances = { version = "0.3.3", default-features = false, path = "../pallets/rtoken/balances" }
+rtoken-rate = { version = "0.3.3", default-features = false, path = "../pallets/rtoken/rate" }
+rfis = { version = "0.3.3", default-features = false, path = "../pallets/rtoken/rfis" }
+bridge-common = { version = "0.3.3", default-features = false, path = "../pallets/bridge/common", package = "bridge-common" }
+bridge-swap = { version = "0.3.3", default-features = false, path = "../pallets/bridge/swap", package = "bridge-swap" }
 
 [build-dependencies]
-wasm-builder-runner = { version = "1.0.6", package = "substrate-wasm-builder-runner", path = "../../utils/wasm-builder-runner" }
+# wasm-builder-runner = { version = "1.0.6", package = "substrate-wasm-builder-runner", path = "../../utils/wasm-builder-runner" }
+wasm-builder-runner = { branch = "master", package = "substrate-wasm-builder-runner", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
-[dev-dependencies]
-sp-io = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+# [dev-dependencies]
+# sp-io = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
 [features]
 default = ["std"]
@@ -135,11 +139,14 @@ std = [
 	"sp-transaction-pool/std",
 	"pallet-utility/std",
 	"sp-version/std",
+	"sp-io/std",
 	"pallet-recovery/std",
 	"pallet-vesting/std",
 	"rtoken-balances/std",
 	"rtoken-rate/std",
 	"rfis/std",
+	"bridge-common/std",
+	"bridge-swap/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

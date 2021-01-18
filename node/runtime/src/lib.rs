@@ -33,8 +33,9 @@ use sp_core::{
 	u32_trait::{_1, _2, _3, _4},
 	OpaqueMetadata,
 };
+use sp_io::hashing::blake2_128;
 pub use node_primitives::{AccountId, Signature};
-use node_primitives::{AccountIndex, Balance, BlockNumber, Hash, Index, Moment};
+use node_primitives::{AccountIndex, Balance, BlockNumber, Hash, Index, Moment, ChainId};
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
 	Permill, Perbill, Perquintill, Percent, ApplyExtrinsicResult,
@@ -840,6 +841,30 @@ impl pallet_vesting::Trait for Runtime {
 	type WeightInfo = weights::pallet_vesting::WeightInfo;
 }
 
+parameter_types! {
+	pub const ChainIdentity: ChainId = 1;
+	pub const ProposalLifetime: BlockNumber = 1000;
+}
+
+impl bridge_common::Trait for Runtime {
+	type Event = Event;
+	type AdminOrigin = EnsureRoot<AccountId>;
+	type Proposal = Call;
+	type ChainIdentity = ChainIdentity;
+	type ProposalLifetime = ProposalLifetime;
+}
+
+parameter_types! {
+	pub NativeTokenId: bridge_common::ResourceId = bridge_common::derive_resource_id(1, &blake2_128(b"FIS"));
+}
+
+impl bridge_swap::Trait for Runtime {
+	type Currency = Balances;
+	type RCurrency = RBalances;
+	type BridgeOrigin = bridge_common::EnsureBridge<Runtime>;
+	type NativeTokenId = NativeTokenId;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -879,6 +904,8 @@ construct_runtime!(
 		RBalances: rtoken_balances::{Module, Call, Storage, Event<T>},
 		RTokenRate: rtoken_rate::{Module, Call, Storage, Event},
 		RFis: rfis::{Module, Call, Storage, Event<T>, ValidateUnsigned},
+		BridgeCommon: bridge_common::{Module, Call, Storage, Event<T>},
+		BridgeSwap: bridge_swap::{Module, Call},
 	}
 );
 

@@ -1,5 +1,5 @@
 [package]
-name = "rtoken-balances"
+name = "bridge-common"
 version = "0.3.3"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
@@ -14,12 +14,15 @@ serde = { version = "1.0.102", optional = true }
 sp-std = { branch = "master", default-features = false, git = "https://github.com/stafiprotocol/stafi-blockchain.git" }
 sp-runtime = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-core = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+node-primitives = { path = "../../../primitives", default-features = false }
 
 # frame dependencies
 frame-support = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 frame-system = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
-node-primitives = { path = "../../../primitives", default-features = false }
+[dev-dependencies]
+sp-io = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+hex = { version = "0.4", default-features = false}
 
 [features]
 default = ["std"]

@@ -68,6 +68,10 @@ pub enum RSymbol {
 	RFIS,
 }
 
+/// Chain constants
+pub mod chain;
+pub use chain::*;
+
 /// Custom validity errors used in Stafi while validating transactions.
 #[repr(u8)]
 pub enum ValidityError {
