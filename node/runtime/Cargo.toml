@@ -74,12 +74,11 @@ pallet-transaction-payment = { branch = "master", default-features = false, git 
 pallet-transaction-payment-rpc-runtime-api = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 pallet-vesting = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
+rtoken-balances = { version = "0.3.3", default-features = false, path = "../pallets/rtoken/balances" }
+rtoken-rate = { version = "0.3.3", default-features = false, path = "../pallets/rtoken/rate" }
+rfis = { version = "0.3.3", default-features = false, path = "../pallets/rtoken/rfis" }
 bridge-common = { version = "0.3.3", default-features = false, path = "../pallets/bridge/common", package = "bridge-common" }
 bridge-swap = { version = "0.3.3", default-features = false, path = "../pallets/bridge/swap", package = "bridge-swap" }
-
-rtoken-balances = { version = "0.3.2", default-features = false, path = "../pallets/rtoken/balances" }
-rtoken-rate = { version = "0.3.2", default-features = false, path = "../pallets/rtoken/rate" }
-rfis = { version = "0.3.2", default-features = false, path = "../pallets/rtoken/rfis" }
 
 [build-dependencies]
 wasm-builder-runner = { branch = "master", package = "substrate-wasm-builder-runner", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
@@ -139,11 +138,11 @@ std = [
 	"sp-io/std",
 	"pallet-recovery/std",
 	"pallet-vesting/std",
-	"bridge-common/std",
-	"bridge-swap/std",
 	"rtoken-balances/std",
 	"rtoken-rate/std",
 	"rfis/std",
+	"bridge-common/std",
+	"bridge-swap/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

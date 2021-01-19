@@ -21,6 +21,7 @@ frame-support = { branch = "master", default-features = false, git = 'https://gi
 frame-system = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
 bridge-common = { path = "../common", default-features = false}
+rtoken-balances = { path = "../../rtoken/balances", default-features = false}
 
 [dev-dependencies]
 sp-io = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
@@ -38,4 +39,5 @@ std = [
   "frame-system/std",
   "pallet-balances/std",
   "bridge-common/std",
+  "rtoken-balances/std",
 ]

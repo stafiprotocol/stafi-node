@@ -582,6 +582,7 @@ version = "0.3.3"
 dependencies = [
  "frame-support",
  "frame-system",
+ "hex",
  "node-primitives",
  "parity-scale-codec",
  "serde",
@@ -601,6 +602,7 @@ dependencies = [
  "node-primitives",
  "pallet-balances",
  "parity-scale-codec",
+ "rtoken-balances",
  "sp-arithmetic",
  "sp-core",
  "sp-io",
@@ -5610,7 +5612,7 @@ checksum = "e005d658ad26eacc2b6c506dfde519f4e277e328d0eb3379ca61647d70a8f531"
 
 [[package]]
 name = "rfis"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5665,7 +5667,7 @@ dependencies = [
 
 [[package]]
 name = "rtoken-balances"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5679,7 +5681,7 @@ dependencies = [
 
 [[package]]
 name = "rtoken-rate"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "frame-support",
  "frame-system",

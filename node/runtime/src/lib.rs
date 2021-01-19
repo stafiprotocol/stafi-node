@@ -103,7 +103,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 12,
+	spec_version: 13,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -842,13 +842,16 @@ impl pallet_vesting::Trait for Runtime {
 }
 
 parameter_types! {
-    pub const ChainIdentity: ChainId = 1;
+	pub const ChainIdentity: ChainId = 1;
+	pub const ProposalLifetime: BlockNumber = 1000;
 }
 
 impl bridge_common::Trait for Runtime {
 	type Event = Event;
 	type AdminOrigin = EnsureRoot<AccountId>;
+	type Proposal = Call;
 	type ChainIdentity = ChainIdentity;
+	type ProposalLifetime = ProposalLifetime;
 }
 
 parameter_types! {
@@ -857,6 +860,8 @@ parameter_types! {
 
 impl bridge_swap::Trait for Runtime {
 	type Currency = Balances;
+	type RCurrency = RBalances;
+	type BridgeOrigin = bridge_common::EnsureBridge<Runtime>;
 	type NativeTokenId = NativeTokenId;
 }
 
