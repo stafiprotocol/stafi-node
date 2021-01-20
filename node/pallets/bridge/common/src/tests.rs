@@ -20,8 +20,9 @@ use sp_io::hashing::blake2_128;
 
 #[test]
 fn new_resource_id() {
-    let rfis_resource_id = derive_resource_id(1, &blake2_128(b"FIS"));
+    let rfis_resource_id = derive_resource_id(1, &blake2_128(b"RFIS"));
     println!("{:?}", hex::encode(rfis_resource_id));
+    //result 000000000000000000000000000000df7e6fee39d3ace035c108833854667701
 }
 
 #[test]

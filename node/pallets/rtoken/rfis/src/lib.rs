@@ -210,7 +210,7 @@ decl_module! {
                 let rfis = rtoken_rate::Module::<T>::token_to_rtoken(SYMBOL, fee);
                 let receiver = op_receiver.unwrap();
                 if let Err(e) = T::RCurrency::mint(&receiver, SYMBOL, rfis) {
-                    debug::info!("rfis commission err: {:?}", e);
+                    debug::error!("rfis commission err: {:?}", e);
                 }
             }
 
@@ -359,10 +359,9 @@ decl_module! {
         }
 
         fn offchain_worker(block: T::BlockNumber) {
-            // if !sp_io::offchain::is_validator() {
-            //     debug::info!("the node is not a validator");
-            //     return;
-            // }
+            if !sp_io::offchain::is_validator() {
+                return;
+            }
 
             let op_active = staking::ActiveEra::get();
             if op_active.is_none() {
@@ -442,7 +441,6 @@ decl_module! {
 
             let mut pools: Vec<T::AccountId> = Self::bonded_pools().into_iter().filter(|p| Self::nominated(&era, &p).is_none()).collect();
             if pools.is_empty() {
-                debug::info!("no pool need to nominate");
                 return;
             }
 
@@ -454,7 +452,7 @@ decl_module! {
                 if validators.len() < min.into() {
                     let call = Call::submit_nomination(era, p, vec![]).into();
                     if let Err(e) = SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call) {
-                        debug::info!("failed to submit nomination: {:?}", e);
+                        debug::error!("failed to submit nomination: {:?}", e);
                     }
                     continue
                 }
@@ -476,7 +474,7 @@ decl_module! {
 
                 let call = Call::submit_nomination(era, p, targets).into();
                 if let Err(e) = SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call) {
-                    debug::info!("failed to submit nomination: {:?}", e);
+                    debug::error!("failed to submit nomination: {:?}", e);
                 }
             }
         }
