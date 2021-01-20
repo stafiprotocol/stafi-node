@@ -152,13 +152,13 @@ decl_storage! {
         /// commission of staking fis rewards
         Commission get(fn commission): Perbill = Perbill::from_percent(10);
         /// max validator commission
-        MaxValidatorCommission get(fn max_validator_commission): Perbill = Perbill::from_percent(20);
+        MaxValidatorCommission get(fn max_validator_commission): Perbill = Perbill::from_percent(10);
         /// switch of nomination
         NominateSwitch get(fn nominate_switch): bool = false;
         /// min nomination
-        MinNominationNum get(fn min_nomination_num): u8 = 1;
+        MinNominationNum get(fn min_nomination_num): u8 = 3;
         /// max nomination
-        MaxNominationNum get(fn max_nomination_num): u8 = 1;
+        MaxNominationNum get(fn max_nomination_num): u8 = 10;
 
         TotalBondedBeforePayout get(fn total_bonded_before_payout): map hasher(blake2_128_concat) EraIndex => Option<BalanceOf<T>>;
         TotalBondedAfterPayout get(fn total_bonded_after_payout): map hasher(blake2_128_concat) EraIndex => Option<BalanceOf<T>>;
