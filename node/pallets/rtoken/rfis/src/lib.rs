@@ -139,6 +139,8 @@ decl_error! {
         NominateSwitchClosed,
         /// Pool Already Unlocked
         PoolAlreadyUnlocked,
+        /// era rate not updated
+        EraRateNotUpdated,
     }
 }
 
@@ -435,7 +437,6 @@ decl_module! {
             }
 
             if !Self::nominate_switch() {
-                debug::info!("nominate switch is off");
                 return;
             }
 
@@ -589,6 +590,8 @@ decl_module! {
             let controller = T::Lookup::lookup(pool)?;
             ensure!(Self::is_in_pools(&controller), Error::<T>::PoolNotFound);
             let mut ledger = staking::Ledger::<T>::get(&controller).ok_or(Error::<T>::PoolUnbond)?;
+            let active_era_info = staking::ActiveEra::get().ok_or(Error::<T>::NoCurrentEra)?;
+            ensure!(rtoken_rate::EraRate::get(SYMBOL, active_era_info.index).is_some(), Error::<T>::EraRateNotUpdated);
 
             let limit = Self::pool_balance_limit();
             let bonded = Self::bonded_of(&controller).checked_add(&value).ok_or(Error::<T>::Overflow)?;
@@ -618,6 +621,8 @@ decl_module! {
             let controller = T::Lookup::lookup(pool)?;
             ensure!(Self::is_in_pools(&controller), Error::<T>::PoolNotFound);
             let mut ledger = staking::Ledger::<T>::get(&controller).ok_or(staking::Error::<T>::NotController)?;
+            let active_era_info = staking::ActiveEra::get().ok_or(Error::<T>::NoCurrentEra)?;
+            ensure!(rtoken_rate::EraRate::get(SYMBOL, active_era_info.index).is_some(), Error::<T>::EraRateNotUpdated);
 
             let free = T::RCurrency::free_balance(&who, SYMBOL);
             free.checked_sub(value).ok_or(Error::<T>::InsufficientBalance)?;
@@ -627,7 +632,7 @@ decl_module! {
             let mut unbonding = <Unbonding<T>>::get(&who, &controller).unwrap_or(vec![]);
             ensure!(unbonding.len() < max_chunks, staking::Error::<T>::NoMoreChunks);
 
-            let era = staking::CurrentEra::get().unwrap_or(0) + T::BondingDuration::get();
+            let era = active_era_info.index + T::BondingDuration::get();
             let fee = Self::unbond_fee(value);
             let left_value = value - fee;
             let balance = rtoken_rate::Module::<T>::rtoken_to_token(SYMBOL, left_value).saturated_into::<BalanceOf<T>>();
