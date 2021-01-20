@@ -139,6 +139,8 @@ decl_error! {
         NominateSwitchClosed,
         /// Pool Already Unlocked
         PoolAlreadyUnlocked,
+        /// era rate not updated
+        EraRateNotUpdated,
     }
 }
 
@@ -152,13 +154,13 @@ decl_storage! {
         /// commission of staking fis rewards
         Commission get(fn commission): Perbill = Perbill::from_percent(10);
         /// max validator commission
-        MaxValidatorCommission get(fn max_validator_commission): Perbill = Perbill::from_percent(20);
+        MaxValidatorCommission get(fn max_validator_commission): Perbill = Perbill::from_percent(10);
         /// switch of nomination
         NominateSwitch get(fn nominate_switch): bool = false;
         /// min nomination
-        MinNominationNum get(fn min_nomination_num): u8 = 1;
+        MinNominationNum get(fn min_nomination_num): u8 = 3;
         /// max nomination
-        MaxNominationNum get(fn max_nomination_num): u8 = 1;
+        MaxNominationNum get(fn max_nomination_num): u8 = 10;
 
         TotalBondedBeforePayout get(fn total_bonded_before_payout): map hasher(blake2_128_concat) EraIndex => Option<BalanceOf<T>>;
         TotalBondedAfterPayout get(fn total_bonded_after_payout): map hasher(blake2_128_concat) EraIndex => Option<BalanceOf<T>>;
@@ -210,7 +212,7 @@ decl_module! {
                 let rfis = rtoken_rate::Module::<T>::token_to_rtoken(SYMBOL, fee);
                 let receiver = op_receiver.unwrap();
                 if let Err(e) = T::RCurrency::mint(&receiver, SYMBOL, rfis) {
-                    debug::info!("rfis commission err: {:?}", e);
+                    debug::error!("rfis commission err: {:?}", e);
                 }
             }
 
@@ -359,10 +361,9 @@ decl_module! {
         }
 
         fn offchain_worker(block: T::BlockNumber) {
-            // if !sp_io::offchain::is_validator() {
-            //     debug::info!("the node is not a validator");
-            //     return;
-            // }
+            if !sp_io::offchain::is_validator() {
+                return;
+            }
 
             let op_active = staking::ActiveEra::get();
             if op_active.is_none() {
@@ -436,13 +437,11 @@ decl_module! {
             }
 
             if !Self::nominate_switch() {
-                debug::info!("nominate switch is off");
                 return;
             }
 
             let mut pools: Vec<T::AccountId> = Self::bonded_pools().into_iter().filter(|p| Self::nominated(&era, &p).is_none()).collect();
             if pools.is_empty() {
-                debug::info!("no pool need to nominate");
                 return;
             }
 
@@ -454,7 +453,7 @@ decl_module! {
                 if validators.len() < min.into() {
                     let call = Call::submit_nomination(era, p, vec![]).into();
                     if let Err(e) = SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call) {
-                        debug::info!("failed to submit nomination: {:?}", e);
+                        debug::error!("failed to submit nomination: {:?}", e);
                     }
                     continue
                 }
@@ -476,7 +475,7 @@ decl_module! {
 
                 let call = Call::submit_nomination(era, p, targets).into();
                 if let Err(e) = SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call) {
-                    debug::info!("failed to submit nomination: {:?}", e);
+                    debug::error!("failed to submit nomination: {:?}", e);
                 }
             }
         }
@@ -591,6 +590,8 @@ decl_module! {
             let controller = T::Lookup::lookup(pool)?;
             ensure!(Self::is_in_pools(&controller), Error::<T>::PoolNotFound);
             let mut ledger = staking::Ledger::<T>::get(&controller).ok_or(Error::<T>::PoolUnbond)?;
+            let active_era_info = staking::ActiveEra::get().ok_or(Error::<T>::NoCurrentEra)?;
+            ensure!(rtoken_rate::EraRate::get(SYMBOL, active_era_info.index).is_some(), Error::<T>::EraRateNotUpdated);
 
             let limit = Self::pool_balance_limit();
             let bonded = Self::bonded_of(&controller).checked_add(&value).ok_or(Error::<T>::Overflow)?;
@@ -620,6 +621,8 @@ decl_module! {
             let controller = T::Lookup::lookup(pool)?;
             ensure!(Self::is_in_pools(&controller), Error::<T>::PoolNotFound);
             let mut ledger = staking::Ledger::<T>::get(&controller).ok_or(staking::Error::<T>::NotController)?;
+            let active_era_info = staking::ActiveEra::get().ok_or(Error::<T>::NoCurrentEra)?;
+            ensure!(rtoken_rate::EraRate::get(SYMBOL, active_era_info.index).is_some(), Error::<T>::EraRateNotUpdated);
 
             let free = T::RCurrency::free_balance(&who, SYMBOL);
             free.checked_sub(value).ok_or(Error::<T>::InsufficientBalance)?;
@@ -629,7 +632,7 @@ decl_module! {
             let mut unbonding = <Unbonding<T>>::get(&who, &controller).unwrap_or(vec![]);
             ensure!(unbonding.len() < max_chunks, staking::Error::<T>::NoMoreChunks);
 
-            let era = staking::CurrentEra::get().unwrap_or(0) + T::BondingDuration::get();
+            let era = active_era_info.index + T::BondingDuration::get();
             let fee = Self::unbond_fee(value);
             let left_value = value - fee;
             let balance = rtoken_rate::Module::<T>::rtoken_to_token(SYMBOL, left_value).saturated_into::<BalanceOf<T>>();
