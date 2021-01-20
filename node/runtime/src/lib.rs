@@ -343,6 +343,20 @@ impl pallet_balances::Trait for Runtime {
 	type WeightInfo = weights::pallet_balances::WeightInfo;
 }
 
+impl rtoken_balances::Trait for Runtime {
+	type Event = Event;
+}
+
+impl rtoken_rate::Trait for Runtime {
+	type Event = Event;
+}
+
+impl rfis::Trait for Runtime {
+	type Event = Event;
+	type RCurrency = RBalances;
+	type UnsignedPriority = RFisUnsignedPriority;
+}
+
 parameter_types! {
 	pub const TransactionByteFee: Balance = 2 * MILLICENTS;
 	pub const TargetBlockFullness: Perquintill = Perquintill::from_percent(25);
@@ -659,6 +673,7 @@ parameter_types! {
 	pub const ImOnlineUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
 	/// We prioritize im-online heartbeats over election solution submission.
 	pub const StakingUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
+	pub const RFisUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 3;
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
@@ -826,13 +841,16 @@ impl pallet_vesting::Trait for Runtime {
 }
 
 parameter_types! {
-    pub const ChainIdentity: ChainId = 1;
+	pub const ChainIdentity: ChainId = 1;
+	pub const ProposalLifetime: BlockNumber = 1000;
 }
 
 impl bridge_common::Trait for Runtime {
 	type Event = Event;
 	type AdminOrigin = EnsureRoot<AccountId>;
+	type Proposal = Call;
 	type ChainIdentity = ChainIdentity;
+	type ProposalLifetime = ProposalLifetime;
 }
 
 parameter_types! {
@@ -841,6 +859,8 @@ parameter_types! {
 
 impl bridge_swap::Trait for Runtime {
 	type Currency = Balances;
+	type RCurrency = RBalances;
+	type BridgeOrigin = bridge_common::EnsureBridge<Runtime>;
 	type NativeTokenId = NativeTokenId;
 }
 
@@ -880,6 +900,9 @@ construct_runtime!(
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 		Proxy: pallet_proxy::{Module, Call, Storage, Event<T>},
 		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
+		RBalances: rtoken_balances::{Module, Call, Storage, Event<T>},
+		RTokenRate: rtoken_rate::{Module, Call, Storage, Event},
+		RFis: rfis::{Module, Call, Storage, Event<T>, ValidateUnsigned},
 		BridgeCommon: bridge_common::{Module, Call, Storage, Event<T>},
 		BridgeSwap: bridge_swap::{Module, Call},
 	}

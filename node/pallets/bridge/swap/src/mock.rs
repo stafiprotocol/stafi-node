@@ -13,15 +13,25 @@ use sp_std::{cell::RefCell};
 use sp_io::hashing::blake2_128;
 use sp_runtime::{Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::Header};
 use sp_core::H256;
-use frame_support::{impl_outer_origin, parameter_types, traits::{Get}, weights::Weight};
+use frame_support::{impl_outer_origin, impl_outer_dispatch, parameter_types, traits::{Get}, weights::Weight};
 use frame_system::{EnsureRoot};
-use node_primitives::{ChainId};
+use node_primitives::{ChainId, BlockNumber};
 use crate::{Module, Trait};
 
 pub(crate) type Balance = u128;
 
 impl_outer_origin!{
 	pub enum Origin for Test where system = frame_system {}
+}
+
+impl_outer_dispatch! {
+	pub enum Call for Test where origin: Origin {
+		frame_system::System,
+		balances::Balances,
+		rtoken_balances::RBalances,
+		bridge_common::BridgeCommon,
+		self::BridgeSwap,
+	}
 }
 
 // For testing the pallet, we construct most of a mock runtime. This means
@@ -40,7 +50,7 @@ parameter_types! {
 impl frame_system::Trait for Test {
 	type BaseCallFilter = ();
 	type Origin = Origin;
-	type Call = ();
+	type Call = Call;
 	type Index = u64;
 	type BlockNumber = u64;
 	type Hash = H256;
@@ -86,14 +96,21 @@ impl pallet_balances::Trait for Test {
 	type WeightInfo = ();
 }
 
+impl rtoken_balances::Trait for Test {
+	type Event = ();
+}
+
 parameter_types! {
-    pub const ChainIdentity: ChainId = 1;
+	pub const ChainIdentity: ChainId = 1;
+	pub const ProposalLifetime: BlockNumber = 50;
 }
 
 impl bridge_common::Trait for Test {
 	type Event = ();
 	type AdminOrigin = EnsureRoot<Self::AccountId>;
 	type ChainIdentity = ChainIdentity;
+	type Proposal = Call;
+	type ProposalLifetime = ProposalLifetime;
 }
 
 parameter_types! {
@@ -102,7 +119,9 @@ parameter_types! {
 
 impl Trait for Test {
 	type Currency = Balances;
+	type RCurrency = RBalances;
 	type NativeTokenId = NativeTokenId;
+	type BridgeOrigin = bridge_common::EnsureBridge<Test>;
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
@@ -119,5 +138,12 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
 pub type System = frame_system::Module<Test>;
 pub type Balances = pallet_balances::Module<Test>;
+pub type RBalances = rtoken_balances::Module<Test>;
 pub type BridgeCommon = bridge_common::Module<Test>;
 pub type BridgeSwap = Module<Test>;
+
+// Relayers
+pub const RELAYER_A: u64 = 0x2;
+pub const RELAYER_B: u64 = 0x3;
+pub const RELAYER_C: u64 = 0x4;
+pub const TEST_THRESHOLD: u32 = 2;
