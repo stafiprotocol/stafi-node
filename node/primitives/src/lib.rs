@@ -19,9 +19,6 @@ use sp_runtime::{
 	generic, traits::{Verify, BlakeTwo256, IdentifyAccount}, OpaqueExtrinsic, MultiSignature
 };
 
-use codec::{Encode, Decode};
-use sp_runtime::{RuntimeDebug};
-
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -61,16 +58,13 @@ pub type Block = generic::Block<Header, OpaqueExtrinsic>;
 /// Block ID.
 pub type BlockId = generic::BlockId<Block>;
 
-/// Rtoken Identifier
-#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug)]
-pub enum RSymbol {
-	/// RFIS
-	RFIS,
-}
-
 /// Chain constants
 pub mod chain;
 pub use chain::*;
+
+/// Rtoken
+pub mod rtoken;
+pub use rtoken::*;
 
 /// Custom validity errors used in Stafi while validating transactions.
 #[repr(u8)]

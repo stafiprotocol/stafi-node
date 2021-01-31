@@ -79,6 +79,9 @@ rtoken-rate = { version = "0.3.3", default-features = false, path = "../pallets/
 rfis = { version = "0.3.3", default-features = false, path = "../pallets/rtoken/rfis" }
 bridge-common = { version = "0.3.3", default-features = false, path = "../pallets/bridge/common", package = "bridge-common" }
 bridge-swap = { version = "0.3.3", default-features = false, path = "../pallets/bridge/swap", package = "bridge-swap" }
+rtoken-votes-bond = { version = "0.3.3", default-features = false, path = "../pallets/rtoken/votes/bond" }
+rdot = { version = "0.3.3", default-features = false, path = "../pallets/rtoken/rdot" }
+
 
 [build-dependencies]
 # wasm-builder-runner = { version = "1.0.6", package = "substrate-wasm-builder-runner", path = "../../utils/wasm-builder-runner" }
@@ -147,6 +150,8 @@ std = [
 	"rfis/std",
 	"bridge-common/std",
 	"bridge-swap/std",
+	"rtoken-votes-bond/std",
+	"rdot/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",
