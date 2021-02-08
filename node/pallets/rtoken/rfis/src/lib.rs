@@ -84,6 +84,8 @@ decl_event! {
         ValidatorOffboard(AccountId, AccountId),
         /// total bonded before payout
         TotalBondedBeforePayout(EraIndex, Balance),
+        /// Paidout Validator: (era, pool, validator, result)
+        ValidatorPaidout(EraIndex, AccountId, AccountId, bool),
         /// total bonded after payout
         TotalBondedAfterPayout(EraIndex, Balance),
         /// Nomination Toggle
@@ -141,6 +143,10 @@ decl_error! {
         PoolAlreadyUnlocked,
         /// era rate not updated
         EraRateNotUpdated,
+        /// Validator already paidout
+        ValidatorAlreadyPaidout,
+        /// pool already nominated
+        PoolAlreadyNominated
     }
 }
 
@@ -168,11 +174,16 @@ decl_storage! {
         /// Paidouts: (era, validator) => bool
         Paidouts get(fn paidouts):
             double_map hasher(blake2_128_concat) EraIndex, hasher(twox_64_concat) T::AccountId => Option<bool>;
+        /// New paidouts: era, (validator, pool) => bool
+        PoolPaidouts get(fn pool_paidouts):
+            double_map hasher(blake2_128_concat) EraIndex, hasher(twox_64_concat) (T::AccountId, T::AccountId) => Option<bool>;
         /// Unbonding: (origin, pool) => [UnlockChunks]
         pub Unbonding get(fn unbonding): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) T::AccountId => Option<Vec<UnlockChunk<BalanceOf<T>>>>;
         /// Nominated: (era, pool) => targets
         Nominated get(fn nominated):
             double_map hasher(blake2_128_concat) EraIndex, hasher(twox_64_concat) T::AccountId => Option<Vec<T::AccountId>>;
+        /// All nominated validators for this era, will take effect in next era
+        NominatedValidators get(fn nominated_validators): map hasher(blake2_128_concat) EraIndex => Vec<T::AccountId>;
         /// unlocked_pools
         UnlockedPools get(fn unlocked_pools): map hasher(blake2_128_concat) EraIndex => Option<Vec<T::AccountId>>;
 
@@ -371,6 +382,7 @@ decl_module! {
                 return;
             }
             let era = op_active.unwrap().index;
+            let last_era = era.saturating_sub(1);
 
             let unlocked_pools = Self::unlocked_pools(&era).unwrap_or(vec![]);
             if unlocked_pools.len() < Self::bonded_pools().len() {
@@ -396,35 +408,22 @@ decl_module! {
                 return;
             }
 
-            let last_era = era.saturating_sub(1);
-            // ensure one block won't deal more than one pool
-            let mut wait_next_block = false;
-            if Self::total_bonded_after_payout(era).is_none() {
-                for p in Self::bonded_pools() {
-                    let op_nominations = staking::Nominators::<T>::get(&p);
-                    if op_nominations.is_none() {
-                        debug::info!("{:?} has none nominations", &p);
-                        continue;
-                    }
-                    let nominations = op_nominations.unwrap();
-                    if nominations.targets.is_empty() {
-                        debug::info!("nominations targets of {:?} is empty", &p);
-                        continue;
-                    }
-    
-                    for t in nominations.targets {
-                        if Self::paidouts(last_era, &t).is_none() && Self::is_validator(last_era, &t) {
-                            wait_next_block = true;
-                            let call = Call::submit_paidouts(last_era, p.clone(), t).into();
-                            if let Err(e) = SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call) {
-                                debug::info!("failed to submit paidouts: {:?}", e);
-                            }
-                        }
-                    }
-                    if wait_next_block {
-                        return;
+            let era_before_last = last_era.saturating_sub(1);
+            for p in Self::bonded_pools() {
+                let mut vals = Self::nominated(era_before_last, &p).unwrap_or(vec![]);
+                vals = vals.into_iter()
+                    .filter(|v| <PoolPaidouts<T>>::get(last_era, (&v, &p)).is_none() && Self::is_validator(last_era, &v) && Self::is_actived(last_era, &v, &p))
+                    .collect();
+                if vals.is_empty() {
+                    continue;
+                }
+                for val in vals {
+                    let call = Call::submit_paidouts(last_era, p.clone(), val.clone()).into();
+                    if let Err(e) = SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call) {
+                        debug::info!("failed to submit paidouts: {:?}", e);
                     }
                 }
+                return;
             }
 
             if Self::total_bonded_after_payout(era).is_none() {
@@ -446,28 +445,23 @@ decl_module! {
             }
 
             pools.sort_by(|a, b| Self::bonded_of(&b).cmp(&Self::bonded_of(&a)));
-            let mut validators = Self::nominatable_validators(era);
+            let mut validators = Self::nominatable_validators(last_era, era);
             let min = Self::min_nomination_num();
             let max = Self::max_nomination_num();
             for p in pools {
+                if Self::nominated(era, &p).is_some() {
+                    continue;
+                }
+
                 if validators.len() < min.into() {
                     let call = Call::submit_nomination(era, p, vec![]).into();
                     if let Err(e) = SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call) {
                         debug::error!("failed to submit nomination: {:?}", e);
                     }
-                    continue
+                    return;
                 }
 
-                let mut targets: Vec<T::AccountId> = vec![];
-                if let Some(nominated) = staking::Nominators::<T>::get(&p) {
-                    for t in nominated.targets {
-                        if let Ok(i) = validators.binary_search(&t) {
-                            targets.push(t.clone());
-                            validators.remove(i);
-                        }
-                    }
-                }
-
+                let mut targets: Vec<T::AccountId> = Self::nominated(last_era, &p).unwrap_or(vec![]).into_iter().filter(|v| validators.contains(&v)).collect();
                 while targets.len() < max.into() && !validators.is_empty() {
                     let t = validators.pop().unwrap();
                     targets.push(t.clone());
@@ -477,6 +471,7 @@ decl_module! {
                 if let Err(e) = SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call) {
                     debug::error!("failed to submit nomination: {:?}", e);
                 }
+                return;
             }
         }
 
@@ -511,10 +506,14 @@ decl_module! {
 
         /// pay out result
         #[weight = 10_000]
-        pub fn submit_paidouts(origin, era: EraIndex, _pool: T::AccountId, validator: T::AccountId) -> DispatchResult {
+        pub fn submit_paidouts(origin, era: EraIndex, pool: T::AccountId, validator: T::AccountId) -> DispatchResult {
             ensure_none(origin)?;
+            ensure!(Self::pool_paidouts(era, (&validator, &pool)).is_none(), Error::<T>::ValidatorAlreadyPaidout);
+
             let result = staking::Module::<T>::do_payout_stakers(validator.clone(), era).is_ok();
-            <Paidouts<T>>::insert(era, validator, result);
+            <PoolPaidouts<T>>::insert(era, (&validator, &pool), result);
+
+            Self::deposit_event(RawEvent::ValidatorPaidout(era, pool, validator, result));
             Ok(())
         }
 
@@ -538,10 +537,15 @@ decl_module! {
             ensure!(staking::EraElectionStatus::<T>::get().is_closed(), staking::Error::<T>::CallNotAllowed);
             let current_era = staking::CurrentEra::get().ok_or(Error::<T>::NoCurrentEra)?;
             ensure!(era == current_era, Error::<T>::NotCurrentEra);
+            ensure!(Self::nominated(era, &pool).is_none(), Error::<T>::PoolAlreadyNominated);
             let ledger = staking::Ledger::<T>::get(&pool).ok_or(staking::Error::<T>::NotController)?;
 			let stash = &ledger.stash;
             Self::update_nominations(current_era, &targets, stash);
             <Nominated<T>>::insert(era, pool, targets.to_vec());
+
+            let mut nomee = Self::nominated_validators(era);
+            nomee.append(&mut targets.clone());
+            <NominatedValidators<T>>::insert(era, nomee);
 
             Self::deposit_event(RawEvent::NominationUpdated(current_era, targets, stash.clone()));
             Ok(())
@@ -724,14 +728,15 @@ impl<T: Trait> Module<T> {
         Self::pools().into_iter().filter(|p| staking::Ledger::<T>::get(&p).is_some()).collect()
     }
 
-    fn nominatable_validators(current_era: EraIndex) -> Vec<T::AccountId> {
+    fn nominatable_validators(last_era: EraIndex, current_era: EraIndex) -> Vec<T::AccountId> {
         let mut onboards = Self::onboard_validators();
         let max_commission = Self::max_validator_commission();
+        let nomee = Self::nominated_validators(current_era);
         onboards = onboards.into_iter()
-            .filter(|v| staking::Validators::<T>::contains_key(&v) && staking::Validators::<T>::get(&v).commission <= max_commission)
+            .filter(|v| staking::Validators::<T>::contains_key(&v) && staking::Validators::<T>::get(&v).commission <= max_commission && !nomee.contains(&v))
             .collect();
 
-        onboards.sort_by(|a, b| Self::validator_stake(current_era, &b).cmp(&Self::validator_stake(current_era, &a)));
+        onboards.sort_by(|a, b| Self::validator_stake(last_era, &b).cmp(&Self::validator_stake(last_era, &a)));
         onboards
     }
 
@@ -754,6 +759,10 @@ impl<T: Trait> Module<T> {
     
     fn unbond_fee(value: u128) -> u128 {
         Self::unbond_commission() * value
+    }
+
+    fn is_actived(era: EraIndex, validator: &T::AccountId, pool: &T::AccountId) -> bool {
+        staking::ErasStakersClipped::<T>::get(&era, &validator).others.iter().any(|ind| ind.who == *pool)
     }
 }
 
