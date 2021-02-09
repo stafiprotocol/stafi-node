@@ -14,9 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
-pub mod tezos;
-pub mod cosmos;
-
-mod tests;
+// pub mod base58;
+// pub mod sign;
+pub mod verify;

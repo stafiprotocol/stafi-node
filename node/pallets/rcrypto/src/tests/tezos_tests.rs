@@ -15,9 +15,9 @@
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
 
 #[cfg(test)]
-mod tests {
+mod tezos_tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.a
-    use super::super::tezos::sign::*;
+    use super::super::super::tezos::sign::*;
     use hex_literal::*;
 
     #[test]
@@ -34,12 +34,12 @@ mod tests {
         assert_eq!(signature_data.sbytes, except_sbytes.to_vec());
     }
 
-    use super::super::tezos::generator::*;
+    use super::super::super::tezos::generator::*;
     #[test]
     fn test_tezos_generate() {
         for _ in 0..3 {
             let keypair = generate_keypair();
-            let (sk, pk, pkh) = (keypair.sk, keypair.pk, keypair.pkh);
+            let (sk, pk, _pkh) = (keypair.sk, keypair.pk, keypair.pkh);
             let sk_str = str::from_utf8(&sk).unwrap();
             let pk_str = str::from_utf8(&pk).unwrap();
             let mnemonic_str = str::from_utf8(&keypair.mnemonic).unwrap();
@@ -68,10 +68,10 @@ mod tests {
         }
     }
 
-    use super::super::tezos::base58;
+    use super::super::super::tezos::base58;
     use sp_std::str;
     #[test]
-    fn test_pkh() {
+    fn test_tezos_pkh() {
         let pk = "edpkvQQhHzGoFf2zSESp1Kh57sFhbhtA16XAGXqjAYse75BC9RdoXW";
         let except_pkh = "tz1MNu6ytbdEYrHyyQwctJ7rZVFcLrHWjKoN";
         let raw_pk_with_prefix = base58::from_check(pk).unwrap();
@@ -79,7 +79,7 @@ mod tests {
         assert_eq!(except_pkh.as_bytes().to_vec(), pkh);
     }
 
-    use super::super::tezos::verify::*;
+    use super::super::super::tezos::verify::*;
     #[test]
     fn test_tezos_verify() {
         let test_data = "TEST".as_bytes();
