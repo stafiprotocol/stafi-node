@@ -146,7 +146,11 @@ decl_error! {
         /// Validator already paidout
         ValidatorAlreadyPaidout,
         /// pool already nominated
-        PoolAlreadyNominated
+        PoolAlreadyNominated,
+        /// UnlockChunk era too small
+        UnlockChunkEraTooSmall,
+        /// UnlockChunk value too big
+        UnlockChunkValueTooBig,
     }
 }
 
@@ -371,6 +375,24 @@ decl_module! {
             Ok(())
         }
 
+        /// set pool unlock
+        #[weight = 10_000]
+        pub fn add_pool_unlock(origin, pool: <T::Lookup as StaticLookup>::Source, chunk: UnlockChunk<BalanceOf<T>>) -> DispatchResult {
+            ensure_root(origin)?;
+            
+            let controller = T::Lookup::lookup(pool)?;
+            ensure!(Self::is_in_pools(&controller), Error::<T>::PoolNotFound);
+            let mut ledger = staking::Ledger::<T>::get(&controller).ok_or(staking::Error::<T>::NotController)?;
+            let current_era = staking::CurrentEra::get().ok_or(Error::<T>::NoCurrentEra)?;
+            ensure!(chunk.era > current_era, Error::<T>::UnlockChunkEraTooSmall);
+            ensure!(chunk.value <= ledger.active, Error::<T>::UnlockChunkValueTooBig);
+
+            ledger.unlocking.push(chunk);
+            staking::Module::<T>::update_ledger(&controller, &ledger);
+
+            Ok(())
+        }
+
         fn offchain_worker(block: T::BlockNumber) {
             if !sp_io::offchain::is_validator() {
                 return;
@@ -462,9 +484,13 @@ decl_module! {
                 }
 
                 let mut targets: Vec<T::AccountId> = Self::nominated(last_era, &p).unwrap_or(vec![]).into_iter().filter(|v| validators.contains(&v)).collect();
-                while targets.len() < max.into() && !validators.is_empty() {
-                    let t = validators.pop().unwrap();
-                    targets.push(t.clone());
+                let mut op_val = validators.pop();
+                while targets.len() < max.into() && op_val.is_some() {
+                    let val = op_val.unwrap();
+                    if !targets.contains(&val) {
+                        targets.push(val);
+                    }
+                    op_val = validators.pop();
                 }
 
                 let call = Call::submit_nomination(era, p, targets).into();
@@ -643,7 +669,7 @@ decl_module! {
             ensure!(ledger.active >= balance, Error::<T>::InsufficientBalance);
             ledger.active -= balance;
             if let Some(chunk) = ledger.unlocking.iter_mut().find(|chunk| chunk.era == era) {
-                chunk.value.checked_add(&balance).ok_or(Error::<T>::Overflow)?;
+                chunk.value = chunk.value.checked_add(&balance).ok_or(Error::<T>::Overflow)?;
             } else {
                 ledger.unlocking.push(UnlockChunk { value: balance, era });
             }
