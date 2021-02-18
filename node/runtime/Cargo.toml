@@ -1,6 +1,6 @@
 [package]
 name = "node-runtime"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
 build = "build.rs"
@@ -74,11 +74,11 @@ pallet-transaction-payment = { branch = "master", default-features = false, git 
 pallet-transaction-payment-rpc-runtime-api = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 pallet-vesting = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
-rtoken-balances = { version = "0.4.0", default-features = false, path = "../pallets/rtoken/balances" }
-rtoken-rate = { version = "0.4.0", default-features = false, path = "../pallets/rtoken/rate" }
-rfis = { version = "0.4.0", default-features = false, path = "../pallets/rtoken/rfis" }
-bridge-common = { version = "0.4.0", default-features = false, path = "../pallets/bridge/common", package = "bridge-common" }
-bridge-swap = { version = "0.4.0", default-features = false, path = "../pallets/bridge/swap", package = "bridge-swap" }
+rtoken-balances = { version = "0.4.1", default-features = false, path = "../pallets/rtoken/balances" }
+rtoken-rate = { version = "0.4.1", default-features = false, path = "../pallets/rtoken/rate" }
+rfis = { version = "0.4.1", default-features = false, path = "../pallets/rtoken/rfis" }
+bridge-common = { version = "0.4.1", default-features = false, path = "../pallets/bridge/common", package = "bridge-common" }
+bridge-swap = { version = "0.4.1", default-features = false, path = "../pallets/bridge/swap", package = "bridge-swap" }
 
 [build-dependencies]
 # wasm-builder-runner = { version = "1.0.6", package = "substrate-wasm-builder-runner", path = "../../utils/wasm-builder-runner" }

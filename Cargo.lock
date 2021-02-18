@@ -578,7 +578,7 @@ dependencies = [
 
 [[package]]
 name = "bridge-common"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -594,7 +594,7 @@ dependencies = [
 
 [[package]]
 name = "bridge-swap"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "bridge-common",
  "frame-support",
@@ -3647,7 +3647,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "assert_cmd",
  "frame-benchmarking-cli",
@@ -3719,7 +3719,7 @@ dependencies = [
 
 [[package]]
 name = "node-executor"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "criterion",
  "frame-benchmarking",
@@ -3751,7 +3751,7 @@ dependencies = [
 
 [[package]]
 name = "node-inspect"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "derive_more",
  "log",
@@ -3767,7 +3767,7 @@ dependencies = [
 
 [[package]]
 name = "node-primitives"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -3780,7 +3780,7 @@ dependencies = [
 
 [[package]]
 name = "node-rpc"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "jsonrpc-core",
  "node-primitives",
@@ -3807,7 +3807,7 @@ dependencies = [
 
 [[package]]
 name = "node-rpc-client"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "futures 0.1.30",
  "hyper 0.12.35",
@@ -3820,7 +3820,7 @@ dependencies = [
 
 [[package]]
 name = "node-runtime"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "bridge-common",
  "bridge-swap",
@@ -3890,7 +3890,7 @@ dependencies = [
 
 [[package]]
 name = "node-testing"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "criterion",
  "frame-support",
@@ -5612,7 +5612,7 @@ checksum = "e005d658ad26eacc2b6c506dfde519f4e277e328d0eb3379ca61647d70a8f531"
 
 [[package]]
 name = "rfis"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5667,7 +5667,7 @@ dependencies = [
 
 [[package]]
 name = "rtoken-balances"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5681,7 +5681,7 @@ dependencies = [
 
 [[package]]
 name = "rtoken-rate"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "frame-support",
  "frame-system",
