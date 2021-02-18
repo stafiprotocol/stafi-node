@@ -151,6 +151,8 @@ decl_error! {
         UnlockChunkEraTooSmall,
         /// UnlockChunk value too big
         UnlockChunkValueTooBig,
+        /// No chunk to withdraw
+        NoChunkToWithdraw,
     }
 }
 
@@ -708,7 +710,7 @@ decl_module! {
                     total = total.saturating_add(chunk.value);
                     false
                 }).collect();
-            
+            ensure!(!total.is_zero(), Error::<T>::NoChunkToWithdraw);
             T::Currency::transfer(&controller, &who, total, KeepAlive)?;
             if new_unbonding.is_empty() {
                 <Unbonding<T>>::remove(&who, &controller);
