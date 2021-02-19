@@ -3865,11 +3865,13 @@ dependencies = [
  "pallet-utility",
  "pallet-vesting",
  "parity-scale-codec",
- "rdot",
  "rfis",
  "rtoken-balances",
+ "rtoken-ledger",
  "rtoken-rate",
- "rtoken-votes-bond",
+ "rtoken-relayers",
+ "rtoken-series",
+ "rtoken-votes",
  "serde",
  "sp-api",
  "sp-authority-discovery",
@@ -5501,25 +5503,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rdot"
-version = "0.3.3"
-dependencies = [
- "frame-support",
- "frame-system",
- "node-primitives",
- "pallet-balances",
- "parity-scale-codec",
- "rtoken-balances",
- "rtoken-rate",
- "rtoken-votes-bond",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "rdrand"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5701,6 +5684,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "rtoken-ledger"
+version = "0.3.3"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "hex",
+ "hex-literal",
+ "node-primitives",
+ "pallet-balances",
+ "parity-scale-codec",
+ "rtoken-balances",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "rtoken-rate"
 version = "0.3.3"
 dependencies = [
@@ -5718,14 +5720,48 @@ dependencies = [
 ]
 
 [[package]]
-name = "rtoken-votes-bond"
+name = "rtoken-relayers"
 version = "0.3.3"
 dependencies = [
  "frame-support",
  "frame-system",
  "node-primitives",
  "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "rtoken-series"
+version = "0.3.3"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "hex",
+ "hex-literal",
+ "node-primitives",
+ "parity-scale-codec",
  "rtoken-balances",
+ "rtoken-rate",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "rtoken-votes"
+version = "0.3.3"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "parity-scale-codec",
+ "rtoken-relayers",
  "serde",
  "sp-core",
  "sp-io",

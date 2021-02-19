@@ -10,7 +10,7 @@
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
 
 use codec::{Encode, Decode};
-use sp_runtime::{RuntimeDebug};
+use sp_runtime::RuntimeDebug;
 
 /// Rtoken Identifier
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug)]
@@ -21,6 +21,18 @@ pub enum RSymbol {
     RDOT,
 }
 
-// default
-// RTOKEN
-// impl Default for RSymbol { fn default() -> Self { Self::RTOKEN } }
+/// Rtoken Identifier
+#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug)]
+pub enum ChainType {
+	/// substrate
+	Substrate,
+}
+
+impl RSymbol {
+	/// get chain type of rsymbol, eg: RDOT => Substrate
+	pub fn chain_type(&self) -> ChainType {
+		match self {
+			RSymbol::RFIS | RSymbol::RDOT => ChainType::Substrate,
+		}
+	}
+}

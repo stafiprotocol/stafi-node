@@ -1,58 +1,30 @@
 use sp_std::prelude::*;
 use codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;
+use node_primitives::{RSymbol};
 
-/// Rtoken Identifier
-#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug)]
-pub enum OpposeReason {
-	/// blockhash
-	BLOCKHASH,
-	/// txhash
-    TXHASH,
-    /// from
-    FROM,
-    /// to
-    TO,
-    /// amount
-    AMOUNT(u128, u128),
-}
-
-#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug)]
-pub enum BondStatus {
-    Initiated,
-    Approved,
-    Rejected,
-}
-
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct BondRecord<AccountId, Symbol> {
-    pub bonder: AccountId,
-    pub symbol: Symbol,
-    pub blockhash: Vec<u8>,
-    pub txhash: Vec<u8>,
-    pub amount: u128,
-}
-
-impl<A: PartialEq, B: PartialEq> BondRecord<A, B> {
-    pub fn new(boonder: A, symbol: B, blockhash: Vec<u8>, txhash: Vec<u8>, amount: u128) -> Self {
-        Self {
-            bonder: boonder,
-            symbol: symbol,
-            blockhash: blockhash,
-            txhash: txhash,
-            amount: amount,
-        }
-    }
-}
-
+// /// Rtoken Identifier
+// #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug)]
+// pub enum OpposeReason {
+// 	/// blockhash
+// 	BLOCKHASH,
+// 	/// txhash
+//     TXHASH,
+//     /// from
+//     FROM,
+//     /// to
+//     TO,
+//     /// amount
+//     AMOUNT(u128, u128),
+// }
 
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct BondVote<Hash, AccountId, BlockNumber> {
+pub struct Rvote<Hash, AccountId, BlockNumber> {
     pub id: Hash,
     pub votes_for: Vec<AccountId>,
     pub votes_against: Vec<AccountId>,
-    pub against_reasons: Vec<OpposeReason>,
+    // pub against_reasons: Vec<OpposeReason>,
     pub status: BondStatus,
     pub expiry: BlockNumber,
 }

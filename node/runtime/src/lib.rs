@@ -359,22 +359,6 @@ impl rfis::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const VoteLifetime: BlockNumber = 2000;
-}
-
-impl rtoken_votes_bond::Trait for Runtime {
-	type Event = Event;
-	type RCurrency = RBalances;
-	type VoteLifetime = VoteLifetime;
-}
-
-impl rdot::Trait for Runtime {
-	type Event = Event;
-	type RCurrency = RBalances;
-	// type UnsignedPriority = RFisUnsignedPriority;
-}
-
-parameter_types! {
 	pub const TransactionByteFee: Balance = 2 * MILLICENTS;
 	pub const TargetBlockFullness: Perquintill = Perquintill::from_percent(25);
 	pub AdjustmentVariable: Multiplier = Multiplier::saturating_from_rational(1, 100_000);
@@ -881,6 +865,27 @@ impl bridge_swap::Trait for Runtime {
 	type NativeTokenId = NativeTokenId;
 }
 
+impl rtoken_relayers::Trait for Runtime {
+	type Event = Event;
+}
+
+impl rtoken_votes::Trait for Runtime {
+	type Event = Event;
+	type Proposal = Call;
+	type ProposalLifetime = ProposalLifetime;
+}
+
+impl rtoken_ledger::Trait for Runtime {
+	type Event = Event;
+	type VoterOrigin = rtoken_votes::EnsureVoter<Runtime>;
+}
+
+impl rtoken_series::Trait for Runtime {
+	type Event = Event;
+	type VoterOrigin = rtoken_votes::EnsureVoter<Runtime>;
+	type RCurrency = RBalances;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -922,8 +927,10 @@ construct_runtime!(
 		RFis: rfis::{Module, Call, Storage, Event<T>, ValidateUnsigned},
 		BridgeCommon: bridge_common::{Module, Call, Storage, Event<T>},
 		BridgeSwap: bridge_swap::{Module, Call},
-		RTokenVotesBond: rtoken_votes_bond::{Module, Call, Storage, Event<T>},
-		RDot: rdot::{Module, Call, Event<T>},
+		RTokenRelayers: rtoken_relayers::{Module, Call, Storage, Event<T>},
+		RTokenVotes: rtoken_votes::{Module, Call, Storage, Event<T>},
+		RTokenLedger: rtoken_ledger::{Module, Call, Storage, Event},
+		RTokenSeries: rtoken_series::{Module, Call, Storage, Event<T>},
 	}
 );
 
