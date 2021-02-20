@@ -23,7 +23,7 @@ pub enum BondReason {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct BondRecord<AccountId> {
     pub bonder: AccountId,
-    pub rsymbol: RSymbol,
+    pub symbol: RSymbol,
     pub pubkey: Vec<u8>,
     pub pool: Vec<u8>,
     pub blockhash: Vec<u8>,
@@ -32,10 +32,10 @@ pub struct BondRecord<AccountId> {
 }
 
 impl<A: PartialEq> BondRecord<A> {
-    pub fn new(boonder: A, rsymbol: RSymbol, pubkey: Vec<u8>, pool: Vec<u8>, blockhash: Vec<u8>, txhash: Vec<u8>, amount: u128) -> Self {
+    pub fn new(boonder: A, symbol: RSymbol, pubkey: Vec<u8>, pool: Vec<u8>, blockhash: Vec<u8>, txhash: Vec<u8>, amount: u128) -> Self {
         Self {
             bonder: boonder,
-            rsymbol: rsymbol,
+            symbol: symbol,
             pubkey: pubkey,
             pool: pool,
             blockhash: blockhash,

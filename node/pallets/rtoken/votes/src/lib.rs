@@ -187,7 +187,7 @@ impl<T: Trait> Module<T> {
 
         let votes = op_votes.unwrap();
         match votes.status {
-            RproposalStatus::Approved => {
+            RproposalStatus::Approved | RproposalStatus::Rejected => {
                 prop.dispatch(system::RawOrigin::Signed(Self::account_id()).into())
                     .map(|_| ())
                     .map_err(|e| e.error)?;
