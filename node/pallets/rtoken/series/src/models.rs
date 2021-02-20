@@ -59,3 +59,13 @@ impl<A: PartialEq> BondKey<A> {
         }
     }
 }
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct BondUnlockChunk {
+	/// Amount of funds to be unlocked.
+	#[codec(compact)]
+	pub value: u128,
+	/// Era number at which point it'll be unlocked.
+	#[codec(compact)]
+	pub era: u32,
+}
