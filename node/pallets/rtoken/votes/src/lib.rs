@@ -110,7 +110,7 @@ decl_error! {
 }
 
 decl_storage! {
-    trait Store for Module<T: Trait> as BridgeCommon {
+    trait Store for Module<T: Trait> as RTokenVotes {
         /// All known proposals.
         pub Votes get(fn votes):
             double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) (T::Hash, T::Proposal)

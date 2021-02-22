@@ -54,8 +54,8 @@ decl_error! {
         PoolNotFound,
         /// liquidity bond Zero
         LiquidityBondZero,
-        /// blockhash and txhash already bonded
-        HashAlreadyBonded,
+        /// txhash already bonded
+        TxhashAlreadyBonded,
         /// bondrepeated
         BondRepeated,
         /// Pubkey invalid
@@ -92,6 +92,8 @@ decl_storage! {
         pub BondReasons get(fn bond_reasons): map hasher(blake2_128_concat) BondKey<T::Hash> => Option<BondReason>;
         pub AccountBondCount get(fn account_bond_count): map hasher(twox_64_concat) T::AccountId => u64;
         pub AccountBondRecords get(fn account_bond_records): map hasher(twox_64_concat) (T::AccountId, u64) => Option<BondKey<T::Hash>>;
+        /// bond success histories. (symbol, blockhash, txhash) => bool
+        pub BondSuccess get(fn bond_success): map hasher(twox_64_concat) (RSymbol, Vec<u8>, Vec<u8>) => Option<bool>;
         /// Recipient account for fees
         Receiver get(fn receiver): Option<T::AccountId>;
         /// Unbonding: (origin, pool) => [UnlockChunks]
@@ -143,6 +145,7 @@ decl_module! {
             let who = ensure_signed(origin)?;
             ensure!(amount > 0, Error::<T>::LiquidityBondZero);
             ensure!(Self::pools(symbol).contains(&pool), Error::<T>::PoolNotFound);
+            ensure!(Self::bond_success((symbol, &blockhash, &txhash)).is_none(), Error::<T>::TxhashAlreadyBonded);
 
             match verify_signature(symbol, &pubkey, &signature, &txhash) {
                 SigVerifyResult::InvalidPubkey => Err(Error::<T>::InvalidPubkey)?,
@@ -156,7 +159,6 @@ decl_module! {
             ensure!(Self::bond_records(&bondkey).is_none(), Error::<T>::BondRepeated);
             let old_count = Self::account_bond_count(&who);
             let new_count = old_count.checked_add(1).ok_or(Error::<T>::OverFlow)?;
-            
 
             <AccountBondCount<T>>::insert(&who, new_count);
             <AccountBondRecords<T>>::insert((&who, new_count), &bondkey);
@@ -168,9 +170,8 @@ decl_module! {
 
         /// execute bond record
         #[weight = 100_000]
-        pub fn execute_bond_record(origin, symbol: RSymbol, bond_id: T::Hash, reason: BondReason) -> DispatchResult {
+        pub fn execute_bond_record(origin, bondkey: BondKey<T::Hash>, reason: BondReason) -> DispatchResult {
             T::VoterOrigin::ensure_origin(origin)?;
-            let bondkey = BondKey::new(symbol, bond_id);
             let op_record = Self::bond_records(&bondkey);
             ensure!(op_record.is_some(), Error::<T>::BondNotFound);
             let record = op_record.unwrap();
@@ -180,9 +181,10 @@ decl_module! {
                 return Ok(())
             }
 
-            let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(symbol, record.amount);
-            T::RCurrency::mint(&record.bonder, symbol, rbalance)?;
+            let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(record.symbol, record.amount);
+            T::RCurrency::mint(&record.bonder, record.symbol, rbalance)?;
             <BondReasons<T>>::insert(&bondkey, reason);
+            <BondSuccess>::insert((record.symbol, record.blockhash, record.txhash), true);
             // Self::bond_extra(&controller, &mut ledger, value);
 
             Ok(())
