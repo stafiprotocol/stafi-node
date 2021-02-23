@@ -32,9 +32,9 @@ pub struct BondRecord<AccountId> {
 }
 
 impl<A: PartialEq> BondRecord<A> {
-    pub fn new(boonder: A, symbol: RSymbol, pubkey: Vec<u8>, pool: Vec<u8>, blockhash: Vec<u8>, txhash: Vec<u8>, amount: u128) -> Self {
+    pub fn new(bonder: A, symbol: RSymbol, pubkey: Vec<u8>, pool: Vec<u8>, blockhash: Vec<u8>, txhash: Vec<u8>, amount: u128) -> Self {
         Self {
-            bonder: boonder,
+            bonder: bonder,
             symbol: symbol,
             pubkey: pubkey,
             pool: pool,

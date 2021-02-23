@@ -25,7 +25,7 @@ pub use models::*;
 pub mod signature;
 pub use signature::*;
 
-pub const MAX_UNLOCKING_CHUNKS: usize = 16;
+pub const MAX_UNLOCKING_CHUNKS: usize = 32;
 pub const MAX_WITHDRAWING_CHUNKS: usize = 100;
 
 pub trait Trait: system::Trait + rtoken_rate::Trait + rtoken_ledger::Trait {
@@ -89,20 +89,23 @@ decl_error! {
 decl_storage! {
     trait Store for Module<T: Trait> as RTokenSeries {
         /// Pools of rsymbol
-        pub Pools get(fn pools): map hasher(blake2_128_concat) RSymbol => Vec<Vec<u8>>;
+        pub Pools get(fn pools): map hasher(twox_64_concat) RSymbol => Vec<Vec<u8>>;
         /// (hash, rsymbol) => record
         pub BondRecords get(fn bond_records): map hasher(blake2_128_concat) BondKey<T::Hash> => Option<BondRecord<T::AccountId>>;
         pub BondReasons get(fn bond_reasons): map hasher(blake2_128_concat) BondKey<T::Hash> => Option<BondReason>;
-        pub AccountBondCount get(fn account_bond_count): map hasher(twox_64_concat) T::AccountId => u64;
-        pub AccountBondRecords get(fn account_bond_records): map hasher(twox_64_concat) (T::AccountId, u64) => Option<BondKey<T::Hash>>;
+        pub AccountBondCount get(fn account_bond_count): map hasher(blake2_128_concat) T::AccountId => u64;
+        pub AccountBondRecords get(fn account_bond_records): map hasher(blake2_128_concat) (T::AccountId, u64) => Option<BondKey<T::Hash>>;
         /// bond success histories. (symbol, blockhash, txhash) => bool
-        pub BondSuccess get(fn bond_success): map hasher(twox_64_concat) (RSymbol, Vec<u8>, Vec<u8>) => Option<bool>;
+        pub BondSuccess get(fn bond_success): map hasher(blake2_128_concat) (RSymbol, Vec<u8>, Vec<u8>) => Option<bool>;
+        /// Total active balance. (symbol, pool) => bool
+        pub TotalBondActiveBalance get(fn total_bond_active_balance): map hasher(twox_64_concat) (RSymbol, Vec<u8>) => u128;
         /// Recipient account for fees
         Receiver get(fn receiver): Option<T::AccountId>;
-        /// Unbonding: (origin, pool) => [BondUnlockChunk]
-        pub Unbonding get(fn unbonding): double_map hasher(twox_64_concat) T::AccountId, hasher(twox_64_concat) (RSymbol, Vec<u8>) => Option<Vec<BondUnlockChunk>>;
+        /// Unbonding: (origin, (symbol, pool)) => [BondUnlockChunk]
+        pub Unbonding get(fn unbonding): double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) (RSymbol, Vec<u8>) => Option<Vec<BondUnlockChunk>>;
         pub TotalUnbonding get(fn total_unbonding): map hasher(twox_64_concat) (RSymbol, u32) => Option<Vec<TotalUnlockChunk>>;
 
+        /// Withdrawing: (symbol, unlocking_era, index) => [WithdrawChunk]
         pub TotalWithdrawing get(fn total_withdrawing): map hasher(twox_64_concat) (RSymbol, u32, u32) => Option<Vec<WithdrawChunk<T::AccountId>>>;
         pub TotalWithdrawingChunkCount get(fn total_withdrawing_chunk_count): map hasher(twox_64_concat) (RSymbol, u32) => u32;
 
@@ -191,7 +194,10 @@ decl_module! {
             T::RCurrency::mint(&record.bonder, record.symbol, rbalance)?;
             <BondReasons<T>>::insert(&bondkey, reason);
             <BondSuccess>::insert((record.symbol, record.blockhash, record.txhash), true);
-            // Self::bond_extra(&controller, &mut ledger, value);
+            
+            let mut total_bond_active_balance = Self::total_bond_active_balance((record.symbol, record.pool.clone()));
+            total_bond_active_balance += record.amount;
+            TotalBondActiveBalance::insert((record.symbol, record.pool), total_bond_active_balance);
 
             Ok(())
         }
@@ -219,8 +225,8 @@ decl_module! {
             let left_value = value - fee;
             let balance = rtoken_rate::Module::<T>::rtoken_to_token(symbol, left_value);
 
-            // TODO
-            // ensure!(pool_active >= balance, Error::<T>::InsufficientBalance);
+            let mut total_bond_active_balance = Self::total_bond_active_balance((symbol, pool.clone()));
+            ensure!(total_bond_active_balance >= balance, Error::<T>::InsufficientBalance);
             
             let unlocking_era = Self::unlocking_era(symbol, current_era);
             if let Some(chunk) = unbonding.iter_mut().find(|chunk| chunk.era == unlocking_era) {
@@ -241,6 +247,10 @@ decl_module! {
             T::RCurrency::burn(&who, symbol, left_value)?;
             <Unbonding<T>>::insert(&who, (symbol, &pool), unbonding);
             TotalUnbonding::insert((symbol, current_era), total_unbonding);
+
+            total_bond_active_balance -= balance;
+            TotalBondActiveBalance::insert((symbol, pool.clone()), total_bond_active_balance);
+
             Self::handle_withdraw(who.clone(), symbol, unlocking_era, pool.clone(), recipient.clone(), balance);
 
             Self::deposit_event(RawEvent::LiquidityUnBond(who, pool, value, left_value, balance));
