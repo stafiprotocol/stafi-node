@@ -46,6 +46,10 @@ decl_event! {
         LiquidityUnBond(AccountId, Vec<u8>, u128, u128, u128),
         /// liquidity withdraw unbond
         LiquidityWithdrawUnBond(AccountId, RSymbol, Vec<u8>, Vec<u8>, u128),
+        /// Commission has been updated.
+        CommissionUpdated(Perbill, Perbill),
+        /// UnbondCommission has been updated.
+        UnbondCommissionUpdated(Perbill, Perbill),
     }
 }
 
@@ -77,6 +81,8 @@ decl_error! {
         NoCurrentEra,
         /// era rate not updated
         EraRateNotUpdated,
+        /// era rate already updated
+        EraRateAlreadyUpdated,
         /// insufficient balance
         InsufficientBalance,
         /// Can not schedule more unlock chunks.
@@ -109,6 +115,8 @@ decl_storage! {
         pub TotalWithdrawing get(fn total_withdrawing): map hasher(twox_64_concat) (RSymbol, u32, u32) => Option<Vec<WithdrawChunk<T::AccountId>>>;
         pub TotalWithdrawingChunkCount get(fn total_withdrawing_chunk_count): map hasher(twox_64_concat) (RSymbol, u32) => u32;
 
+        /// commission of staking rewards
+        Commission get(fn commission): Perbill = Perbill::from_percent(10);
         /// Unbond commission
         UnbondCommission get(fn unbond_commission): Perbill = Perbill::from_parts(2000000);
     }
@@ -138,12 +146,49 @@ decl_module! {
             Ok(())
         }
 
+        /// Update commission
+		#[weight = 10_000]
+		fn set_commission(origin, new_part: u32) -> DispatchResult {
+            ensure_root(origin)?;
+            let old_commission = Self::commission();
+            let new_commission = Perbill::from_parts(new_part);
+			Commission::put(new_commission);
+
+			Self::deposit_event(RawEvent::CommissionUpdated(old_commission, new_commission));
+			Ok(())
+        }
+
         /// set unbond commission
         #[weight = 10_000]
         pub fn set_unbond_commission(origin, new_part: u32) -> DispatchResult {
             ensure_root(origin)?;
+            let old_commission = Self::unbond_commission();
             let new_commission = Perbill::from_parts(new_part);
             UnbondCommission::put(new_commission);
+
+            Self::deposit_event(RawEvent::UnbondCommissionUpdated(old_commission, new_commission));
+            Ok(())
+        }
+
+        /// execute rtoken rate
+        #[weight = 100_000]
+        pub fn execute_rtoken_rate(origin, symbol: RSymbol, _era: u32, total_active_balance: u128, reward: u128) -> DispatchResult {
+            T::VoterOrigin::ensure_origin(origin)?;
+
+            let current_era = rtoken_ledger::ChainEras::get(symbol).ok_or(Error::<T>::NoCurrentEra)?;
+            ensure!(!rtoken_rate::EraRate::get(symbol, current_era).is_some(), Error::<T>::EraRateAlreadyUpdated);
+
+            let op_receiver = Self::receiver();
+            if reward > 0 && op_receiver.is_some() {
+                let fee = Self::commission() * reward;
+                let rtoken_value = rtoken_rate::Module::<T>::token_to_rtoken(symbol, fee);
+                let receiver = op_receiver.unwrap();
+                T::RCurrency::mint(&receiver, symbol, rtoken_value)?;
+            }
+
+            let rbalance = T::RCurrency::total_issuance(symbol);
+            let rate =  rtoken_rate::Module::<T>::set_rate(symbol, total_active_balance, rbalance);
+            rtoken_rate::EraRate::insert(symbol, current_era, rate);
 
             Ok(())
         }
