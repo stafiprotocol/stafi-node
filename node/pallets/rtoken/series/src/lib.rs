@@ -5,7 +5,7 @@ use sp_std::prelude::*;
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchResult}, ensure,
-    traits::{EnsureOrigin, Get}
+    traits::{EnsureOrigin}
 };
 
 use frame_system::{self as system, ensure_signed, ensure_root};
@@ -87,6 +87,8 @@ decl_error! {
         InsufficientBalance,
         /// Can not schedule more unlock chunks.
         NoMoreChunks,
+        /// Bonding duration not set
+        BondingDurationNotSet,
     }
 }
 
@@ -273,7 +275,8 @@ decl_module! {
             let mut total_bond_active_balance = Self::total_bond_active_balance((symbol, pool.clone()));
             ensure!(total_bond_active_balance >= balance, Error::<T>::InsufficientBalance);
             
-            let unlocking_era = Self::unlocking_era(symbol, current_era);
+            let bonding_duration = rtoken_ledger::ChainBondingDuration::get(symbol).ok_or(Error::<T>::BondingDurationNotSet)?;
+            let unlocking_era = current_era + bonding_duration + 2;
             if let Some(chunk) = unbonding.iter_mut().find(|chunk| chunk.era == unlocking_era) {
                 chunk.value += balance;
             } else {
@@ -308,13 +311,6 @@ decl_module! {
 impl<T: Trait> Module<T> {
     fn unbond_fee(value: u128) -> u128 {
         Self::unbond_commission() * value
-    }
-
-    fn unlocking_era(symbol: RSymbol, current_era: u32) -> u32 {
-        match symbol {
-            RSymbol::RDOT => current_era + 30,
-            _ => current_era + 58,
-        }
     }
 
     fn handle_withdraw(who: T::AccountId, symbol: RSymbol, unlocking_era: u32, pool: Vec<u8>, recipient: Vec<u8>, value: u128) {
