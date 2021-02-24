@@ -105,12 +105,15 @@ decl_storage! {
         pub AccountBondRecords get(fn account_bond_records): map hasher(blake2_128_concat) (T::AccountId, u64) => Option<BondKey<T::Hash>>;
         /// bond success histories. (symbol, blockhash, txhash) => bool
         pub BondSuccess get(fn bond_success): map hasher(blake2_128_concat) (RSymbol, Vec<u8>, Vec<u8>) => Option<bool>;
-        /// Total active balance. (symbol, pool) => bool
+        /// TotalBonding: (symbol, era) => [TotalBondExtraChunk]
+        pub TotalBonding get(fn total_bonding): map hasher(twox_64_concat) (RSymbol, u32) => Option<Vec<TotalBondExtraChunk>>;
+        /// Total active balance. (symbol, pool) => u128
         pub TotalBondActiveBalance get(fn total_bond_active_balance): map hasher(twox_64_concat) (RSymbol, Vec<u8>) => u128;
         /// Recipient account for fees
         Receiver get(fn receiver): Option<T::AccountId>;
         /// Unbonding: (origin, (symbol, pool)) => [BondUnlockChunk]
         pub Unbonding get(fn unbonding): double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) (RSymbol, Vec<u8>) => Option<Vec<BondUnlockChunk>>;
+        /// Total unbonding: (symbol, era) => [TotalUnlockChunk]
         pub TotalUnbonding get(fn total_unbonding): map hasher(twox_64_concat) (RSymbol, u32) => Option<Vec<TotalUnlockChunk>>;
 
         /// Withdrawing: (symbol, unlocking_era, index) => [WithdrawChunk]
@@ -237,10 +240,20 @@ decl_module! {
                 return Ok(())
             }
 
+            let current_era = rtoken_ledger::ChainEras::get(record.symbol).ok_or(Error::<T>::NoCurrentEra)?;
+
             let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(record.symbol, record.amount);
             T::RCurrency::mint(&record.bonder, record.symbol, rbalance)?;
             <BondReasons<T>>::insert(&bondkey, reason);
-            <BondSuccess>::insert((record.symbol, record.blockhash, record.txhash), true);
+            <BondSuccess>::insert((record.symbol, record.blockhash.clone(), record.txhash.clone()), true);
+
+            let mut total_bonding = Self::total_bonding((record.symbol, current_era)).unwrap_or(vec![]);
+            if let Some(chunk) = total_bonding.iter_mut().find(|chunk| chunk.pool == record.pool.clone()) {
+                chunk.value += record.amount;
+            } else {
+                total_bonding.push(TotalBondExtraChunk { value: record.amount, pool: record.pool.clone() });
+            }
+            TotalBonding::insert((record.symbol, current_era), total_bonding);
             
             let mut total_bond_active_balance = Self::total_bond_active_balance((record.symbol, record.pool.clone()));
             total_bond_active_balance += record.amount;
