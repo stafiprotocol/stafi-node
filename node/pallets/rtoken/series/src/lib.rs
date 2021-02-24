@@ -15,6 +15,7 @@ use sp_runtime::{
 };
 use rtoken_balances::{traits::{Currency as RCurrency}};
 use node_primitives::RSymbol;
+use rtoken_ledger as ledger;
 
 #[cfg(test)]
 mod tests;
@@ -55,8 +56,6 @@ decl_event! {
 
 decl_error! {
     pub enum Error for Module<T: Trait> {
-        /// pool already added
-        PoolAlreadyAdded,
         /// pool not found
         PoolNotFound,
         /// liquidity bond Zero
@@ -96,8 +95,6 @@ decl_error! {
 
 decl_storage! {
     trait Store for Module<T: Trait> as RTokenSeries {
-        /// Pools of rsymbol
-        pub Pools get(fn pools): map hasher(twox_64_concat) RSymbol => Vec<Vec<u8>>;
         /// (hash, rsymbol) => record
         pub BondRecords get(fn bond_records): map hasher(blake2_128_concat) BondKey<T::Hash> => Option<BondRecord<T::AccountId>>;
         pub BondReasons get(fn bond_reasons): map hasher(blake2_128_concat) BondKey<T::Hash> => Option<BondReason>;
@@ -118,10 +115,12 @@ decl_storage! {
 
         /// Withdrawing: (symbol, unlocking_era, index) => [WithdrawChunk]
         pub TotalWithdrawing get(fn total_withdrawing): map hasher(twox_64_concat) (RSymbol, u32, u32) => Option<Vec<WithdrawChunk<T::AccountId>>>;
+        /// symbol, era => count_index
         pub TotalWithdrawingChunkCount get(fn total_withdrawing_chunk_count): map hasher(twox_64_concat) (RSymbol, u32) => u32;
 
         /// commission of staking rewards
         Commission get(fn commission): Perbill = Perbill::from_percent(10);
+
         /// Unbond commission
         UnbondCommission get(fn unbond_commission): Perbill = Perbill::from_parts(2000000);
     }
@@ -130,18 +129,6 @@ decl_storage! {
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event() = default;
-
-        /// add new pool
-        #[weight = 10_000]
-        pub fn add_new_pool(origin, symbol: RSymbol, pool: Vec<u8>) -> DispatchResult {
-            ensure_root(origin)?;
-            let mut pools = Self::pools(symbol);
-            ensure!(!pools.contains(&pool), Error::<T>::PoolAlreadyAdded);
-            pools.push(pool);
-            Pools::insert(symbol, pools);
-
-            Ok(())
-        }
 
         /// set receiver
         #[weight = 10_000]
@@ -203,7 +190,7 @@ decl_module! {
         pub fn liquidity_bond(origin, pubkey: Vec<u8>, signature: Vec<u8>, pool: Vec<u8>, blockhash: Vec<u8>, txhash: Vec<u8>, amount: u128, symbol: RSymbol) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(amount > 0, Error::<T>::LiquidityBondZero);
-            ensure!(Self::pools(symbol).contains(&pool), Error::<T>::PoolNotFound);
+            ensure!(ledger::Pools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotFound);
             ensure!(Self::bond_success((symbol, &blockhash, &txhash)).is_none(), Error::<T>::TxhashAlreadyBonded);
 
             match verify_signature(symbol, &pubkey, &signature, &txhash) {
@@ -267,7 +254,7 @@ decl_module! {
         pub fn liquidity_unbond(origin, symbol: RSymbol, pool: Vec<u8>, value: u128, recipient: Vec<u8>) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(value > 0, Error::<T>::LiquidityUnbondZero);
-            ensure!(Self::pools(symbol).contains(&pool), Error::<T>::PoolNotFound);
+            ensure!(ledger::Pools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotFound);
 
             let op_receiver = Self::receiver();
             ensure!(op_receiver.is_some(), "No receiver to get unbond commission fee");
