@@ -91,8 +91,6 @@ decl_error! {
     }
 }
 
-
-
 decl_storage! {
     trait Store for Module<T: Trait> as RTokenSeries {
         /// (hash, rsymbol) => record
@@ -102,16 +100,16 @@ decl_storage! {
         pub AccountBondRecords get(fn account_bond_records): map hasher(blake2_128_concat) (T::AccountId, u64) => Option<BondKey<T::Hash>>;
         /// bond success histories. (symbol, blockhash, txhash) => bool
         pub BondSuccess get(fn bond_success): map hasher(blake2_128_concat) (RSymbol, Vec<u8>, Vec<u8>) => Option<bool>;
-        /// TotalBonding: (symbol, era) => [TotalBondExtraChunk]
-        pub TotalBonding get(fn total_bonding): map hasher(twox_64_concat) (RSymbol, u32) => Option<Vec<TotalBondExtraChunk>>;
+        /// TotalBonding: (symbol, era) => [LinkChunk]
+        pub TotalBonding get(fn total_bonding): map hasher(twox_64_concat) (RSymbol, u32) => Option<Vec<LinkChunk>>;
         /// Total active balance. (symbol, pool) => u128
         pub TotalBondActiveBalance get(fn total_bond_active_balance): map hasher(twox_64_concat) (RSymbol, Vec<u8>) => u128;
         /// Recipient account for fees
         Receiver get(fn receiver): Option<T::AccountId>;
         /// Unbonding: (origin, (symbol, pool)) => [BondUnlockChunk]
         pub Unbonding get(fn unbonding): double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) (RSymbol, Vec<u8>) => Option<Vec<BondUnlockChunk>>;
-        /// Total unbonding: (symbol, era) => [TotalUnlockChunk]
-        pub TotalUnbonding get(fn total_unbonding): map hasher(twox_64_concat) (RSymbol, u32) => Option<Vec<TotalUnlockChunk>>;
+        /// Total unbonding: (symbol, era) => [LinkChunk]
+        pub TotalUnbonding get(fn total_unbonding): map hasher(twox_64_concat) (RSymbol, u32) => Option<Vec<LinkChunk>>;
 
         /// Withdrawing: (symbol, unlocking_era, index) => [WithdrawChunk]
         pub TotalWithdrawing get(fn total_withdrawing): map hasher(twox_64_concat) (RSymbol, u32, u32) => Option<Vec<WithdrawChunk<T::AccountId>>>;
@@ -238,7 +236,7 @@ decl_module! {
             if let Some(chunk) = total_bonding.iter_mut().find(|chunk| chunk.pool == record.pool.clone()) {
                 chunk.value += record.amount;
             } else {
-                total_bonding.push(TotalBondExtraChunk { value: record.amount, pool: record.pool.clone() });
+                total_bonding.push(LinkChunk { value: record.amount, pool: record.pool.clone() });
             }
             TotalBonding::insert((record.symbol, current_era), total_bonding);
             
@@ -287,7 +285,7 @@ decl_module! {
             if let Some(chunk) = total_unbonding.iter_mut().find(|chunk| chunk.pool == pool) {
                 chunk.value += balance;
             } else {
-                total_unbonding.push(TotalUnlockChunk { value: balance, pool: pool.clone() });
+                total_unbonding.push(LinkChunk { value: balance, pool: pool.clone() });
             }
 
             let receiver = op_receiver.unwrap();
