@@ -79,6 +79,10 @@ rtoken-rate = { version = "0.4.0", default-features = false, path = "../pallets/
 rfis = { version = "0.4.0", default-features = false, path = "../pallets/rtoken/rfis" }
 bridge-common = { version = "0.4.0", default-features = false, path = "../pallets/bridge/common", package = "bridge-common" }
 bridge-swap = { version = "0.4.0", default-features = false, path = "../pallets/bridge/swap", package = "bridge-swap" }
+rtoken-relayers = { version = "0.4.0", default-features = false, path = "../pallets/rtoken/relayers" }
+rtoken-votes = { version = "0.4.0", default-features = false, path = "../pallets/rtoken/votes" }
+rtoken-ledger = { version = "0.4.0", default-features = false, path = "../pallets/rtoken/ledger" }
+rtoken-series = { version = "0.4.0", default-features = false, path = "../pallets/rtoken/series" }
 
 [build-dependencies]
 wasm-builder-runner = { branch = "master", package = "substrate-wasm-builder-runner", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
@@ -143,6 +147,10 @@ std = [
 	"rfis/std",
 	"bridge-common/std",
 	"bridge-swap/std",
+	"rtoken-relayers/std",
+	"rtoken-votes/std",
+	"rtoken-ledger/std",
+	"rtoken-series/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

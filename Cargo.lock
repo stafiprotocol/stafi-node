@@ -3867,7 +3867,11 @@ dependencies = [
  "parity-scale-codec",
  "rfis",
  "rtoken-balances",
+ "rtoken-ledger",
  "rtoken-rate",
+ "rtoken-relayers",
+ "rtoken-series",
+ "rtoken-votes",
  "serde",
  "sp-api",
  "sp-authority-discovery",
@@ -5680,6 +5684,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "rtoken-ledger"
+version = "0.4.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "hex",
+ "hex-literal",
+ "node-primitives",
+ "pallet-balances",
+ "parity-scale-codec",
+ "rtoken-balances",
+ "rtoken-rate",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "rtoken-rate"
 version = "0.4.0"
 dependencies = [
@@ -5692,6 +5716,57 @@ dependencies = [
  "serde",
  "sp-arithmetic",
  "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "rtoken-relayers"
+version = "0.4.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "rtoken-series"
+version = "0.4.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "hex",
+ "hex-literal",
+ "node-primitives",
+ "parity-scale-codec",
+ "rtoken-balances",
+ "rtoken-ledger",
+ "rtoken-rate",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "rtoken-votes"
+version = "0.4.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "parity-scale-codec",
+ "rtoken-relayers",
+ "serde",
+ "sp-core",
+ "sp-io",
  "sp-runtime",
  "sp-std",
 ]

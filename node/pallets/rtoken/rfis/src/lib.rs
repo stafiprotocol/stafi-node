@@ -129,7 +129,7 @@ decl_error! {
         NotOnboard,
         /// no session key
         NoSessionKey,
-        /// get curreent era err
+        /// get current era err
         NoCurrentEra,
         /// not current era
         NotCurrentEra,
@@ -358,7 +358,7 @@ decl_module! {
 			Ok(())
         }
 
-        /// set commission
+        /// set receiver
         #[weight = 10_000]
         pub fn set_receiver(origin, new_receiver: <T::Lookup as StaticLookup>::Source) -> DispatchResult {
             ensure_root(origin)?;

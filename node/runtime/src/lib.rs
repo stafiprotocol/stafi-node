@@ -102,7 +102,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 16,
+	spec_version: 17,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -864,6 +864,26 @@ impl bridge_swap::Trait for Runtime {
 	type NativeTokenId = NativeTokenId;
 }
 
+impl rtoken_relayers::Trait for Runtime {
+	type Event = Event;
+}
+
+impl rtoken_votes::Trait for Runtime {
+	type Event = Event;
+	type Proposal = Call;
+	type ProposalLifetime = ProposalLifetime;
+}
+
+impl rtoken_ledger::Trait for Runtime {
+	type Event = Event;
+	type VoterOrigin = rtoken_votes::EnsureVoter<Runtime>;
+}
+
+impl rtoken_series::Trait for Runtime {
+	type Event = Event;
+	type RCurrency = RBalances;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -905,6 +925,10 @@ construct_runtime!(
 		RBalances: rtoken_balances::{Module, Call, Storage, Event<T>},
 		RTokenRate: rtoken_rate::{Module, Call, Storage, Event},
 		RFis: rfis::{Module, Call, Storage, Event<T>, ValidateUnsigned},
+		RTokenRelayers: rtoken_relayers::{Module, Call, Storage, Event<T>},
+		RTokenVotes: rtoken_votes::{Module, Call, Storage, Event<T>},
+		RTokenLedger: rtoken_ledger::{Module, Call, Storage, Event},
+		RTokenSeries: rtoken_series::{Module, Call, Storage, Event<T>},
 	}
 );
 
