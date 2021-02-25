@@ -62,14 +62,15 @@ impl<A: PartialEq> BondKey<A> {
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct LinkChunk {
-	/// Total amount
-	#[codec(compact)]
-	pub value: u128,
-	/// Pool
+    /// Pool
 	pub pool: Vec<u8>,
+	/// Total bond amount
+	#[codec(compact)]
+	pub bond_value: u128,
+	/// Total unbond amount
+	#[codec(compact)]
+	pub unbond_value: u128,
 }
-
-// TotalBondExtraChunk
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct BondUnlockChunk {
@@ -89,8 +90,6 @@ pub struct TotalUnlockChunk {
 	/// Pool address from which it'll be unlocked.
 	pub pool: Vec<u8>,
 }
-
-
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct WithdrawChunk<AccountId> {

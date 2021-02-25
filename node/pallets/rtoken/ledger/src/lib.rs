@@ -8,12 +8,12 @@ use frame_support::{
         EnsureOrigin,
     },
 };
-use frame_system::{self as system, ensure_root, ensure_signed};
+use frame_system::{self as system, ensure_root};
 use node_primitives::{RSymbol};
 
 pub type ChainEra = u32;
 
-pub trait Trait: system::Trait {
+pub trait Trait: system::Trait + rtoken_rate::Trait {
     type Event: From<Event> + Into<<Self as system::Trait>::Event>;
 
     /// Specifies the origin check provided by the voter for calls that can only be called by the votes pallet
@@ -22,6 +22,8 @@ pub trait Trait: system::Trait {
 
 decl_event! {
     pub enum Event {
+        /// symbol, era
+        EraInitialized(RSymbol, ChainEra),
         /// symbol, old_era, new_era
         EraUpdated(RSymbol, ChainEra, ChainEra),
         /// symbol, old_bonding_duration, new_bonding_duration
@@ -41,6 +43,10 @@ decl_error! {
         PoolNotFound,
         /// sub account already added
         SubAccountAlreadyAdded,
+        /// era zero
+        EraZero,
+        /// era already initialized
+        EraAlreadyInitialized,
         /// new_era not bigger than old
         NewEraNotBiggerThanOld,
         /// new_bonding_duration zero
@@ -99,6 +105,22 @@ decl_module! {
             Ok(())
         }
 
+        /// Initialize chain era
+        #[weight = 10_000]
+        pub fn initialize_chain_era(origin, symbol: RSymbol, era: u32) -> DispatchResult {
+            ensure_root(origin)?;
+
+            ensure!(era > 0, Error::<T>::EraZero);
+            ensure!(!Self::chain_eras(symbol).is_some(), Error::<T>::EraAlreadyInitialized);
+            <ChainEras>::insert(symbol, era);
+
+            let rate = rtoken_rate::Module::<T>::set_rate(symbol, 0, 0);
+            rtoken_rate::EraRate::insert(symbol, era, rate);
+
+            Self::deposit_event(Event::EraInitialized(symbol, era));
+            Ok(())
+        }
+
 
         /// set chain era
         #[weight = 10_000]
@@ -107,6 +129,7 @@ decl_module! {
             let old_era = Self::chain_eras(symbol).unwrap_or(0);
             ensure!(new_era > old_era, Error::<T>::NewEraNotBiggerThanOld);
             <ChainEras>::insert(symbol, new_era);
+
             Self::deposit_event(Event::EraUpdated(symbol, old_era, new_era));
             Ok(())
         }

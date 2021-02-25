@@ -23,6 +23,7 @@ pallet-balances = { branch = "master", default-features = false, git = 'https://
 
 node-primitives = { path = "../../../primitives", default-features = false }
 rtoken-balances = { path = "../balances", default-features = false}
+rtoken-rate = { path = "../rate", default-features = false}
 
 [dev-dependencies]
 hex = "0.4"
@@ -41,4 +42,5 @@ std = [
   "frame-system/std",
   "pallet-balances/std",
   "rtoken-balances/std",
+  "rtoken-rate/std",
 ]
