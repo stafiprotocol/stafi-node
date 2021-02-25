@@ -199,7 +199,7 @@ decl_module! {
             let current_era = rtoken_ledger::ChainEras::get(symbol).ok_or(Error::<T>::NoCurrentEra)?;
             ensure!(rtoken_rate::EraRate::get(symbol, current_era).is_some(), Error::<T>::EraRateNotUpdated);
 
-            let record = BondRecord::new(who.clone(), symbol, pubkey.clone(), pool.clone(), blockhash.clone(), txhash.clone(), amount);
+            let record = BondRecord::new(who.clone(), symbol, current_era, pubkey.clone(), pool.clone(), blockhash.clone(), txhash.clone(), amount);
             let bond_id = <T::Hashing as Hash>::hash_of(&record);
             let bondkey = BondKey::new(symbol, bond_id);
             ensure!(Self::bond_records(&bondkey).is_none(), Error::<T>::BondRepeated);
