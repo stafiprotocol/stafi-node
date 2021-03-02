@@ -24,7 +24,6 @@ pub enum BondReason {
 pub struct BondRecord<AccountId> {
     pub bonder: AccountId,
     pub symbol: RSymbol,
-    pub era: u32,
     pub pubkey: Vec<u8>,
     pub pool: Vec<u8>,
     pub blockhash: Vec<u8>,
@@ -33,11 +32,10 @@ pub struct BondRecord<AccountId> {
 }
 
 impl<A: PartialEq> BondRecord<A> {
-    pub fn new(bonder: A, symbol: RSymbol, era: u32, pubkey: Vec<u8>, pool: Vec<u8>, blockhash: Vec<u8>, txhash: Vec<u8>, amount: u128) -> Self {
+    pub fn new(bonder: A, symbol: RSymbol, pubkey: Vec<u8>, pool: Vec<u8>, blockhash: Vec<u8>, txhash: Vec<u8>, amount: u128) -> Self {
         Self {
             bonder: bonder,
             symbol: symbol,
-            era: era,
             pubkey: pubkey,
             pool: pool,
             blockhash: blockhash,
@@ -62,17 +60,17 @@ impl<A: PartialEq> BondKey<A> {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct LinkChunk {
-    /// Pool
-	pub pool: Vec<u8>,
-	/// Total bond amount
-	#[codec(compact)]
-	pub bond_value: u128,
-	/// Total unbond amount
-	#[codec(compact)]
-	pub unbond_value: u128,
-}
+// #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+// pub struct LinkChunk {
+//     /// Pool
+// 	pub pool: Vec<u8>,
+// 	/// Total bond amount
+// 	#[codec(compact)]
+// 	pub bond: u128,
+// 	/// Total unbond amount
+// 	#[codec(compact)]
+//     pub unbond: u128,
+// }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct BondUnlockChunk {

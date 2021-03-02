@@ -15,7 +15,7 @@ use sp_runtime::{
 };
 use rtoken_balances::{traits::{Currency as RCurrency}};
 use node_primitives::RSymbol;
-use rtoken_ledger as ledger;
+use rtoken_ledger::{self as ledger};
 
 #[cfg(test)]
 mod tests;
@@ -102,8 +102,11 @@ decl_storage! {
         pub BondSuccess get(fn bond_success): map hasher(blake2_128_concat) (RSymbol, Vec<u8>, Vec<u8>) => Option<bool>;
         /// Total active balance. (symbol, pool) => u128
         pub TotalBondActiveBalance get(fn total_bond_active_balance): map hasher(twox_64_concat) (RSymbol, Vec<u8>) => u128;
-        /// TotalLinking: (symbol, era) => [LinkChunk]
-        pub TotalLinking get(fn total_linking): map hasher(twox_64_concat) (RSymbol, u32) => Option<Vec<LinkChunk>>;
+
+        // /// TotalLinking: (symbol, era) => [LinkChunk]
+        // pub TotalLinking get(fn total_linking): map hasher(twox_64_concat) (RSymbol, u32) => Option<Vec<LinkChunk>>;
+
+
         /// Recipient account for fees
         Receiver get(fn receiver): Option<T::AccountId>;
         /// Unbonding: (origin, (symbol, pool)) => [BondUnlockChunk]
@@ -196,10 +199,7 @@ decl_module! {
             ensure!(ledger::Pools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotFound);
             ensure!(Self::bond_success((symbol, &blockhash, &txhash)).is_none(), Error::<T>::TxhashAlreadyBonded);
 
-            let current_era = rtoken_ledger::ChainEras::get(symbol).ok_or(Error::<T>::NoCurrentEra)?;
-            ensure!(rtoken_rate::EraRate::get(symbol, current_era).is_some(), Error::<T>::EraRateNotUpdated);
-
-            let record = BondRecord::new(who.clone(), symbol, current_era, pubkey.clone(), pool.clone(), blockhash.clone(), txhash.clone(), amount);
+            let record = BondRecord::new(who.clone(), symbol, pubkey.clone(), pool.clone(), blockhash.clone(), txhash.clone(), amount);
             let bond_id = <T::Hashing as Hash>::hash_of(&record);
             let bondkey = BondKey::new(symbol, bond_id);
             ensure!(Self::bond_records(&bondkey).is_none(), Error::<T>::BondRepeated);
@@ -221,26 +221,21 @@ decl_module! {
             let op_record = Self::bond_records(&bondkey);
             ensure!(op_record.is_some(), Error::<T>::BondNotFound);
             let record = op_record.unwrap();
+            ensure!(Self::bond_success((record.symbol, &record.blockhash, &record.txhash)).is_none(), Error::<T>::TxhashAlreadyBonded);
 
             if reason != BondReason::Pass {
                 <BondReasons<T>>::insert(&bondkey, reason);
                 return Ok(())
             }
 
-            let current_era = rtoken_ledger::ChainEras::get(record.symbol).ok_or(Error::<T>::NoCurrentEra)?;
-
             let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(record.symbol, record.amount);
             T::RCurrency::mint(&record.bonder, record.symbol, rbalance)?;
             <BondReasons<T>>::insert(&bondkey, reason);
             <BondSuccess>::insert((record.symbol, record.blockhash.clone(), record.txhash.clone()), true);
 
-            let mut total_linking = Self::total_linking((record.symbol, current_era)).unwrap_or(vec![]);
-            if let Some(chunk) = total_linking.iter_mut().find(|chunk| chunk.pool == record.pool.clone()) {
-                chunk.bond_value += record.amount;
-            } else {
-                total_linking.push(LinkChunk { pool: record.pool.clone(), bond_value: record.amount, unbond_value: 0 });
-            }
-            TotalLinking::insert((record.symbol, current_era), total_linking);
+            let mut pipe = ledger::BondPipelines::get((record.symbol, &record.pool)).unwrap_or_default();
+            pipe.bond = pipe.bond.checked_add(record.amount).ok_or(Error::<T>::OverFlow)?;
+            ledger::BondPipelines::insert((record.symbol, &record.pool), pipe);
             
             let mut total_bond_active_balance = Self::total_bond_active_balance((record.symbol, record.pool.clone()));
             total_bond_active_balance += record.amount;
@@ -258,9 +253,7 @@ decl_module! {
 
             let op_receiver = Self::receiver();
             ensure!(op_receiver.is_some(), "No receiver to get unbond commission fee");
-            
             let current_era = rtoken_ledger::ChainEras::get(symbol).ok_or(Error::<T>::NoCurrentEra)?;
-            ensure!(rtoken_rate::EraRate::get(symbol, current_era).is_some(), Error::<T>::EraRateNotUpdated);
 
             let free = T::RCurrency::free_balance(&who, symbol);
             free.checked_sub(value).ok_or(Error::<T>::InsufficientBalance)?;
@@ -283,18 +276,14 @@ decl_module! {
                 unbonding.push(BondUnlockChunk { value: balance, era: unlocking_era });
             }
 
-            let mut total_linking = Self::total_linking((symbol, current_era)).unwrap_or(vec![]);
-            if let Some(chunk) = total_linking.iter_mut().find(|chunk| chunk.pool == pool) {
-                chunk.unbond_value += balance;
-            } else {
-                total_linking.push(LinkChunk { pool: pool.clone(), bond_value: 0, unbond_value: balance });
-            }
-
             let receiver = op_receiver.unwrap();
             T::RCurrency::transfer(&who, &receiver, symbol, fee)?;
             T::RCurrency::burn(&who, symbol, left_value)?;
             <Unbonding<T>>::insert(&who, (symbol, &pool), unbonding);
-            TotalLinking::insert((symbol, current_era), total_linking);
+
+            let mut pipe = ledger::BondPipelines::get((symbol, &pool)).unwrap_or_default();
+            pipe.unbond = pipe.unbond.checked_add(balance).ok_or(Error::<T>::OverFlow)?;
+            ledger::BondPipelines::insert((symbol, &pool), pipe);
 
             total_bond_active_balance -= balance;
             TotalBondActiveBalance::insert((symbol, pool.clone()), total_bond_active_balance);

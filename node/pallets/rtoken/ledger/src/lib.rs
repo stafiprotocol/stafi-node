@@ -11,7 +11,8 @@ use frame_support::{
 use frame_system::{self as system, ensure_root};
 use node_primitives::{RSymbol};
 
-pub type ChainEra = u32;
+pub mod models;
+pub use models::*;
 
 pub trait Trait: system::Trait + rtoken_rate::Trait {
     type Event: From<Event> + Into<<Self as system::Trait>::Event>;
@@ -23,9 +24,11 @@ pub trait Trait: system::Trait + rtoken_rate::Trait {
 decl_event! {
     pub enum Event {
         /// symbol, era
-        EraInitialized(RSymbol, ChainEra),
+        EraInitialized(RSymbol, u32),
         /// symbol, old_era, new_era
-        EraUpdated(RSymbol, ChainEra, ChainEra),
+        EraUpdated(RSymbol, u32, u32),
+        /// EraPoolUpdated
+        EraPoolUpdated(RSymbol, u32, Vec<u8>, u128, u128),
         /// symbol, old_bonding_duration, new_bonding_duration
         BondingDurationUpdated(RSymbol, u32, u32),
         /// pool added
@@ -47,8 +50,6 @@ decl_error! {
         EraZero,
         /// era already initialized
         EraAlreadyInitialized,
-        /// new_era not bigger than old
-        NewEraNotBiggerThanOld,
         /// new_bonding_duration zero
         NewBondingDurationZero
     }
@@ -56,10 +57,16 @@ decl_error! {
 
 decl_storage! {
     trait Store for Module<T: Trait> as RTokenLedger {
-        pub ChainEras get(fn chain_eras): map hasher(blake2_128_concat) RSymbol => Option<ChainEra>;
+        pub ChainEras get(fn chain_eras): map hasher(blake2_128_concat) RSymbol => Option<u32>;
         pub ChainBondingDuration get(fn chain_bonding_duration): map hasher(twox_64_concat) RSymbol => Option<u32>;
-        /// Pools
+        /// Pools: maybe pubkeys
         pub Pools get(fn pools): map hasher(blake2_128_concat) RSymbol => Vec<Vec<u8>>;
+
+        /// first place to place bond/unbond datas
+        pub BondPipelines get(fn bond_pipelines): map hasher(twox_64_concat) (RSymbol, Vec<u8>) => Option<LinkChunk>;
+        /// second place to place bond/unbond datas
+        pub BondFaucets get(fn bond_faucets): map hasher(twox_64_concat) (RSymbol, u32, Vec<u8>) => Option<LinkChunk>;
+
         /// pool => Vec<SubAccounts>
         pub SubAccounts get(fn sub_accounts): map hasher(blake2_128_concat) Vec<u8> => Vec<Vec<u8>>;
         /// pool sub account flag
@@ -127,8 +134,21 @@ decl_module! {
         pub fn set_chain_era(origin, symbol: RSymbol, new_era: u32) -> DispatchResult {
             T::VoterOrigin::ensure_origin(origin)?;
             let old_era = Self::chain_eras(symbol).unwrap_or(0);
-            ensure!(new_era > old_era, Error::<T>::NewEraNotBiggerThanOld);
             <ChainEras>::insert(symbol, new_era);
+            let pools = Self::pools(symbol);
+            for p in pools {
+                if Self::bond_faucets((symbol, new_era, &p)).is_some() {
+                    break;
+                }
+                let op_chunk = Self::bond_pipelines((symbol, &p));
+                if op_chunk.is_none() {
+                    continue;
+                }
+                let chunk = op_chunk.unwrap();
+                <BondPipelines>::insert((symbol, &p), LinkChunk::default());
+                <BondFaucets>::insert((symbol, new_era, &p), &chunk);
+                Self::deposit_event(Event::EraPoolUpdated(symbol, new_era, p, chunk.bond, chunk.unbond));
+            }
 
             Self::deposit_event(Event::EraUpdated(symbol, old_era, new_era));
             Ok(())
@@ -148,3 +168,7 @@ decl_module! {
         }
     }
 }
+
+// impl<T: Trait> Module<T> {
+//     fn open_faucets()
+// }
