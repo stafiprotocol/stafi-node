@@ -5,10 +5,8 @@ use sp_runtime::RuntimeDebug;
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct LinkChunk {
 	/// Total bond amount
-	#[codec(compact)]
 	pub bond: u128,
 	/// Total unbond amount
-	#[codec(compact)]
     pub unbond: u128,
 }
 

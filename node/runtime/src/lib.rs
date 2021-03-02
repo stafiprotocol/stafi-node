@@ -882,6 +882,7 @@ impl rtoken_ledger::Trait for Runtime {
 
 impl rtoken_series::Trait for Runtime {
 	type Event = Event;
+	type Currency = Balances;
 	type RCurrency = RBalances;
 }
 

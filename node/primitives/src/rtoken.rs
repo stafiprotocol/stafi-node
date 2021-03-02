@@ -15,10 +15,12 @@ use sp_runtime::RuntimeDebug;
 /// Rtoken Identifier
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug)]
 pub enum RSymbol {
-	/// rfis
+	/// rFIS
 	RFIS,
-	/// rdot
+	/// rDOT
     RDOT,
+	/// rKSM
+    RKSM,
 }
 
 /// Rtoken Identifier
@@ -32,7 +34,7 @@ impl RSymbol {
 	/// get chain type of rsymbol, eg: RDOT => Substrate
 	pub fn chain_type(&self) -> ChainType {
 		match self {
-			RSymbol::RFIS | RSymbol::RDOT => ChainType::Substrate,
+			RSymbol::RFIS | RSymbol::RDOT | RSymbol::RKSM => ChainType::Substrate,
 		}
 	}
 }
