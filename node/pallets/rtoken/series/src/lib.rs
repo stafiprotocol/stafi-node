@@ -204,29 +204,6 @@ decl_module! {
             Ok(())
         }
 
-        /// execute rtoken rate
-        #[weight = 100_000]
-        pub fn execute_rtoken_rate(origin, symbol: RSymbol, _era: u32, total_active_balance: u128, reward: u128) -> DispatchResult {
-            T::VoterOrigin::ensure_origin(origin)?;
-
-            let current_era = rtoken_ledger::ChainEras::get(symbol).ok_or(Error::<T>::NoCurrentEra)?;
-            ensure!(!rtoken_rate::EraRate::get(symbol, current_era).is_some(), Error::<T>::EraRateAlreadyUpdated);
-
-            let op_receiver = Self::receiver();
-            if reward > 0 && op_receiver.is_some() {
-                let fee = Self::commission() * reward;
-                let rtoken_value = rtoken_rate::Module::<T>::token_to_rtoken(symbol, fee);
-                let receiver = op_receiver.unwrap();
-                T::RCurrency::mint(&receiver, symbol, rtoken_value)?;
-            }
-
-            let rbalance = T::RCurrency::total_issuance(symbol);
-            let rate =  rtoken_rate::Module::<T>::set_rate(symbol, total_active_balance, rbalance);
-            rtoken_rate::EraRate::insert(symbol, current_era, rate);
-
-            Ok(())
-        }
-
         /// liquidity bond token to get rtoken
         #[weight = 100_000_000_000]
         pub fn liquidity_bond(origin, pubkey: Vec<u8>, signature: Vec<u8>, pool: Vec<u8>, blockhash: Vec<u8>, txhash: Vec<u8>, amount: u128, symbol: RSymbol) -> DispatchResult {
@@ -290,7 +267,7 @@ decl_module! {
             pipe.bond = pipe.bond.checked_add(record.amount).ok_or(Error::<T>::OverFlow)?;
 
             let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(record.symbol, record.amount);
-            T::RCurrency::mint(&record.bonder, record.symbol, rbalance)?;
+            <T as Trait>::RCurrency::mint(&record.bonder, record.symbol, rbalance)?;
             <BondReasons<T>>::insert(&bondkey, reason);
             <BondSuccess>::insert((record.symbol, record.blockhash.clone(), record.txhash.clone()), true);
 
@@ -314,7 +291,7 @@ decl_module! {
             ensure!(op_receiver.is_some(), "No receiver to get unbond commission fee");
             let current_era = rtoken_ledger::ChainEras::get(symbol).ok_or(Error::<T>::NoCurrentEra)?;
 
-            let free = T::RCurrency::free_balance(&who, symbol);
+            let free = <T as Trait>::RCurrency::free_balance(&who, symbol);
             free.checked_sub(value).ok_or(Error::<T>::InsufficientBalance)?;
 
             let mut unbonding = <Unbonding<T>>::get(&who, (symbol, &pool)).unwrap_or(vec![]);
@@ -336,8 +313,8 @@ decl_module! {
             }
 
             let receiver = op_receiver.unwrap();
-            T::RCurrency::transfer(&who, &receiver, symbol, fee)?;
-            T::RCurrency::burn(&who, symbol, left_value)?;
+            <T as Trait>::RCurrency::transfer(&who, &receiver, symbol, fee)?;
+            <T as Trait>::RCurrency::burn(&who, symbol, left_value)?;
             <Unbonding<T>>::insert(&who, (symbol, &pool), unbonding);
 
             let mut pipe = ledger::BondPipelines::get((symbol, &pool)).unwrap_or_default();
