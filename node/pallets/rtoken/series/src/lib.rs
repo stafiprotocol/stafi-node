@@ -55,6 +55,8 @@ decl_event! {
         UnbondCommissionUpdated(Perbill, Perbill),
         /// Set bond fees
         BondFeesSet(RSymbol, Balance),
+        /// Pool balance limit has been updated
+        PoolBalanceLimitUpdated(RSymbol, u128, u128),
     }
 }
 
@@ -78,6 +80,8 @@ decl_error! {
         InvalidSignature,
         /// Got an overflow after adding
         OverFlow,
+        /// Pool limit reached
+        PoolLimitReached,
         /// bondrecord not found
         BondNotFound,
         /// bondrecord processing
@@ -125,6 +129,8 @@ decl_storage! {
         /// fees to cover the commission happened on other chains
         pub BondFees get(fn bond_fees): map hasher(twox_64_concat) RSymbol => Balance = 1500000000000;
 
+        PoolBalanceLimit get(fn pool_balance_limit): map hasher(twox_64_concat) RSymbol => u128;
+
         /// commission of staking rewards
         Commission get(fn commission): Perbill = Perbill::from_percent(10);
 
@@ -161,6 +167,17 @@ decl_module! {
             BondFees::insert(symbol, fees);
             Self::deposit_event(RawEvent::BondFeesSet(symbol, fees));
             Ok(())
+        }
+
+        /// Update pool balance limit
+        #[weight = 10_000]
+        fn set_balance_limit(origin, symbol: RSymbol, new_limit: u128) -> DispatchResult {
+            ensure_root(origin)?;
+            let old_limit = Self::pool_balance_limit(symbol);
+            PoolBalanceLimit::insert(symbol, new_limit);
+
+			Self::deposit_event(RawEvent::PoolBalanceLimitUpdated(symbol, old_limit, new_limit));
+			Ok(())
         }
 
         /// Update commission
@@ -225,6 +242,11 @@ decl_module! {
             ensure!(Self::bond_switch(), Error::<T>::BondSwitchClosed);
             ensure!(ledger::Pools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotFound);
             ensure!(Self::bond_success((symbol, &blockhash, &txhash)).is_none(), Error::<T>::TxhashAlreadyBonded);
+
+            let limit = Self::pool_balance_limit(symbol);
+            let total_bond_active_balance = Self::total_bond_active_balance((symbol, pool.clone()));
+            let bonded = total_bond_active_balance.checked_add(amount).ok_or(Error::<T>::OverFlow)?;
+            ensure!(limit == 0 || bonded <= limit, Error::<T>::PoolLimitReached);
 
             let record = BondRecord::new(who.clone(), symbol, pubkey.clone(), pool.clone(), blockhash.clone(), txhash.clone(), amount);
             let bond_id = <T::Hashing as Hash>::hash_of(&record);
