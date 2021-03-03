@@ -877,6 +877,7 @@ impl rtoken_votes::Trait for Runtime {
 
 impl rtoken_ledger::Trait for Runtime {
 	type Event = Event;
+	type RCurrency = RBalances;
 	type VoterOrigin = rtoken_votes::EnsureVoter<Runtime>;
 }
 
