@@ -110,8 +110,6 @@ decl_storage! {
         pub AccountBondRecords get(fn account_bond_records): map hasher(blake2_128_concat) (T::AccountId, u64) => Option<BondKey<T::Hash>>;
         /// bond success histories. (symbol, blockhash, txhash) => bool
         pub BondSuccess get(fn bond_success): map hasher(blake2_128_concat) (RSymbol, Vec<u8>, Vec<u8>) => Option<bool>;
-        /// Total active balance. (symbol, pool) => u128
-        pub TotalBondActiveBalance get(fn total_bond_active_balance): map hasher(twox_64_concat) (RSymbol, Vec<u8>) => u128;
         /// Recipient account for fees
         Receiver get(fn receiver): Option<T::AccountId>;
         /// Unbonding: (origin, (symbol, pool)) => [BondUnlockChunk]
@@ -144,14 +142,6 @@ decl_module! {
             let state = Self::bond_switch();
             BondSwitch::put(!state);
 			Ok(())
-        }
-
-        /// set receiver
-        #[weight = 10_000]
-        pub fn set_receiver(origin, new_receiver: T::AccountId) -> DispatchResult {
-            ensure_root(origin)?;
-            <Receiver<T>>::put(new_receiver);
-            Ok(())
         }
 
         /// Set fees for bond.
@@ -191,17 +181,19 @@ decl_module! {
         #[weight = 100_000_000_000]
         pub fn liquidity_bond(origin, pubkey: Vec<u8>, signature: Vec<u8>, pool: Vec<u8>, blockhash: Vec<u8>, txhash: Vec<u8>, amount: u128, symbol: RSymbol) -> DispatchResult {
             let who = ensure_signed(origin)?;
+            ensure!(Self::bond_switch(), Error::<T>::BondSwitchClosed);
             ensure!(amount > 0, Error::<T>::LiquidityBondZero);
             ensure!(symbol != RSymbol::RFIS, Error::<T>::InvalidRSymbol);
+            ensure!(Self::bond_success((symbol, &blockhash, &txhash)).is_none(), Error::<T>::TxhashAlreadyBonded);
+            ensure!(ledger::BondedPools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotBonded);
+            let op_receiver = ledger::Module::<T>::receiver();
+            ensure!(op_receiver.is_some(), ledger::Error::<T>::NoReceiver);
 
             match verify_signature(symbol, &pubkey, &signature, &txhash) {
                 SigVerifyResult::InvalidPubkey => Err(Error::<T>::InvalidPubkey)?,
                 SigVerifyResult::Fail => Err(Error::<T>::InvalidSignature)?,
                 _ => (),
             }
-            ensure!(Self::bond_switch(), Error::<T>::BondSwitchClosed);
-            ensure!(ledger::Pools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotFound);
-            ensure!(Self::bond_success((symbol, &blockhash, &txhash)).is_none(), Error::<T>::TxhashAlreadyBonded);
 
             let record = BondRecord::new(who.clone(), symbol, pubkey.clone(), pool.clone(), blockhash.clone(), txhash.clone(), amount);
             let bond_id = <T::Hashing as Hash>::hash_of(&record);
@@ -209,9 +201,6 @@ decl_module! {
             ensure!(Self::bond_records(&bondkey).is_none(), Error::<T>::BondRepeated);
             let old_count = Self::account_bond_count(&who);
             let new_count = old_count.checked_add(1).ok_or(Error::<T>::OverFlow)?;
-
-            let op_receiver = Self::receiver();
-            ensure!(op_receiver.is_some(), "No receiver to get bond fee");
 
             let fees = Self::bond_fees(symbol);
             if fees > 0 {
@@ -242,7 +231,9 @@ decl_module! {
             }
 
             let mut pipe = ledger::BondPipelines::get((record.symbol, &record.pool)).unwrap_or_default();
+            let mut tmp_bond = ledger::TmpTotalBond::get(record.symbol).unwrap_or(0);
             pipe.bond = pipe.bond.checked_add(record.amount).ok_or(Error::<T>::OverFlow)?;
+            tmp_bond = tmp_bond.checked_add(record.amount).ok_or(Error::<T>::OverFlow)?;
 
             let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(record.symbol, record.amount);
             <T as Trait>::RCurrency::mint(&record.bonder, record.symbol, rbalance)?;
@@ -250,10 +241,7 @@ decl_module! {
             <BondSuccess>::insert((record.symbol, record.blockhash.clone(), record.txhash.clone()), true);
 
             ledger::BondPipelines::insert((record.symbol, &record.pool), pipe);
-            
-            let mut total_bond_active_balance = Self::total_bond_active_balance((record.symbol, record.pool.clone()));
-            total_bond_active_balance += record.amount;
-            TotalBondActiveBalance::insert((record.symbol, record.pool), total_bond_active_balance);
+            ledger::TmpTotalBond::insert(record.symbol, tmp_bond);
 
             Ok(())
         }
@@ -264,9 +252,8 @@ decl_module! {
             let who = ensure_signed(origin)?;
             ensure!(value > 0, Error::<T>::LiquidityUnbondZero);
             ensure!(ledger::Pools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotFound);
-
-            let op_receiver = Self::receiver();
-            ensure!(op_receiver.is_some(), "No receiver to get unbond commission fee");
+            let op_receiver = ledger::Module::<T>::receiver();
+            ensure!(op_receiver.is_some(), ledger::Error::<T>::NoReceiver);
             let current_era = rtoken_ledger::ChainEras::get(symbol).ok_or(Error::<T>::NoCurrentEra)?;
 
             let free = <T as Trait>::RCurrency::free_balance(&who, symbol);
@@ -278,9 +265,6 @@ decl_module! {
             let fee = Self::unbond_fee(value);
             let left_value = value - fee;
             let balance = rtoken_rate::Module::<T>::rtoken_to_token(symbol, left_value);
-
-            let mut total_bond_active_balance = Self::total_bond_active_balance((symbol, pool.clone()));
-            ensure!(total_bond_active_balance >= balance, Error::<T>::InsufficientBalance);
             
             let bonding_duration = rtoken_ledger::ChainBondingDuration::get(symbol).ok_or(Error::<T>::BondingDurationNotSet)?;
             let unlocking_era = current_era + bonding_duration + 2;
@@ -290,17 +274,18 @@ decl_module! {
                 unbonding.push(BondUnlockChunk { value: balance, era: unlocking_era });
             }
 
+            let mut pipe = ledger::BondPipelines::get((symbol, &pool)).unwrap_or_default();
+            let mut tmp_unbond = ledger::TmpTotalUnbond::get(symbol).unwrap_or(0);
+            pipe.unbond = pipe.unbond.checked_add(balance).ok_or(Error::<T>::OverFlow)?;
+            tmp_unbond = tmp_unbond.checked_add(balance).ok_or(Error::<T>::OverFlow)?;
+
             let receiver = op_receiver.unwrap();
             <T as Trait>::RCurrency::transfer(&who, &receiver, symbol, fee)?;
             <T as Trait>::RCurrency::burn(&who, symbol, left_value)?;
             <Unbonding<T>>::insert(&who, (symbol, &pool), unbonding);
 
-            let mut pipe = ledger::BondPipelines::get((symbol, &pool)).unwrap_or_default();
-            pipe.unbond = pipe.unbond.checked_add(balance).ok_or(Error::<T>::OverFlow)?;
             ledger::BondPipelines::insert((symbol, &pool), pipe);
-
-            total_bond_active_balance -= balance;
-            TotalBondActiveBalance::insert((symbol, pool.clone()), total_bond_active_balance);
+            ledger::TmpTotalUnbond::insert(symbol, tmp_unbond);
 
             Self::handle_withdraw(who.clone(), symbol, unlocking_era, pool.clone(), recipient.clone(), balance);
 
