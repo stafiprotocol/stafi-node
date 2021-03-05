@@ -102,7 +102,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 17,
+	spec_version: 18,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -876,11 +876,13 @@ impl rtoken_votes::Trait for Runtime {
 
 impl rtoken_ledger::Trait for Runtime {
 	type Event = Event;
+	type RCurrency = RBalances;
 	type VoterOrigin = rtoken_votes::EnsureVoter<Runtime>;
 }
 
 impl rtoken_series::Trait for Runtime {
 	type Event = Event;
+	type Currency = Balances;
 	type RCurrency = RBalances;
 }
 

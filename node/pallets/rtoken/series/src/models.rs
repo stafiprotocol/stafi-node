@@ -24,7 +24,6 @@ pub enum BondReason {
 pub struct BondRecord<AccountId> {
     pub bonder: AccountId,
     pub symbol: RSymbol,
-    pub era: u32,
     pub pubkey: Vec<u8>,
     pub pool: Vec<u8>,
     pub blockhash: Vec<u8>,
@@ -33,11 +32,10 @@ pub struct BondRecord<AccountId> {
 }
 
 impl<A: PartialEq> BondRecord<A> {
-    pub fn new(bonder: A, symbol: RSymbol, era: u32, pubkey: Vec<u8>, pool: Vec<u8>, blockhash: Vec<u8>, txhash: Vec<u8>, amount: u128) -> Self {
+    pub fn new(bonder: A, symbol: RSymbol, pubkey: Vec<u8>, pool: Vec<u8>, blockhash: Vec<u8>, txhash: Vec<u8>, amount: u128) -> Self {
         Self {
             bonder: bonder,
             symbol: symbol,
-            era: era,
             pubkey: pubkey,
             pool: pool,
             blockhash: blockhash,
@@ -63,34 +61,11 @@ impl<A: PartialEq> BondKey<A> {
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct LinkChunk {
-    /// Pool
-	pub pool: Vec<u8>,
-	/// Total bond amount
-	#[codec(compact)]
-	pub bond_value: u128,
-	/// Total unbond amount
-	#[codec(compact)]
-	pub unbond_value: u128,
-}
-
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct BondUnlockChunk {
 	/// Amount of funds to be unlocked.
-	#[codec(compact)]
 	pub value: u128,
 	/// Era number at which point it'll be unlocked.
-	#[codec(compact)]
 	pub era: u32,
-}
-
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct TotalUnlockChunk {
-	/// Total amount of funds to be unlocked.
-	#[codec(compact)]
-	pub value: u128,
-	/// Pool address from which it'll be unlocked.
-	pub pool: Vec<u8>,
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
@@ -101,6 +76,5 @@ pub struct WithdrawChunk<AccountId> {
 	/// The recipient account.
 	pub recipient: Vec<u8>,
 	/// Amount of funds exposed.
-	#[codec(compact)]
 	pub value: u128,
 }
