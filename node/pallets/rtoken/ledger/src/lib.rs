@@ -84,6 +84,7 @@ decl_storage! {
         /// Pools: maybe pubkeys
         pub Pools get(fn pools): map hasher(blake2_128_concat) RSymbol => Vec<Vec<u8>>;
         pub BondedPools get(fn bonded_pools): map hasher(blake2_128_concat) RSymbol => Vec<Vec<u8>>;
+        pub PoolWillBonded get(fn pool_will_bonded): map hasher(blake2_128_concat) (RSymbol, Vec<u8>) => Option<u128>;
 
         /// first place to place bond/unbond datas
         pub BondPipelines get(fn bond_pipelines): map hasher(blake2_128_concat) (RSymbol, Vec<u8>) => Option<LinkChunk>;
@@ -101,8 +102,6 @@ decl_storage! {
         pub SubAccounts get(fn sub_accounts): map hasher(blake2_128_concat) Vec<u8> => Vec<Vec<u8>>;
         /// pool sub account flag
         pub PoolSubAccountFlag get(fn pool_sub_account_flag): map hasher(blake2_128_concat) (Vec<u8>, Vec<u8>) => Option<bool>;
-        /// pool bonded
-        pub PoolBonded get(fn pool_bonded): map hasher(blake2_128_concat) (RSymbol, Vec<u8>) => Option<bool>;
     }
 }
 
@@ -252,6 +251,8 @@ decl_module! {
                 rtoken_rate::EraRate::insert(symbol, era, rate);
             }
 
+            let pipe = Self::bond_pipelines((symbol, &pool)).unwrap_or_default();
+            <PoolWillBonded>::insert((symbol, &pool), active + pipe.bond - pipe.unbond);
             <EraPoolBonded>::insert((symbol, era, &pool), active);
             <EraTotolBonded>::insert((symbol, era), total);
             <EraBondPools>::insert((symbol, era), pls);

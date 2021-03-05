@@ -213,8 +213,8 @@ decl_module! {
             }
 
             let limit = Self::pool_balance_limit(symbol);
-            let total_bond_active_balance = Self::total_bond_active_balance((symbol, pool.clone()));
-            let bonded = total_bond_active_balance.checked_add(amount).ok_or(Error::<T>::OverFlow)?;
+            let will_bond = ledger::PoolWillBonded::get((symbol, &pool)).unwrap_or(0);
+            let bonded = will_bond.checked_add(amount).ok_or(Error::<T>::OverFlow)?;
             ensure!(limit == 0 || bonded <= limit, Error::<T>::PoolLimitReached);
 
             let record = BondRecord::new(who.clone(), symbol, pubkey.clone(), pool.clone(), blockhash.clone(), txhash.clone(), amount);
@@ -254,8 +254,10 @@ decl_module! {
 
             let mut pipe = ledger::BondPipelines::get((record.symbol, &record.pool)).unwrap_or_default();
             let mut tmp_bond = ledger::TmpTotalBond::get(record.symbol).unwrap_or(0);
+            let mut will_bond = ledger::PoolWillBonded::get((record.symbol, &record.pool)).unwrap_or(0);
             pipe.bond = pipe.bond.checked_add(record.amount).ok_or(Error::<T>::OverFlow)?;
             tmp_bond = tmp_bond.checked_add(record.amount).ok_or(Error::<T>::OverFlow)?;
+            will_bond = will_bond.checked_add(record.amount).ok_or(Error::<T>::OverFlow)?;
 
             let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(record.symbol, record.amount);
             <T as Trait>::RCurrency::mint(&record.bonder, record.symbol, rbalance)?;
@@ -264,6 +266,7 @@ decl_module! {
 
             ledger::BondPipelines::insert((record.symbol, &record.pool), pipe);
             ledger::TmpTotalBond::insert(record.symbol, tmp_bond);
+            ledger::PoolWillBonded::insert((record.symbol, &record.pool), will_bond);
 
             Ok(())
         }
@@ -287,6 +290,8 @@ decl_module! {
             let fee = Self::unbond_fee(value);
             let left_value = value - fee;
             let balance = rtoken_rate::Module::<T>::rtoken_to_token(symbol, left_value);
+            let mut will_bond = ledger::PoolWillBonded::get((symbol, &pool)).unwrap_or(0);
+            will_bond = will_bond.checked_sub(balance).ok_or(ledger::Error::<T>::Insufficient)?;
             
             let bonding_duration = rtoken_ledger::ChainBondingDuration::get(symbol).ok_or(Error::<T>::BondingDurationNotSet)?;
             let unlocking_era = current_era + bonding_duration + 2;
@@ -308,6 +313,7 @@ decl_module! {
 
             ledger::BondPipelines::insert((symbol, &pool), pipe);
             ledger::TmpTotalUnbond::insert(symbol, tmp_unbond);
+            ledger::PoolWillBonded::insert((symbol, &pool), will_bond);
 
             Self::handle_withdraw(who.clone(), symbol, unlocking_era, pool.clone(), recipient.clone(), balance);
 
