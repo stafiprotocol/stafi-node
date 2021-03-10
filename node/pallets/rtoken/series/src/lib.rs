@@ -252,6 +252,7 @@ decl_module! {
 
             if reason != BondReason::Pass {
                 <BondReasons<T>>::insert(&bondkey, reason);
+                <BondStates>::insert((record.symbol, &record.blockhash, &record.txhash), BondState::Fail);
                 return Ok(())
             }
 
