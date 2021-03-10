@@ -68,8 +68,10 @@ decl_error! {
         PoolNotFound,
         /// liquidity bond Zero
         LiquidityBondZero,
-        /// txhash already bonded
-        TxhashAlreadyBonded,
+        /// txhash unavailable
+        TxhashUnavailable,
+        /// txhash unexecutable
+        TxhashUnexecutable,
         /// bondrepeated
         BondRepeated,
         /// rSymbol invalid
@@ -113,7 +115,7 @@ decl_storage! {
         pub AccountBondCount get(fn account_bond_count): map hasher(blake2_128_concat) T::AccountId => u64;
         pub AccountBondRecords get(fn account_bond_records): map hasher(blake2_128_concat) (T::AccountId, u64) => Option<BondKey<T::Hash>>;
         /// bond success histories. (symbol, blockhash, txhash) => bool
-        pub BondSuccess get(fn bond_success): map hasher(blake2_128_concat) (RSymbol, Vec<u8>, Vec<u8>) => Option<bool>;
+        pub BondStates get(fn bond_states): map hasher(blake2_128_concat) (RSymbol, Vec<u8>, Vec<u8>) => Option<BondState>;
         /// Recipient account for fees
         Receiver get(fn receiver): Option<T::AccountId>;
         /// Unbonding: (origin, (symbol, pool)) => [BondUnlockChunk]
@@ -201,7 +203,7 @@ decl_module! {
             ensure!(Self::bond_switch(), Error::<T>::BondSwitchClosed);
             ensure!(amount > 0, Error::<T>::LiquidityBondZero);
             ensure!(symbol != RSymbol::RFIS, Error::<T>::InvalidRSymbol);
-            ensure!(Self::bond_success((symbol, &blockhash, &txhash)).is_none(), Error::<T>::TxhashAlreadyBonded);
+            ensure!(Self::is_txhash_available(symbol, &blockhash, &txhash), Error::<T>::TxhashUnavailable);
             ensure!(ledger::BondedPools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotBonded);
             let op_receiver = ledger::Module::<T>::receiver();
             ensure!(op_receiver.is_some(), ledger::Error::<T>::NoReceiver);
@@ -230,6 +232,7 @@ decl_module! {
                 T::Currency::transfer(&who, &receiver, fees.saturated_into(), KeepAlive)?;
             }
 
+            <BondStates>::insert((symbol, &blockhash, &txhash), BondState::Dealing);
             <AccountBondCount<T>>::insert(&who, new_count);
             <AccountBondRecords<T>>::insert((&who, new_count), &bondkey);
             <BondRecords<T>>::insert(&bondkey, &record);
@@ -245,7 +248,7 @@ decl_module! {
             let op_record = Self::bond_records(&bondkey);
             ensure!(op_record.is_some(), Error::<T>::BondNotFound);
             let record = op_record.unwrap();
-            ensure!(Self::bond_success((record.symbol, &record.blockhash, &record.txhash)).is_none(), Error::<T>::TxhashAlreadyBonded);
+            ensure!(Self::is_txhash_executable(record.symbol, &record.blockhash, &record.txhash), Error::<T>::TxhashUnexecutable);
 
             if reason != BondReason::Pass {
                 <BondReasons<T>>::insert(&bondkey, reason);
@@ -262,7 +265,7 @@ decl_module! {
             let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(record.symbol, record.amount);
             <T as Trait>::RCurrency::mint(&record.bonder, record.symbol, rbalance)?;
             <BondReasons<T>>::insert(&bondkey, reason);
-            <BondSuccess>::insert((record.symbol, record.blockhash.clone(), record.txhash.clone()), true);
+            <BondStates>::insert((record.symbol, &record.blockhash, &record.txhash), BondState::Success);
 
             ledger::BondPipelines::insert((record.symbol, &record.pool), pipe);
             ledger::TmpTotalBond::insert(record.symbol, tmp_bond);
@@ -325,6 +328,24 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
+    fn is_txhash_available(symbol: RSymbol, blockhash: &Vec<u8>, txhash: &Vec<u8>) -> bool {
+        let op_state = Self::bond_states((symbol, &blockhash, &txhash));
+        if op_state.is_none() {
+            return true
+        }
+        let state = op_state.unwrap();
+        state == BondState::Fail
+    }
+
+    fn is_txhash_executable(symbol: RSymbol, blockhash: &Vec<u8>, txhash: &Vec<u8>) -> bool {
+        let op_state = Self::bond_states((symbol, &blockhash, &txhash));
+        if op_state.is_none() {
+            return false
+        }
+        let state = op_state.unwrap();
+        state == BondState::Dealing
+    }
+
     fn unbond_fee(value: u128) -> u128 {
         Self::unbond_commission() * value
     }

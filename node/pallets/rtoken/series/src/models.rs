@@ -20,6 +20,17 @@ pub enum BondReason {
     AmountUnmatch,
 }
 
+/// Rtoken Identifier
+#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug)]
+pub enum BondState {
+    /// dealing
+    Dealing,
+	/// fail
+	Fail,
+	/// Success
+    Success,
+}
+
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct BondRecord<AccountId> {
     pub bonder: AccountId,
