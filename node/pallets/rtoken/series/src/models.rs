@@ -89,3 +89,18 @@ pub struct WithdrawChunk<AccountId> {
 	/// Amount of funds exposed.
 	pub value: u128,
 }
+
+/// Original tx type
+#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug)]
+pub enum OriginalTxType {
+    /// transfer
+    Transfer,
+    /// bond
+    Bond,
+	/// unbond
+	Unbond,
+    /// withdraw unbond
+    WithdrawUnbond,
+	/// claim rewards
+    ClaimRewards,
+}

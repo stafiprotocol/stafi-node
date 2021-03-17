@@ -15,8 +15,9 @@ use sp_runtime::{
     SaturatedConversion
 };
 use rtoken_balances::{traits::{Currency as RCurrency}};
-use node_primitives::{RSymbol, Balance};
+use node_primitives::{RSymbol, Balance, ChainType};
 use rtoken_ledger::{self as ledger};
+use rtoken_relayers as relayers;
 
 #[cfg(test)]
 mod tests;
@@ -30,7 +31,7 @@ pub use signature::*;
 pub const MAX_UNLOCKING_CHUNKS: usize = 32;
 pub const MAX_WITHDRAWING_CHUNKS: usize = 100;
 
-pub trait Trait: system::Trait + rtoken_rate::Trait + rtoken_ledger::Trait {
+pub trait Trait: system::Trait + rtoken_rate::Trait + rtoken_ledger::Trait + relayers::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
     /// The currency mechanism.
     type Currency: Currency<Self::AccountId>;
@@ -57,6 +58,10 @@ decl_event! {
         BondFeesSet(RSymbol, Balance),
         /// Pool balance limit has been updated
         PoolBalanceLimitUpdated(RSymbol, u128, u128),
+        /// submit signatures
+        SubmitSignatures(AccountId, RSymbol, u32, Vec<u8>, OriginalTxType, Vec<u8>, Vec<u8>),
+        /// signatures enough
+        SignaturesEnough(RSymbol, u32, Vec<u8>, OriginalTxType, Vec<u8>),
     }
 }
 
@@ -92,6 +97,8 @@ decl_error! {
         LiquidityUnbondZero,
         /// get current era err
         NoCurrentEra,
+        /// get invalid era err
+        InvalidEra,
         /// era rate not updated
         EraRateNotUpdated,
         /// era rate already updated
@@ -102,6 +109,8 @@ decl_error! {
         NoMoreChunks,
         /// Bonding duration not set
         BondingDurationNotSet,
+        /// signature repeated
+        SignatureRepeated,
     }
 }
 
@@ -136,6 +145,9 @@ decl_storage! {
 
         /// Unbond commission
         UnbondCommission get(fn unbond_commission): Perbill = Perbill::from_parts(2000000);
+
+        pub Signatures get(fn signatures): map hasher(twox_64_concat) (RSymbol, u32, Vec<u8>, OriginalTxType, Vec<u8>) => Option<Vec<Vec<u8>>>;
+        pub AccountSignature get(fn account_signature): map hasher(blake2_128_concat) (T::AccountId, RSymbol, u32, Vec<u8>, OriginalTxType, Vec<u8>) => Option<Vec<u8>>;
     }
 }
 
@@ -323,6 +335,35 @@ decl_module! {
 
             Self::deposit_event(RawEvent::LiquidityUnBond(who, pool, value, left_value, balance));
 
+            Ok(())
+        }
+
+        /// Submit tx signatures
+        #[weight = 10_000_000]
+        pub fn submit_signatures(origin, symbol: RSymbol, era: u32, pool: Vec<u8>, tx_type: OriginalTxType, proposal_id: Vec<u8>, signature: Vec<u8>) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(symbol.chain_type() != ChainType::Substrate, Error::<T>::InvalidRSymbol);
+            ensure!(relayers::Module::<T>::is_relayer(symbol, &who), relayers::Error::<T>::MustBeRelayer);
+            ensure!(ledger::Pools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotFound);
+
+            let current_era = rtoken_ledger::ChainEras::get(symbol).ok_or(Error::<T>::NoCurrentEra)?;
+            ensure!(era <= current_era && era >= current_era - 14, Error::<T>::InvalidEra);
+
+            ensure!(Self::account_signature((&who, symbol, era, &pool, tx_type, &proposal_id)).is_none(), Error::<T>::SignatureRepeated);
+
+            let mut signatures = Signatures::get((symbol, era, &pool, tx_type, &proposal_id)).unwrap_or(vec![]);
+            ensure!(!signatures.contains(&signature), Error::<T>::SignatureRepeated);
+
+            signatures.push(signature.clone());
+            Signatures::insert((symbol, era, &pool, tx_type, &proposal_id), &signatures);
+
+            <AccountSignature<T>>::insert((&who, symbol, era, &pool, tx_type, &proposal_id), &signature);
+
+            if signatures.len() == relayers::RelayerThreshold::get(symbol) as usize {
+                Self::deposit_event(RawEvent::SignaturesEnough(symbol, era, pool.clone(), tx_type, proposal_id.clone()));
+            }
+
+            Self::deposit_event(RawEvent::SubmitSignatures(who.clone(), symbol, era, pool, tx_type, proposal_id, signature));
             Ok(())
         }
     }
