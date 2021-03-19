@@ -843,7 +843,7 @@ impl pallet_vesting::Trait for Runtime {
 
 parameter_types! {
 	pub const ChainIdentity: ChainId = 1;
-	pub const ProposalLifetime: BlockNumber = 1000;
+	pub const ProposalLifetime: BlockNumber = 201600;
 }
 
 impl bridge_common::Trait for Runtime {
