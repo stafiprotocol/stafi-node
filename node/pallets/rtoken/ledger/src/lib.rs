@@ -16,7 +16,7 @@ pub mod models;
 pub use models::*;
 
 pub trait Trait: system::Trait + rtoken_rate::Trait {
-    type Event: From<Event> + Into<<Self as system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
     /// currency of rtoken
     type RCurrency: RCurrency<Self::AccountId>;
@@ -26,13 +26,15 @@ pub trait Trait: system::Trait + rtoken_rate::Trait {
 }
 
 decl_event! {
-    pub enum Event {
+    pub enum Event<T> where
+        AccountId = <T as system::Trait>::AccountId 
+    {
         /// symbol, era
         EraInitialized(RSymbol, u32),
         /// symbol, old_era, new_era
         EraUpdated(RSymbol, u32, u32),
         /// EraPoolUpdated
-        EraPoolUpdated(RSymbol, u32, Vec<u8>, u128, u128),
+        EraPoolUpdated(RSymbol, u32, Vec<u8>, u128, u128, AccountId),
         /// symbol, old_bonding_duration, new_bonding_duration
         BondingDurationUpdated(RSymbol, u32, u32),
         /// pool added
@@ -72,6 +74,8 @@ decl_error! {
         NewEraNotBiggerThanold,
         /// EraRepeatSet
         EraRepeatSet,
+        /// Last voter is nobody
+        LastVoterNobody,
     }
 }
 
@@ -99,9 +103,12 @@ decl_storage! {
         pub EraTotolBonded get(fn era_total_bonded): map hasher(blake2_128_concat) (RSymbol, u32) => Option<u128>;
 
         /// pool => Vec<SubAccounts>
-        pub SubAccounts get(fn sub_accounts): map hasher(blake2_128_concat) Vec<u8> => Vec<Vec<u8>>;
-        /// pool sub account flag
-        pub PoolSubAccountFlag get(fn pool_sub_account_flag): map hasher(blake2_128_concat) (Vec<u8>, Vec<u8>) => Option<bool>;
+        pub SubAccounts get(fn sub_accounts): map hasher(blake2_128_concat) (RSymbol, Vec<u8>) => Vec<Vec<u8>>;
+        /// pool => Threshold
+        pub MultiThresholds get(fn multi_thresholds): map hasher(blake2_128_concat) (RSymbol, Vec<u8>) => Option<u16>;
+
+        /// last voter
+        pub LastVoter get(fn last_voter): map hasher(blake2_128_concat) RSymbol => Option<T::AccountId>;
     }
 }
 
@@ -118,9 +125,9 @@ decl_module! {
             let mut pools = Self::pools(symbol);
             ensure!(!pools.contains(&pool), Error::<T>::PoolAlreadyAdded);
             pools.push(pool.clone());
-            Pools::insert(symbol, pools);
+            <Pools>::insert(symbol, pools);
 
-            Self::deposit_event(Event::PoolAdded(symbol, pool));
+            Self::deposit_event(RawEvent::PoolAdded(symbol, pool));
             Ok(())
         }
 
@@ -157,18 +164,13 @@ decl_module! {
 
         /// add new pool
         #[weight = 10_000]
-        pub fn add_sub_account_for_pool(origin, symbol: RSymbol, pool: Vec<u8>, sub_account: Vec<u8>) -> DispatchResult {
+        pub fn add_sub_accounts_and_threshold(origin, symbol: RSymbol, pool: Vec<u8>, sub_accounts: Vec<Vec<u8>>, threshold: u16) -> DispatchResult {
             ensure_root(origin)?;
             let pools = Self::pools(symbol);
             ensure!(pools.contains(&pool), Error::<T>::PoolNotFound);
-            let mut sub_accounts = Self::sub_accounts(&pool);
-            ensure!(!sub_accounts.contains(&sub_account), Error::<T>::SubAccountAlreadyAdded);
+            <SubAccounts>::insert((symbol, &pool), sub_accounts);
+            <MultiThresholds>::insert((symbol, &pool), threshold);
 
-            sub_accounts.push(sub_account.clone());
-            <SubAccounts>::insert(&pool, &sub_accounts);
-            <PoolSubAccountFlag>::insert((&pool, &sub_account), true);
-
-            Self::deposit_event(Event::PoolSubAccountAdded(symbol, pool, sub_account));
             Ok(())
         }
 
@@ -185,7 +187,7 @@ decl_module! {
             let rate = rtoken_rate::Module::<T>::set_rate(symbol, 0, 0);
             rtoken_rate::EraRate::insert(symbol, era, rate);
 
-            Self::deposit_event(Event::EraInitialized(symbol, era));
+            Self::deposit_event(RawEvent::EraInitialized(symbol, era));
             Ok(())
         }
 
@@ -194,6 +196,9 @@ decl_module! {
         #[weight = 10_000]
         pub fn set_chain_era(origin, symbol: RSymbol, new_era: u32) -> DispatchResult {
             T::VoterOrigin::ensure_origin(origin)?;
+            let op_voter = Self::last_voter(symbol);
+            ensure!(op_voter.is_some(), Error::<T>::LastVoterNobody);
+            let voter = op_voter.unwrap();
             let old_era = Self::chain_eras(symbol).unwrap_or(0);
             ensure!(old_era < new_era, Error::<T>::NewEraNotBiggerThanold);
             let mut pls = Self::era_bond_pools((symbol, new_era)).unwrap_or(vec![]);
@@ -205,7 +210,7 @@ decl_module! {
                 pls.push(p.clone());
                 <BondPipelines>::insert((symbol, &p), LinkChunk::default());
                 <BondFaucets>::insert((symbol, new_era, &p), &chunk);
-                Self::deposit_event(Event::EraPoolUpdated(symbol, new_era, p, chunk.bond, chunk.unbond));
+                Self::deposit_event(RawEvent::EraPoolUpdated(symbol, new_era, p, chunk.bond, chunk.unbond, voter.clone()));
             }
 
             <TmpTotalBond>::insert(symbol, 0);
@@ -213,7 +218,7 @@ decl_module! {
             <ChainEras>::insert(symbol, new_era);
             <EraBondPools>::insert((symbol, new_era), pls);
             
-            Self::deposit_event(Event::EraUpdated(symbol, old_era, new_era));
+            Self::deposit_event(RawEvent::EraUpdated(symbol, old_era, new_era));
             Ok(())
         }
 
@@ -226,7 +231,7 @@ decl_module! {
             let old_bonding_duration = Self::chain_bonding_duration(symbol).unwrap_or(0);
             ChainBondingDuration::insert(symbol, new_bonding_duration);
 
-            Self::deposit_event(Event::BondingDurationUpdated(symbol, old_bonding_duration, new_bonding_duration));
+            Self::deposit_event(RawEvent::BondingDurationUpdated(symbol, old_bonding_duration, new_bonding_duration));
             Ok(())
         }
 

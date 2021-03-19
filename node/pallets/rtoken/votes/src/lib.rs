@@ -16,6 +16,7 @@ use sp_runtime::{
 };
 use node_primitives::{RSymbol};
 use rtoken_relayers as relayers;
+use rtoken_ledger as ledger;
 
 const MODULE_ID: ModuleId = ModuleId(*b"rtk/vote");
 
@@ -76,7 +77,7 @@ impl<AccountId, BlockNumber: Default> Default for RproposalVotes<AccountId, Bloc
     }
 }
 
-pub trait Trait: system::Trait + relayers::Trait {
+pub trait Trait: system::Trait + relayers::Trait + ledger::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
     type Proposal: Parameter + Dispatchable<Origin = Self::Origin> + EncodeLike + GetDispatchInfo;
@@ -98,12 +99,8 @@ decl_event! {
 
 decl_error! {
     pub enum Error for Module<T: Trait> {
-        /// Relayer has already submitted some vote for this vote
-        RelayerAlreadyVoted,
         /// No proposal with the ID was found
         ProposalDoesNotExist,
-        /// Proposal has either failed or succeeded
-        ProposalAlreadyCompleted,
         /// Lifetime of proposal has been exceeded
         ProposalExpired,
     }
@@ -134,6 +131,7 @@ decl_module! {
         pub fn acknowledge_proposal(origin, symbol: RSymbol, prop_id: T::Hash, in_favour: bool, call: Box<T::Proposal>) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(relayers::Module::<T>::is_relayer(symbol, &who), relayers::Error::<T>::MustBeRelayer);
+            ledger::LastVoter::<T>::insert(symbol, &who);
 
             Self::commit_vote(who, symbol, prop_id, in_favour, call.clone())?;
             Self::try_resolve_proposal(symbol, prop_id, call)
@@ -157,13 +155,8 @@ impl<T: Trait> Module<T> {
             v
         });
 
-        // Ensure the proposal isn't complete and relayer hasn't already voted
-        ensure!(!votes.is_completed(), Error::<T>::ProposalAlreadyCompleted);
-        ensure!(!votes.has_voted(&who), Error::<T>::RelayerAlreadyVoted);
-        if votes.is_expired(now) {
-            votes.status = RproposalStatus::Expired;
-            <Votes<T>>::insert(symbol, (prop_id, prop.clone()), votes.clone());
-            Err(Error::<T>::ProposalExpired)?;
+        if votes.has_voted(&who) {
+            return Ok(())
         }
 
         if in_favour {
@@ -172,6 +165,17 @@ impl<T: Trait> Module<T> {
         } else {
             votes.votes_against.push(who.clone());
             Self::deposit_event(RawEvent::VoteAgainst(who.clone(), symbol, prop_id));
+        }
+
+        if votes.is_completed() {
+            <Votes<T>>::insert(symbol, (prop_id, prop.clone()), votes.clone());
+            return Ok(())
+        }
+
+        if votes.is_expired(now) {
+            votes.status = RproposalStatus::Expired;
+            <Votes<T>>::insert(symbol, (prop_id, prop.clone()), votes.clone());
+            Err(Error::<T>::ProposalExpired)?;
         }
 
         votes.derivate(relayers::RelayerThreshold::get(symbol), relayers::RelayerCount::get(symbol));
