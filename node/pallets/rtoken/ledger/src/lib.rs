@@ -8,6 +8,10 @@ use frame_support::{
         EnsureOrigin,
     },
 };
+use sp_runtime::{
+    Perbill,
+    traits::Hash,
+};
 use frame_system::{self as system, ensure_root};
 use rtoken_balances::{traits::{Currency as RCurrency}};
 use node_primitives::{RSymbol};
@@ -27,20 +31,25 @@ pub trait Trait: system::Trait + rtoken_rate::Trait {
 
 decl_event! {
     pub enum Event<T> where
-        AccountId = <T as system::Trait>::AccountId 
+        Hash = <T as system::Trait>::Hash,
+        AccountId = <T as system::Trait>::AccountId
     {
         /// symbol, era
         EraInitialized(RSymbol, u32),
         /// symbol, old_era, new_era
         EraUpdated(RSymbol, u32, u32),
         /// EraPoolUpdated
-        EraPoolUpdated(RSymbol, u32, Vec<u8>, u128, u128, AccountId),
+        EraPoolUpdated(Hash, AccountId),
         /// symbol, old_bonding_duration, new_bonding_duration
         BondingDurationUpdated(RSymbol, u32, u32),
         /// pool added
         PoolAdded(RSymbol, Vec<u8>),
         /// pool sub account added: (symbol, pool, sub_account)
         PoolSubAccountAdded(RSymbol, Vec<u8>, Vec<u8>),
+        /// bond report
+        BondReport(Hash, Vec<u8>, AccountId),
+        /// Commission has been updated.
+        CommissionUpdated(Perbill, Perbill),
     }
 }
 
@@ -68,14 +77,18 @@ decl_error! {
         OverFlow,
         /// Insufficient
         Insufficient,
-        /// active repeat set
-        ActiveRepeatSet,
         /// new era not bigger than old
         NewEraNotBiggerThanold,
         /// EraRepeatSet
         EraRepeatSet,
         /// Last voter is nobody
         LastVoterNobody,
+        /// shot_id not found for BondSnapshot,
+        BondShotIdNotFound,
+        /// shot_id already processed
+        ShotIdAlreadyProcessed,
+        /// active already set
+        ActiveAlreadySet,
     }
 }
 
@@ -83,24 +96,20 @@ decl_storage! {
     trait Store for Module<T: Trait> as RTokenLedger {
         pub ChainEras get(fn chain_eras): map hasher(blake2_128_concat) RSymbol => Option<u32>;
         pub ChainBondingDuration get(fn chain_bonding_duration): map hasher(twox_64_concat) RSymbol => Option<u32>;
+
+        /// commission of staking rewards
+        Commission get(fn commission): Perbill = Perbill::from_percent(10);
         /// Recipient account for fees
         pub Receiver get(fn receiver): Option<T::AccountId>;
+
         /// Pools: maybe pubkeys
         pub Pools get(fn pools): map hasher(blake2_128_concat) RSymbol => Vec<Vec<u8>>;
         pub BondedPools get(fn bonded_pools): map hasher(blake2_128_concat) RSymbol => Vec<Vec<u8>>;
-        pub PoolWillBonded get(fn pool_will_bonded): map hasher(blake2_128_concat) (RSymbol, Vec<u8>) => Option<u128>;
 
-        /// first place to place bond/unbond datas
+        /// place bond/unbond datas for pools
         pub BondPipelines get(fn bond_pipelines): map hasher(blake2_128_concat) (RSymbol, Vec<u8>) => Option<LinkChunk>;
-        pub TmpTotalBond get(fn tmp_total_bond): map hasher(blake2_128_concat) RSymbol => Option<u128>;
-        pub TmpTotalUnbond get(fn tmp_total_unbond): map hasher(blake2_128_concat) RSymbol => Option<u128>;
-        /// second place to place bond/unbond datas
-        pub BondFaucets get(fn bond_faucets): map hasher(blake2_128_concat) (RSymbol, u32, Vec<u8>) => Option<LinkChunk>;
-
-        /// symbol, era => pools
-        pub EraBondPools get(fn era_bond_pools): map hasher(blake2_128_concat) (RSymbol, u32) => Option<Vec<Vec<u8>>>;
-        pub EraPoolBonded get(fn era_pool_bonded): map hasher(blake2_128_concat) (RSymbol, u32, Vec<u8>) => Option<u128>;
-        pub EraTotolBonded get(fn era_total_bonded): map hasher(blake2_128_concat) (RSymbol, u32) => Option<u128>;
+        pub EraSnapShots get(fn era_snap_shots): map hasher(blake2_128_concat) (RSymbol, u32) => Option<Vec<T::Hash>>;
+        pub Snapshots get(fn snap_shots): map hasher(blake2_128_concat) T::Hash => Option<BondSnapshot<T::AccountId>>;
 
         /// pool => Vec<SubAccounts>
         pub SubAccounts get(fn sub_accounts): map hasher(blake2_128_concat) (RSymbol, Vec<u8>) => Vec<Vec<u8>>;
@@ -117,6 +126,18 @@ decl_module! {
         type Error = Error<T>;
 
         fn deposit_event() = default;
+
+        /// Update commission
+		#[weight = 10_000]
+		fn set_commission(origin, new_part: u32) -> DispatchResult {
+            ensure_root(origin)?;
+            let old_commission = Self::commission();
+            let new_commission = Perbill::from_parts(new_part);
+			Commission::put(new_commission);
+
+			Self::deposit_event(RawEvent::CommissionUpdated(old_commission, new_commission));
+			Ok(())
+        }
 
         /// add new pool
         #[weight = 10_000]
@@ -149,7 +170,6 @@ decl_module! {
             let mut bonded_pools = Self::bonded_pools(symbol);
             ensure!(!bonded_pools.contains(&pool), Error::<T>::RepeatInitBond);
             
-
             let op_receiver = Self::receiver();
             ensure!(op_receiver.is_some(), Error::<T>::NoReceiver);
             let receiver = op_receiver.unwrap();
@@ -159,6 +179,21 @@ decl_module! {
 
             bonded_pools.push(pool.clone());
             <BondedPools>::insert(symbol, bonded_pools);
+            <BondPipelines>::insert((symbol, &pool), LinkChunk {bond: 0, unbond: 0, active: amount});
+
+            Ok(())
+        }
+
+        /// set chain era
+        #[weight = 10_000]
+        pub fn set_chain_bonding_duration(origin, symbol: RSymbol, new_bonding_duration: u32) -> DispatchResult {
+            ensure_root(origin)?;
+            ensure!(new_bonding_duration > 0, Error::<T>::NewBondingDurationZero);
+
+            let old_bonding_duration = Self::chain_bonding_duration(symbol).unwrap_or(0);
+            ChainBondingDuration::insert(symbol, new_bonding_duration);
+
+            Self::deposit_event(RawEvent::BondingDurationUpdated(symbol, old_bonding_duration, new_bonding_duration));
             Ok(())
         }
 
@@ -191,79 +226,100 @@ decl_module! {
             Ok(())
         }
 
+        /// set chain era
+        #[weight = 10_000]
+        pub fn init_last_voter(origin) -> DispatchResult {
+            T::VoterOrigin::ensure_origin(origin)?;
+            Ok(())
+        }
 
         /// set chain era
         #[weight = 10_000]
         pub fn set_chain_era(origin, symbol: RSymbol, new_era: u32) -> DispatchResult {
             T::VoterOrigin::ensure_origin(origin)?;
+            // last_voter
             let op_voter = Self::last_voter(symbol);
             ensure!(op_voter.is_some(), Error::<T>::LastVoterNobody);
             let voter = op_voter.unwrap();
+
             let old_era = Self::chain_eras(symbol).unwrap_or(0);
             ensure!(old_era < new_era, Error::<T>::NewEraNotBiggerThanold);
-            let mut pls = Self::era_bond_pools((symbol, new_era)).unwrap_or(vec![]);
-            ensure!(pls.is_empty(), Error::<T>::EraRepeatSet);
             let pools = Self::bonded_pools(symbol);
+            let mut era_shots = Self::era_snap_shots((symbol, new_era)).unwrap_or(vec![]);
             
-            for p in pools {
-                let chunk = Self::bond_pipelines((symbol, &p)).unwrap_or_default();
-                pls.push(p.clone());
-                <BondPipelines>::insert((symbol, &p), LinkChunk::default());
-                <BondFaucets>::insert((symbol, new_era, &p), &chunk);
-                Self::deposit_event(RawEvent::EraPoolUpdated(symbol, new_era, p, chunk.bond, chunk.unbond, voter.clone()));
+            for pool in pools {
+                let chunk = Self::bond_pipelines((symbol, &pool)).unwrap_or_default();
+                let snapshot = BondSnapshot {symbol, era: new_era, pool, bond: chunk.bond, unbond: chunk.unbond, last_voter: voter.clone(), active: chunk.active};
+                let shot_id = <T::Hashing as Hash>::hash_of(&snapshot);
+                <Snapshots<T>>::insert(&shot_id, snapshot.clone());
+                era_shots.push(shot_id.clone());
+                Self::deposit_event(RawEvent::EraPoolUpdated(shot_id, voter.clone()));
             }
 
-            <TmpTotalBond>::insert(symbol, 0);
-            <TmpTotalUnbond>::insert(symbol, 0);
+            <EraSnapShots<T>>::insert((symbol, new_era), era_shots);
             <ChainEras>::insert(symbol, new_era);
-            <EraBondPools>::insert((symbol, new_era), pls);
-            
             Self::deposit_event(RawEvent::EraUpdated(symbol, old_era, new_era));
             Ok(())
         }
 
-        /// set chain era
+        /// bond link success
         #[weight = 10_000]
-        pub fn set_chain_bonding_duration(origin, symbol: RSymbol, new_bonding_duration: u32) -> DispatchResult {
-            ensure_root(origin)?;
-            ensure!(new_bonding_duration > 0, Error::<T>::NewBondingDurationZero);
+        pub fn bond_report(origin, shot_id: T::Hash) -> DispatchResult {
+            T::VoterOrigin::ensure_origin(origin)?;
+            ensure!(Self::snap_shots(&shot_id).is_some(), Error::<T>::BondShotIdNotFound);
+            let snap = Self::snap_shots(&shot_id).unwrap();
 
-            let old_bonding_duration = Self::chain_bonding_duration(symbol).unwrap_or(0);
-            ChainBondingDuration::insert(symbol, new_bonding_duration);
+            let op_voter = Self::last_voter(snap.symbol);
+            ensure!(op_voter.is_some(), Error::<T>::LastVoterNobody);
+            let voter = op_voter.unwrap();
+            
+            let mut chunk = Self::bond_pipelines((snap.symbol, &snap.pool)).unwrap_or_default();
+            chunk.bond = chunk.bond.saturating_sub(snap.bond);
+            chunk.unbond = chunk.unbond.saturating_sub(snap.unbond);
 
-            Self::deposit_event(RawEvent::BondingDurationUpdated(symbol, old_bonding_duration, new_bonding_duration));
+            <BondPipelines>::insert((snap.symbol, &snap.pool), chunk);
+            Self::deposit_event(RawEvent::BondReport(shot_id, snap.pool, voter));
+
             Ok(())
         }
 
         /// set bond active of pool
         #[weight = 10_000]
-        pub fn set_pool_active(origin, symbol: RSymbol, era: u32, pool: Vec<u8>, active: u128) -> DispatchResult {
+        pub fn active_report(origin, shot_id: T::Hash, active: u128) -> DispatchResult {
             T::VoterOrigin::ensure_origin(origin)?;
-            let mut pls = Self::era_bond_pools((symbol, era)).unwrap_or(vec![]);
-            let location = pls.binary_search(&pool).ok().ok_or(Error::<T>::PoolNotFound)?;
-            ensure!(Self::era_pool_bonded((symbol, era, &pool)).is_none(), Error::<T>::ActiveRepeatSet);
+
+            let op_receiver = Self::receiver();
+            ensure!(op_receiver.is_some(), Error::<T>::NoReceiver);
+            let receiver = op_receiver.unwrap();
+
+            ensure!(Self::snap_shots(&shot_id).is_some(), Error::<T>::BondShotIdNotFound);
+            let snap = Self::snap_shots(&shot_id).unwrap();
+            let symbol = snap.symbol;
             
-            let mut total = Self::era_total_bonded((symbol, era)).unwrap_or(0);
-            total = total.checked_add(active).ok_or(Error::<T>::OverFlow)?;
-            pls.remove(location);
-            if pls.is_empty() {
-                let new_bond = Self::tmp_total_bond(symbol).unwrap_or(0);
-                let new_unbond = Self::tmp_total_unbond(symbol).unwrap_or(0);
-                total = total.checked_add(new_bond).ok_or(Error::<T>::OverFlow)?;
-                total = total.checked_sub(new_unbond).ok_or(Error::<T>::Insufficient)?;
-                let rbalance = T::RCurrency::total_issuance(symbol);
-                let rate = rtoken_rate::Module::<T>::set_rate(symbol, total, rbalance);
-                rtoken_rate::EraRate::insert(symbol, era, rate);
+            let mut era_shots = Self::era_snap_shots((symbol, snap.era)).unwrap_or(vec![]);
+            let location = era_shots.binary_search(&shot_id).ok().ok_or(Error::<T>::ActiveAlreadySet)?;
+            
+            let rbalance = T::RCurrency::total_issuance(symbol);
+            let before = rtoken_rate::Module::<T>::rtoken_to_token(symbol, rbalance);
+            let after = before.saturating_add(active).saturating_sub(snap.active);
+            if after > before {
+                let fee = Self::commission() * (after - before);
+                let rfee = rtoken_rate::Module::<T>::token_to_rtoken(symbol, fee);
+                T::RCurrency::mint(&receiver, symbol, rfee)?;
             }
 
-            let pipe = Self::bond_pipelines((symbol, &pool)).unwrap_or_default();
-            <PoolWillBonded>::insert((symbol, &pool), active + pipe.bond - pipe.unbond);
-            <EraPoolBonded>::insert((symbol, era, &pool), active);
-            <EraTotolBonded>::insert((symbol, era), total);
-            <EraBondPools>::insert((symbol, era), pls);
+            let mut rate = rtoken_rate::RATEBASE;
+            if after != before {
+                let rbalance = T::RCurrency::total_issuance(symbol);
+                rate = rtoken_rate::Module::<T>::set_rate(symbol, after, rbalance);
+            }
+
+            era_shots.remove(location);
+            if era_shots.is_empty() {
+                rtoken_rate::EraRate::insert(symbol, snap.era, rate);
+            }
 
             Ok(())
-        }
-        
+        }    
     }
 }

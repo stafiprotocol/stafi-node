@@ -50,8 +50,6 @@ decl_event! {
         LiquidityUnBond(AccountId, Vec<u8>, u128, u128, u128),
         /// liquidity withdraw unbond
         LiquidityWithdrawUnBond(AccountId, RSymbol, Vec<u8>, Vec<u8>, u128),
-        /// Commission has been updated.
-        CommissionUpdated(Perbill, Perbill),
         /// UnbondCommission has been updated.
         UnbondCommissionUpdated(Perbill, Perbill),
         /// Set bond fees
@@ -103,8 +101,8 @@ decl_error! {
         EraRateNotUpdated,
         /// era rate already updated
         EraRateAlreadyUpdated,
-        /// insufficient balance
-        InsufficientBalance,
+        /// insufficient
+        Insufficient,
         /// Can not schedule more unlock chunks.
         NoMoreChunks,
         /// Bonding duration not set
@@ -139,9 +137,6 @@ decl_storage! {
         pub BondFees get(fn bond_fees): map hasher(twox_64_concat) RSymbol => Balance = 1500000000000;
 
         PoolBalanceLimit get(fn pool_balance_limit): map hasher(twox_64_concat) RSymbol => u128;
-
-        /// commission of staking rewards
-        Commission get(fn commission): Perbill = Perbill::from_percent(10);
 
         /// Unbond commission
         UnbondCommission get(fn unbond_commission): Perbill = Perbill::from_parts(2000000);
@@ -184,18 +179,6 @@ decl_module! {
 			Ok(())
         }
 
-        /// Update commission
-		#[weight = 10_000]
-		fn set_commission(origin, new_part: u32) -> DispatchResult {
-            ensure_root(origin)?;
-            let old_commission = Self::commission();
-            let new_commission = Perbill::from_parts(new_part);
-			Commission::put(new_commission);
-
-			Self::deposit_event(RawEvent::CommissionUpdated(old_commission, new_commission));
-			Ok(())
-        }
-
         /// set unbond commission
         #[weight = 10_000]
         pub fn set_unbond_commission(origin, new_part: u32) -> DispatchResult {
@@ -227,9 +210,10 @@ decl_module! {
             }
 
             let limit = Self::pool_balance_limit(symbol);
-            let will_bond = ledger::PoolWillBonded::get((symbol, &pool)).unwrap_or(0);
-            let bonded = will_bond.checked_add(amount).ok_or(Error::<T>::OverFlow)?;
-            ensure!(limit == 0 || bonded <= limit, Error::<T>::PoolLimitReached);
+            let pipe = ledger::BondPipelines::get((symbol, &pool)).unwrap_or_default();
+            pipe.bond.checked_add(amount).ok_or(Error::<T>::OverFlow)?;
+            let will_active = pipe.active.checked_add(amount).ok_or(Error::<T>::OverFlow)?;
+            ensure!(limit == 0 || will_active <= limit, Error::<T>::PoolLimitReached);
 
             let record = BondRecord::new(who.clone(), symbol, pubkey.clone(), pool.clone(), blockhash.clone(), txhash.clone(), amount);
             let bond_id = <T::Hashing as Hash>::hash_of(&record);
@@ -269,11 +253,8 @@ decl_module! {
             }
 
             let mut pipe = ledger::BondPipelines::get((record.symbol, &record.pool)).unwrap_or_default();
-            let mut tmp_bond = ledger::TmpTotalBond::get(record.symbol).unwrap_or(0);
-            let mut will_bond = ledger::PoolWillBonded::get((record.symbol, &record.pool)).unwrap_or(0);
             pipe.bond = pipe.bond.checked_add(record.amount).ok_or(Error::<T>::OverFlow)?;
-            tmp_bond = tmp_bond.checked_add(record.amount).ok_or(Error::<T>::OverFlow)?;
-            will_bond = will_bond.checked_add(record.amount).ok_or(Error::<T>::OverFlow)?;
+            pipe.active = pipe.active.checked_add(record.amount).ok_or(Error::<T>::OverFlow)?;
 
             let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(record.symbol, record.amount);
             <T as Trait>::RCurrency::mint(&record.bonder, record.symbol, rbalance)?;
@@ -281,8 +262,6 @@ decl_module! {
             <BondStates>::insert((record.symbol, &record.blockhash, &record.txhash), BondState::Success);
 
             ledger::BondPipelines::insert((record.symbol, &record.pool), pipe);
-            ledger::TmpTotalBond::insert(record.symbol, tmp_bond);
-            ledger::PoolWillBonded::insert((record.symbol, &record.pool), will_bond);
 
             Ok(())
         }
@@ -298,7 +277,7 @@ decl_module! {
             let current_era = rtoken_ledger::ChainEras::get(symbol).ok_or(Error::<T>::NoCurrentEra)?;
 
             let free = <T as Trait>::RCurrency::free_balance(&who, symbol);
-            free.checked_sub(value).ok_or(Error::<T>::InsufficientBalance)?;
+            free.checked_sub(value).ok_or(Error::<T>::Insufficient)?;
 
             let mut unbonding = <Unbonding<T>>::get(&who, (symbol, &pool)).unwrap_or(vec![]);
             ensure!(unbonding.len() < MAX_UNLOCKING_CHUNKS, Error::<T>::NoMoreChunks);
@@ -306,8 +285,6 @@ decl_module! {
             let fee = Self::unbond_fee(value);
             let left_value = value - fee;
             let balance = rtoken_rate::Module::<T>::rtoken_to_token(symbol, left_value);
-            let mut will_bond = ledger::PoolWillBonded::get((symbol, &pool)).unwrap_or(0);
-            will_bond = will_bond.checked_sub(balance).ok_or(ledger::Error::<T>::Insufficient)?;
             
             let bonding_duration = rtoken_ledger::ChainBondingDuration::get(symbol).ok_or(Error::<T>::BondingDurationNotSet)?;
             let unlocking_era = current_era + bonding_duration + 2;
@@ -318,9 +295,8 @@ decl_module! {
             }
 
             let mut pipe = ledger::BondPipelines::get((symbol, &pool)).unwrap_or_default();
-            let mut tmp_unbond = ledger::TmpTotalUnbond::get(symbol).unwrap_or(0);
             pipe.unbond = pipe.unbond.checked_add(balance).ok_or(Error::<T>::OverFlow)?;
-            tmp_unbond = tmp_unbond.checked_add(balance).ok_or(Error::<T>::OverFlow)?;
+            pipe.active = pipe.active.checked_sub(balance).ok_or(Error::<T>::Insufficient)?;
 
             let receiver = op_receiver.unwrap();
             <T as Trait>::RCurrency::transfer(&who, &receiver, symbol, fee)?;
@@ -328,11 +304,7 @@ decl_module! {
             <Unbonding<T>>::insert(&who, (symbol, &pool), unbonding);
 
             ledger::BondPipelines::insert((symbol, &pool), pipe);
-            ledger::TmpTotalUnbond::insert(symbol, tmp_unbond);
-            ledger::PoolWillBonded::insert((symbol, &pool), will_bond);
-
             Self::handle_withdraw(who.clone(), symbol, unlocking_era, pool.clone(), recipient.clone(), balance);
-
             Self::deposit_event(RawEvent::LiquidityUnBond(who, pool, value, left_value, balance));
 
             Ok(())

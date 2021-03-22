@@ -1,6 +1,7 @@
 use sp_std::prelude::*;
 use codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;
+use node_primitives::{RSymbol};
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct LinkChunk {
@@ -8,6 +9,8 @@ pub struct LinkChunk {
 	pub bond: u128,
 	/// Total unbond amount
     pub unbond: u128,
+    /// active
+    pub active: u128,
 }
 
 impl Default for LinkChunk {
@@ -15,6 +18,27 @@ impl Default for LinkChunk {
         Self {
             bond: 0,
             unbond: 0,
+            active: 0,
         }
     }
 }
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct BondSnapshot<AccountId> {
+    /// rsymbol
+    pub symbol: RSymbol,
+    /// era
+    pub era: u32,
+    /// pool
+    pub pool: Vec<u8>,
+	/// bond amount
+	pub bond: u128,
+	/// unbond amount
+    pub unbond: u128,
+    /// active
+    pub active: u128,
+    /// lastVoter
+    pub last_voter: AccountId,
+}
+
+
