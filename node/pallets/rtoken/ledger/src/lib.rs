@@ -47,7 +47,7 @@ decl_event! {
         /// pool sub account added: (symbol, pool, sub_account)
         PoolSubAccountAdded(RSymbol, Vec<u8>, Vec<u8>),
         /// bond report
-        BondReport(Hash, Vec<u8>, AccountId),
+        BondReport(Hash, RSymbol, Vec<u8>, u32, AccountId),
         /// Commission has been updated.
         CommissionUpdated(Perbill, Perbill),
     }
@@ -203,6 +203,7 @@ decl_module! {
             ensure_root(origin)?;
             let pools = Self::pools(symbol);
             ensure!(pools.contains(&pool), Error::<T>::PoolNotFound);
+            ensure!(usize::from(threshold) <= sub_accounts.len(), "threshold bigger than length of sub_accounts");
             <SubAccounts>::insert((symbol, &pool), sub_accounts);
             <MultiThresholds>::insert((symbol, &pool), threshold);
 
@@ -278,7 +279,7 @@ decl_module! {
             chunk.unbond = chunk.unbond.saturating_sub(snap.unbond);
 
             <BondPipelines>::insert((snap.symbol, &snap.pool), chunk);
-            Self::deposit_event(RawEvent::BondReport(shot_id, snap.pool, voter));
+            Self::deposit_event(RawEvent::BondReport(shot_id, snap.symbol, snap.pool, snap.era, voter));
 
             Ok(())
         }
@@ -308,7 +309,7 @@ decl_module! {
                 T::RCurrency::mint(&receiver, symbol, rfee)?;
             }
 
-            let mut rate = rtoken_rate::RATEBASE;
+            let mut rate = rtoken_rate::Rate::get(symbol).unwrap_or(rtoken_rate::RATEBASE);
             if after != before {
                 let rbalance = T::RCurrency::total_issuance(symbol);
                 rate = rtoken_rate::Module::<T>::set_rate(symbol, after, rbalance);
