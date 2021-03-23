@@ -5764,6 +5764,7 @@ dependencies = [
  "frame-system",
  "node-primitives",
  "parity-scale-codec",
+ "rtoken-ledger",
  "rtoken-relayers",
  "serde",
  "sp-core",

@@ -5,19 +5,19 @@ use hex_literal::hex;
 #[test]
 fn sr25519_verify_should_work() {
     let pair = <Sr25519Pair as TraitPair>::from_seed(&hex!(
-        "5cb9063bc28a07f7444dbb29b6fc15b802b141a4e7dd5c932f2981be69e127e7"
+        "7caadbb21966e5e268945005488a3c9be64a37b949d4691a367e477ed9e57995"
     ));
     let public = pair.public();
     assert_eq!(
         public,
         Public::from_raw(hex!(
-            "9c4189297ad2140c85861f64656d1d1318994599130d98b75ff094176d2ca31e"
+            "26db25c52b007221331a844e5335e59874e45b03e81c3d76ff007377c2c17965"
         ))
     );
-    let message = hex!("46094babab45e2fd5265b2aab02c9342fe0ca1a5aacd455d3bc8a2ac99dce8fd");
+    let message = hex!("0f92963488b1078ba8b7f0f1bfbade45cf65b11297ec6c6ecdef474dce88ed58");
     let signature = pair.sign(&message[..]);
     let Signature(bytes) = signature;
     assert!(<Sr25519Pair as TraitPair>::verify(&signature, &message[..], &public));
     println!("{:?}", hex::encode(bytes.to_vec()));
-    // d25232bef5133781d97d5f8bf6c3ef9c51be5cf0f2f325b8b38d7fb7f1b7d178776fa8348de900fb4697547dbaad5e8c99095c38186addadb4a515169525e787
+    // 3a09e37ac5172f45061d8ee03a34be1e677bb5efd8538fe3f78d0085bf67342013b8de01f99e939926a8bfa8c6728bcff18539c6632cd58ea68a8c17e28de584
 }

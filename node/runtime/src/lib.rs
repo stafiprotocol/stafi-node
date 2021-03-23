@@ -930,7 +930,7 @@ construct_runtime!(
 		BridgeSwap: bridge_swap::{Module, Call},
 		RTokenRelayers: rtoken_relayers::{Module, Call, Storage, Event<T>},
 		RTokenVotes: rtoken_votes::{Module, Call, Storage, Event<T>},
-		RTokenLedger: rtoken_ledger::{Module, Call, Storage, Event},
+		RTokenLedger: rtoken_ledger::{Module, Call, Storage, Event<T>},
 		RTokenSeries: rtoken_series::{Module, Call, Storage, Event<T>},
 	}
 );
