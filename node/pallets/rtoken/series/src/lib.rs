@@ -47,7 +47,7 @@ decl_event! {
         /// LiquidityBond
         LiquidityBond(AccountId, RSymbol, Hash),
         /// liquidity unbond record
-        LiquidityUnBond(AccountId, Vec<u8>, u128, u128, u128),
+        LiquidityUnBond(AccountId, RSymbol, Vec<u8>, u128, u128, u128, Vec<u8>),
         /// liquidity withdraw unbond
         LiquidityWithdrawUnBond(AccountId, RSymbol, Vec<u8>, Vec<u8>, u128),
         /// Commission has been updated.
@@ -292,6 +292,13 @@ decl_module! {
         pub fn liquidity_unbond(origin, symbol: RSymbol, pool: Vec<u8>, value: u128, recipient: Vec<u8>) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(value > 0, Error::<T>::LiquidityUnbondZero);
+            ensure!(symbol != RSymbol::RFIS, Error::<T>::InvalidRSymbol);
+
+            match verify_pubkey(symbol, &recipient) {
+                false => Err(Error::<T>::InvalidPubkey)?,
+                _ => (),
+            }
+
             ensure!(ledger::Pools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotFound);
             let op_receiver = ledger::Module::<T>::receiver();
             ensure!(op_receiver.is_some(), ledger::Error::<T>::NoReceiver);
@@ -333,7 +340,7 @@ decl_module! {
 
             Self::handle_withdraw(who.clone(), symbol, unlocking_era, pool.clone(), recipient.clone(), balance);
 
-            Self::deposit_event(RawEvent::LiquidityUnBond(who, pool, value, left_value, balance));
+            Self::deposit_event(RawEvent::LiquidityUnBond(who, symbol, pool, value, left_value, balance, recipient));
 
             Ok(())
         }

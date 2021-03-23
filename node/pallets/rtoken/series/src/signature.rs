@@ -11,6 +11,18 @@ pub fn verify_signature(symbol: RSymbol, pubkey: &Vec<u8>, signature: &Vec<u8>, 
     }
 }
 
+pub fn verify_pubkey(symbol: RSymbol, pubkey: &Vec<u8>) -> bool {
+    match symbol.chain_type() {
+        ChainType::Substrate => {
+            let re_public = <Public as TryFrom<_>>::try_from(&pubkey[..]);
+            if re_public.is_err() {
+                return false;
+            }
+            return true;
+        },
+    }
+}
+
 /// signature verify result
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug)]
 pub enum SigVerifyResult {
