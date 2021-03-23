@@ -78,7 +78,7 @@ decl_error! {
         /// Insufficient
         Insufficient,
         /// new era not bigger than old
-        NewEraNotBiggerThanold,
+        NewEraNotBiggerThanOld,
         /// EraRepeatSet
         EraRepeatSet,
         /// Last voter is nobody
@@ -244,7 +244,7 @@ decl_module! {
             let voter = op_voter.unwrap();
 
             let old_era = Self::chain_eras(symbol).unwrap_or(0);
-            ensure!(old_era < new_era, Error::<T>::NewEraNotBiggerThanold);
+            ensure!(old_era < new_era, Error::<T>::NewEraNotBiggerThanOld);
             let pools = Self::bonded_pools(symbol);
             let mut era_shots = Self::era_snap_shots((symbol, new_era)).unwrap_or(vec![]);
             

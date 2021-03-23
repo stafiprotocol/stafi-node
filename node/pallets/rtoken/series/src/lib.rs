@@ -47,7 +47,7 @@ decl_event! {
         /// LiquidityBond
         LiquidityBond(AccountId, RSymbol, Hash),
         /// liquidity unbond record
-        LiquidityUnBond(AccountId, Vec<u8>, u128, u128, u128),
+        LiquidityUnBond(AccountId, RSymbol, Vec<u8>, u128, u128, u128, Vec<u8>),
         /// liquidity withdraw unbond
         LiquidityWithdrawUnBond(AccountId, RSymbol, Vec<u8>, Vec<u8>, u128),
         /// UnbondCommission has been updated.
@@ -60,6 +60,10 @@ decl_event! {
         SubmitSignatures(AccountId, RSymbol, u32, Vec<u8>, OriginalTxType, Vec<u8>, Vec<u8>),
         /// signatures enough
         SignaturesEnough(RSymbol, u32, Vec<u8>, OriginalTxType, Vec<u8>),
+        /// Nomination Updated for a pool
+        NominationUpdated(RSymbol, Vec<u8>, Vec<Vec<u8>>),
+        /// Validator Updated for a pool
+        ValidatorUpdated(RSymbol, Vec<u8>, Vec<u8>, Vec<u8>),
     }
 }
 
@@ -109,6 +113,8 @@ decl_error! {
         BondingDurationNotSet,
         /// signature repeated
         SignatureRepeated,
+        /// nominations already initialized
+        NominationsInitialized,
     }
 }
 
@@ -143,6 +149,8 @@ decl_storage! {
 
         pub Signatures get(fn signatures): map hasher(twox_64_concat) (RSymbol, u32, Vec<u8>, OriginalTxType, Vec<u8>) => Option<Vec<Vec<u8>>>;
         pub AccountSignature get(fn account_signature): map hasher(blake2_128_concat) (T::AccountId, RSymbol, u32, Vec<u8>, OriginalTxType, Vec<u8>) => Option<Vec<u8>>;
+
+        pub Nominated get(fn nominated): map hasher(twox_64_concat) (RSymbol, Vec<u8>) => Option<Vec<Vec<u8>>>;
     }
 }
 
@@ -188,6 +196,44 @@ decl_module! {
             UnbondCommission::put(new_commission);
 
             Self::deposit_event(RawEvent::UnbondCommissionUpdated(old_commission, new_commission));
+            Ok(())
+        }
+
+        /// init nominatons
+        #[weight = 10_000]
+        pub fn init_nominations(origin, symbol: RSymbol, pool: Vec<u8>, validators: Vec<Vec<u8>>) -> DispatchResult {
+            ensure_root(origin)?;
+            
+            ensure!(Self::nominated((symbol, &pool)).is_none(), Error::<T>::NominationsInitialized);
+            Nominated::insert((symbol, &pool), validators.clone());
+
+            Ok(())
+        }
+
+        /// update nominatons
+        #[weight = 10_000]
+        pub fn update_nominations(origin, symbol: RSymbol, pool: Vec<u8>, new_validators: Vec<Vec<u8>>) -> DispatchResult {
+            ensure_root(origin)?;
+            
+            Nominated::insert((symbol, &pool), new_validators.clone());
+
+            Self::deposit_event(RawEvent::NominationUpdated(symbol, pool, new_validators));
+            Ok(())
+        }
+
+        /// update validator
+        #[weight = 10_000]
+        pub fn update_validator(origin, symbol: RSymbol, pool: Vec<u8>, old_validator: Vec<u8>, new_validator: Vec<u8>) -> DispatchResult {
+            ensure_root(origin)?;
+            
+            let mut validators = Self::nominated((symbol, &pool)).unwrap_or(vec![]);
+            if let Ok(i) = validators.binary_search(&old_validator) {
+                validators.remove(i);
+            }
+            validators.push(new_validator.clone());
+            Nominated::insert((symbol, &pool), validators);
+
+            Self::deposit_event(RawEvent::ValidatorUpdated(symbol, pool, old_validator, new_validator));
             Ok(())
         }
 
@@ -271,6 +317,13 @@ decl_module! {
         pub fn liquidity_unbond(origin, symbol: RSymbol, pool: Vec<u8>, value: u128, recipient: Vec<u8>) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(value > 0, Error::<T>::LiquidityUnbondZero);
+            ensure!(symbol != RSymbol::RFIS, Error::<T>::InvalidRSymbol);
+
+            match verify_pubkey(symbol, &recipient) {
+                false => Err(Error::<T>::InvalidPubkey)?,
+                _ => (),
+            }
+
             ensure!(ledger::Pools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotFound);
             let op_receiver = ledger::Module::<T>::receiver();
             ensure!(op_receiver.is_some(), ledger::Error::<T>::NoReceiver);
@@ -305,7 +358,8 @@ decl_module! {
 
             ledger::BondPipelines::insert((symbol, &pool), pipe);
             Self::handle_withdraw(who.clone(), symbol, unlocking_era, pool.clone(), recipient.clone(), balance);
-            Self::deposit_event(RawEvent::LiquidityUnBond(who, pool, value, left_value, balance));
+
+            Self::deposit_event(RawEvent::LiquidityUnBond(who, symbol, pool, value, left_value, balance, recipient));
 
             Ok(())
         }
