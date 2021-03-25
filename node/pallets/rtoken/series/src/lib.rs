@@ -16,7 +16,7 @@ use sp_runtime::{
 };
 use rtoken_balances::{traits::{Currency as RCurrency}};
 use node_primitives::{RSymbol, Balance, ChainType};
-use rtoken_ledger::{self as ledger};
+use rtoken_ledger::{self as ledger, Unbonding};
 use rtoken_relayers as relayers;
 
 #[cfg(test)]
@@ -107,8 +107,6 @@ decl_error! {
         EraRateAlreadyUpdated,
         /// insufficient
         Insufficient,
-        /// Can not schedule more unlock chunks.
-        NoMoreChunks,
         /// Bonding duration not set
         BondingDurationNotSet,
         /// signature repeated
@@ -131,13 +129,6 @@ decl_storage! {
         pub BondStates get(fn bond_states): map hasher(blake2_128_concat) (RSymbol, Vec<u8>, Vec<u8>) => Option<BondState>;
         /// Recipient account for fees
         Receiver get(fn receiver): Option<T::AccountId>;
-        /// Unbonding: (origin, (symbol, pool)) => [BondUnlockChunk]
-        pub Unbonding get(fn unbonding): double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) (RSymbol, Vec<u8>) => Option<Vec<BondUnlockChunk>>;
-
-        /// Withdrawing: (symbol, unlocking_era, index) => [WithdrawChunk]
-        pub TotalWithdrawing get(fn total_withdrawing): map hasher(twox_64_concat) (RSymbol, u32, u32) => Option<Vec<WithdrawChunk<T::AccountId>>>;
-        /// symbol, era => count_index
-        pub TotalWithdrawingChunkCount get(fn total_withdrawing_chunk_count): map hasher(twox_64_concat) (RSymbol, u32) => u32;
 
         /// fees to cover the commission happened on other chains
         pub BondFees get(fn bond_fees): map hasher(twox_64_concat) RSymbol => Balance = 1500000000000;
@@ -318,46 +309,44 @@ decl_module! {
             let who = ensure_signed(origin)?;
             ensure!(value > 0, Error::<T>::LiquidityUnbondZero);
             ensure!(symbol != RSymbol::RFIS, Error::<T>::InvalidRSymbol);
-
+            ensure!(ledger::BondedPools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotFound);
             match verify_pubkey(symbol, &recipient) {
                 false => Err(Error::<T>::InvalidPubkey)?,
                 _ => (),
             }
 
-            ensure!(ledger::Pools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotFound);
+            let current_era = rtoken_ledger::ChainEras::get(symbol).ok_or(Error::<T>::NoCurrentEra)?;
+            let bonding_duration = rtoken_ledger::ChainBondingDuration::get(symbol).ok_or(Error::<T>::BondingDurationNotSet)?;
+            let unlock_era = current_era + bonding_duration;
+            
             let op_receiver = ledger::Module::<T>::receiver();
             ensure!(op_receiver.is_some(), ledger::Error::<T>::NoReceiver);
-            let current_era = rtoken_ledger::ChainEras::get(symbol).ok_or(Error::<T>::NoCurrentEra)?;
+            let receiver = op_receiver.unwrap();
 
             let free = <T as Trait>::RCurrency::free_balance(&who, symbol);
             free.checked_sub(value).ok_or(Error::<T>::Insufficient)?;
 
-            let mut unbonding = <Unbonding<T>>::get(&who, (symbol, &pool)).unwrap_or(vec![]);
-            ensure!(unbonding.len() < MAX_UNLOCKING_CHUNKS, Error::<T>::NoMoreChunks);
-
             let fee = Self::unbond_fee(value);
             let left_value = value - fee;
             let balance = rtoken_rate::Module::<T>::rtoken_to_token(symbol, left_value);
-            
-            let bonding_duration = rtoken_ledger::ChainBondingDuration::get(symbol).ok_or(Error::<T>::BondingDurationNotSet)?;
-            let unlocking_era = current_era + bonding_duration + 2;
-            if let Some(chunk) = unbonding.iter_mut().find(|chunk| chunk.era == unlocking_era) {
-                chunk.value += balance;
-            } else {
-                unbonding.push(BondUnlockChunk { value: balance, era: unlocking_era });
-            }
 
             let mut pipe = ledger::BondPipelines::get((symbol, &pool)).unwrap_or_default();
             pipe.unbond = pipe.unbond.checked_add(balance).ok_or(Error::<T>::OverFlow)?;
             pipe.active = pipe.active.checked_sub(balance).ok_or(Error::<T>::Insufficient)?;
 
-            let receiver = op_receiver.unwrap();
+            let unbonding = Unbonding{who: who.clone(), symbol, pool: pool.clone(), rvalue: left_value, value: balance, current_era, unlock_era, recipient: recipient.clone()};
+            let mut ac_unbonds = ledger::AccountUnbonds::<T>::get(&who, (symbol, &pool)).unwrap_or(vec![]);
+            let mut pool_unbonds = ledger::PoolUnbonds::<T>::get((symbol, &pool, unlock_era)).unwrap_or(vec![]);
+            let limit = ledger::EraUnbondLimit::get(symbol);
+            ensure!(limit == 0 || pool_unbonds.len() < usize::from(limit), Error::<T>::PoolLimitReached);
+            ac_unbonds.push(unbonding.clone());
+            pool_unbonds.push(unbonding.clone());
+            
             <T as Trait>::RCurrency::transfer(&who, &receiver, symbol, fee)?;
             <T as Trait>::RCurrency::burn(&who, symbol, left_value)?;
-            <Unbonding<T>>::insert(&who, (symbol, &pool), unbonding);
-
             ledger::BondPipelines::insert((symbol, &pool), pipe);
-            Self::handle_withdraw(who.clone(), symbol, unlocking_era, pool.clone(), recipient.clone(), balance);
+            ledger::AccountUnbonds::<T>::insert(&who, (symbol, &pool), &ac_unbonds);
+            ledger::PoolUnbonds::<T>::insert((symbol, &pool, unlock_era), &pool_unbonds);
 
             Self::deposit_event(RawEvent::LiquidityUnBond(who, symbol, pool, value, left_value, balance, recipient));
 
@@ -416,36 +405,5 @@ impl<T: Trait> Module<T> {
 
     fn unbond_fee(value: u128) -> u128 {
         Self::unbond_commission() * value
-    }
-
-    fn handle_withdraw(who: T::AccountId, symbol: RSymbol, unlocking_era: u32, pool: Vec<u8>, recipient: Vec<u8>, value: u128) {
-        let total_withdrawing_chunk_count = Self::total_withdrawing_chunk_count((symbol, unlocking_era));
-        if total_withdrawing_chunk_count > 0 {
-            for i in 0..total_withdrawing_chunk_count {
-                let mut old_total_withdrawing = Self::total_withdrawing((symbol, unlocking_era, i)).unwrap_or(vec![]);
-                if let Some(chunk) = old_total_withdrawing.iter_mut().find(|chunk| chunk.pool == pool && chunk.recipient == recipient) {
-                    chunk.value += value;
-                    <TotalWithdrawing<T>>::insert((symbol, unlocking_era, i), old_total_withdrawing);
-                    break;
-                } else {
-                    if old_total_withdrawing.len() < MAX_WITHDRAWING_CHUNKS {
-                        old_total_withdrawing.push(WithdrawChunk { who: who, pool: pool, recipient: recipient, value: value });
-                        <TotalWithdrawing<T>>::insert((symbol, unlocking_era, i), old_total_withdrawing);
-                        break;
-                    } else if i == (total_withdrawing_chunk_count - 1) {
-                        TotalWithdrawingChunkCount::insert((symbol, unlocking_era), total_withdrawing_chunk_count + 1);
-                        let mut new_total_withdrawing: Vec<WithdrawChunk<T::AccountId>> = vec![];
-                        new_total_withdrawing.push(WithdrawChunk { who: who, pool: pool, recipient: recipient, value: value });
-                        <TotalWithdrawing<T>>::insert((symbol, unlocking_era, total_withdrawing_chunk_count), new_total_withdrawing);
-                        break;
-                    }
-                }
-            }
-        } else {
-            TotalWithdrawingChunkCount::insert((symbol, unlocking_era), total_withdrawing_chunk_count + 1);
-            let mut new_total_withdrawing: Vec<WithdrawChunk<T::AccountId>> = vec![];
-            new_total_withdrawing.push(WithdrawChunk { who: who, pool: pool, recipient: recipient, value: value });
-            <TotalWithdrawing<T>>::insert((symbol, unlocking_era, total_withdrawing_chunk_count), new_total_withdrawing);
-        }
     }
 }

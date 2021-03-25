@@ -79,17 +79,6 @@ pub struct BondUnlockChunk {
 	pub era: u32,
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct WithdrawChunk<AccountId> {
-    pub who: AccountId,
-    /// Pool address from which it'll be withdrawn.
-	pub pool: Vec<u8>,
-	/// The recipient account.
-	pub recipient: Vec<u8>,
-	/// Amount of funds exposed.
-	pub value: u128,
-}
-
 /// Original tx type
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug)]
 pub enum OriginalTxType {

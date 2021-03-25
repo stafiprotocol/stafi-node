@@ -41,4 +41,16 @@ pub struct BondSnapshot<AccountId> {
     pub last_voter: AccountId,
 }
 
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct Unbonding<AccountId> {
+    pub who: AccountId,
+    pub symbol: RSymbol,
+    pub pool: Vec<u8>,
+    pub rvalue: u128,
+    pub value: u128,
+    pub current_era: u32,
+    pub unlock_era: u32,
+    pub recipient: Vec<u8>,
+}
+
 
