@@ -34,8 +34,6 @@ decl_event! {
         Hash = <T as system::Trait>::Hash,
         AccountId = <T as system::Trait>::AccountId
     {
-        /// symbol, era
-        EraInitialized(RSymbol, u32),
         /// symbol, old_era, new_era
         EraUpdated(RSymbol, u32, u32),
         /// EraPoolUpdated
@@ -69,22 +67,10 @@ decl_error! {
         RepeatInitBond,
         /// No receiver
         NoReceiver,
-        /// sub account already added
-        SubAccountAlreadyAdded,
-        /// era zero
-        EraZero,
-        /// era already initialized
-        EraAlreadyInitialized,
         /// new_bonding_duration zero
         NewBondingDurationZero,
-        /// OverFlow
-        OverFlow,
-        /// Insufficient
-        Insufficient,
         /// new era not bigger than old
         NewEraNotBiggerThanOld,
-        /// EraRepeatSet
-        EraRepeatSet,
         /// Last voter is nobody
         LastVoterNobody,
         /// shot_id not found for BondSnapshot,
@@ -142,8 +128,8 @@ decl_module! {
 
         fn deposit_event() = default;
 
-        /// Update commission
-		#[weight = 10_000]
+        /// Update commission of staking rewards
+		#[weight = 1_000_000]
 		fn set_commission(origin, new_part: u32) -> DispatchResult {
             ensure_root(origin)?;
             let old_commission = Self::commission();
@@ -155,7 +141,7 @@ decl_module! {
         }
 
         /// add new pool
-        #[weight = 10_000]
+        #[weight = 1_000_000]
         pub fn add_new_pool(origin, symbol: RSymbol, pool: Vec<u8>) -> DispatchResult {
             ensure_root(origin)?;
             let mut pools = Self::pools(symbol);
@@ -168,15 +154,15 @@ decl_module! {
         }
 
         /// set receiver
-        #[weight = 10_000]
+        #[weight = 1_000_000]
         pub fn set_receiver(origin, new_receiver: T::AccountId) -> DispatchResult {
             ensure_root(origin)?;
             <Receiver<T>>::put(new_receiver);
             Ok(())
         }
 
-        /// add new pool
-        #[weight = 10_000]
+        /// init bond pool
+        #[weight = 1_000_000]
         pub fn set_init_bond(origin, symbol: RSymbol, pool: Vec<u8>, amount: u128) -> DispatchResult {
             ensure_root(origin)?;
             let pools = Self::pools(symbol);
@@ -199,8 +185,8 @@ decl_module! {
             Ok(())
         }
 
-        /// set chain era
-        #[weight = 10_000]
+        /// set chain bonding duration
+        #[weight = 1_000_000]
         pub fn set_chain_bonding_duration(origin, symbol: RSymbol, new_bonding_duration: u32) -> DispatchResult {
             ensure_root(origin)?;
             ensure!(new_bonding_duration > 0, Error::<T>::NewBondingDurationZero);
@@ -212,8 +198,8 @@ decl_module! {
             Ok(())
         }
 
-        /// add new pool
-        #[weight = 10_000]
+        /// add sub accounts and threshold of a pool
+        #[weight = 1_000_000]
         pub fn add_sub_accounts_and_threshold(origin, symbol: RSymbol, pool: Vec<u8>, sub_accounts: Vec<Vec<u8>>, threshold: u16) -> DispatchResult {
             ensure_root(origin)?;
             let pools = Self::pools(symbol);
@@ -225,32 +211,15 @@ decl_module! {
             Ok(())
         }
 
-        /// Initialize chain era
-        /// may not be needed. need more think
-        #[weight = 10_000]
-        pub fn initialize_chain_era(origin, symbol: RSymbol, era: u32) -> DispatchResult {
-            ensure_root(origin)?;
-
-            ensure!(era > 0, Error::<T>::EraZero);
-            ensure!(!Self::chain_eras(symbol).is_some(), Error::<T>::EraAlreadyInitialized);
-            <ChainEras>::insert(symbol, era);
-
-            let rate = rtoken_rate::Module::<T>::set_rate(symbol, 0, 0);
-            rtoken_rate::EraRate::insert(symbol, era, rate);
-
-            Self::deposit_event(RawEvent::EraInitialized(symbol, era));
-            Ok(())
-        }
-
-        /// set chain era
-        #[weight = 10_000]
+        /// init last voter
+        #[weight = 1_000_000]
         pub fn init_last_voter(origin) -> DispatchResult {
             T::VoterOrigin::ensure_origin(origin)?;
             Ok(())
         }
 
         /// set chain era
-        #[weight = 10_000]
+        #[weight = 1_000_000]
         pub fn set_chain_era(origin, symbol: RSymbol, new_era: u32) -> DispatchResult {
             T::VoterOrigin::ensure_origin(origin)?;
             // last_voter
@@ -279,7 +248,7 @@ decl_module! {
         }
 
         /// bond link success
-        #[weight = 10_000]
+        #[weight = 1_000_000]
         pub fn bond_report(origin, shot_id: T::Hash) -> DispatchResult {
             T::VoterOrigin::ensure_origin(origin)?;
             ensure!(Self::snap_shots(&shot_id).is_some(), Error::<T>::BondShotIdNotFound);
@@ -300,7 +269,7 @@ decl_module! {
         }
 
         /// set bond active of pool
-        #[weight = 10_000]
+        #[weight = 1_000_000]
         pub fn active_report(origin, shot_id: T::Hash, active: u128) -> DispatchResult {
             T::VoterOrigin::ensure_origin(origin)?;
 
@@ -346,8 +315,8 @@ decl_module! {
             Ok(())
         }
 
-        /// set bond active of pool
-        #[weight = 10_000]
+        /// withdraw success
+        #[weight = 1_000_000]
         pub fn withdraw_report(origin, shot_id: T::Hash) -> DispatchResult {
             T::VoterOrigin::ensure_origin(origin)?;
 
@@ -364,8 +333,8 @@ decl_module! {
             Ok(())
         }
 
-        /// set bond active of pool
-        #[weight = 10_000]
+        /// transfer success
+        #[weight = 1_000_000]
         pub fn transfer_report(origin, shot_id: T::Hash) -> DispatchResult {
             T::VoterOrigin::ensure_origin(origin)?;
 

@@ -54,6 +54,8 @@ decl_event! {
         UnbondCommissionUpdated(Perbill, Perbill),
         /// Set bond fees
         BondFeesSet(RSymbol, Balance),
+        /// Set unbond fees
+        UnbondFeesSet(RSymbol, Balance),
         /// Pool balance limit has been updated
         PoolBalanceLimitUpdated(RSymbol, u128, u128),
         /// submit signatures
@@ -71,6 +73,8 @@ decl_error! {
     pub enum Error for Module<T: Trait> {
         /// bond switch closed
         BondSwitchClosed,
+        /// invalid proxy account
+        InvalidProxyAccount,
         /// pool not found
         PoolNotFound,
         /// liquidity bond Zero
@@ -97,6 +101,8 @@ decl_error! {
         BondProcessing,
         /// liquidity unbond Zero
         LiquidityUnbondZero,
+        /// no more unbonding chunks
+        NoMoreUnbondingChunks,
         /// get current era err
         NoCurrentEra,
         /// get invalid era err
@@ -130,8 +136,13 @@ decl_storage! {
         /// Recipient account for fees
         Receiver get(fn receiver): Option<T::AccountId>;
 
+        /// Proxy accounts for setting fees
+        ProxyAccounts get(fn proxy_accounts): map hasher(twox_64_concat) T::AccountId => Option<u8>;
         /// fees to cover the commission happened on other chains
         pub BondFees get(fn bond_fees): map hasher(twox_64_concat) RSymbol => Balance = 1500000000000;
+
+        /// fees to cover the commission happened on other chains
+        pub UnbondFees get(fn unbond_fees): map hasher(twox_64_concat) RSymbol => Balance = 3000000000000;
 
         PoolBalanceLimit get(fn pool_balance_limit): map hasher(twox_64_concat) RSymbol => u128;
 
@@ -150,7 +161,7 @@ decl_module! {
         fn deposit_event() = default;
 
         /// turn on/off bond switch
-        #[weight = 10_000]
+        #[weight = 1_000_000]
         fn toggle_bond_switch(origin) -> DispatchResult {
             ensure_root(origin)?;
             let state = Self::bond_switch();
@@ -158,17 +169,50 @@ decl_module! {
 			Ok(())
         }
 
-        /// Set fees for bond.
-        #[weight = 10_000]
-        pub fn set_bond_fees(origin, symbol: RSymbol, fees: Balance) -> DispatchResult {
+        /// Set proxy accounts.
+        #[weight = 1_000_000]
+        pub fn set_proxy_accounts(origin, account: T::AccountId) -> DispatchResult {
             ensure_root(origin)?;
+            <ProxyAccounts<T>>::insert(account, 0);
+
+            Ok(())
+        }
+
+        /// Remove proxy accounts.
+        #[weight = 1_000_000]
+        pub fn remove_proxy_accounts(origin, account: T::AccountId) -> DispatchResult {
+            ensure_root(origin)?;
+            <ProxyAccounts<T>>::remove(account);
+
+            Ok(())
+        }
+
+        /// Set fees for bond.
+        #[weight = 1_000_000]
+        pub fn set_bond_fees(origin, symbol: RSymbol, fees: Balance) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+
+            ensure!(<ProxyAccounts<T>>::contains_key(&who), Error::<T>::InvalidProxyAccount);
+
             BondFees::insert(symbol, fees);
             Self::deposit_event(RawEvent::BondFeesSet(symbol, fees));
             Ok(())
         }
 
+        /// Set fees for unbond.
+        #[weight = 1_000_000]
+        pub fn set_unbond_fees(origin, symbol: RSymbol, fees: Balance) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+
+            ensure!(<ProxyAccounts<T>>::contains_key(&who), Error::<T>::InvalidProxyAccount);
+
+            UnbondFees::insert(symbol, fees);
+            Self::deposit_event(RawEvent::UnbondFeesSet(symbol, fees));
+            Ok(())
+        }
+
         /// Update pool balance limit
-        #[weight = 10_000]
+        #[weight = 1_000_000]
         fn set_balance_limit(origin, symbol: RSymbol, new_limit: u128) -> DispatchResult {
             ensure_root(origin)?;
             let old_limit = Self::pool_balance_limit(symbol);
@@ -179,7 +223,7 @@ decl_module! {
         }
 
         /// set unbond commission
-        #[weight = 10_000]
+        #[weight = 1_000_000]
         pub fn set_unbond_commission(origin, new_part: u32) -> DispatchResult {
             ensure_root(origin)?;
             let old_commission = Self::unbond_commission();
@@ -191,7 +235,7 @@ decl_module! {
         }
 
         /// init nominatons
-        #[weight = 10_000]
+        #[weight = 1_000_000]
         pub fn init_nominations(origin, symbol: RSymbol, pool: Vec<u8>, validators: Vec<Vec<u8>>) -> DispatchResult {
             ensure_root(origin)?;
             
@@ -202,7 +246,7 @@ decl_module! {
         }
 
         /// update nominatons
-        #[weight = 10_000]
+        #[weight = 1_000_000]
         pub fn update_nominations(origin, symbol: RSymbol, pool: Vec<u8>, new_validators: Vec<Vec<u8>>) -> DispatchResult {
             ensure_root(origin)?;
             
@@ -213,7 +257,7 @@ decl_module! {
         }
 
         /// update validator
-        #[weight = 10_000]
+        #[weight = 1_000_000]
         pub fn update_validator(origin, symbol: RSymbol, pool: Vec<u8>, old_validator: Vec<u8>, new_validator: Vec<u8>) -> DispatchResult {
             ensure_root(origin)?;
             
@@ -234,7 +278,6 @@ decl_module! {
             let who = ensure_signed(origin)?;
             ensure!(Self::bond_switch(), Error::<T>::BondSwitchClosed);
             ensure!(amount > 0, Error::<T>::LiquidityBondZero);
-            ensure!(symbol != RSymbol::RFIS, Error::<T>::InvalidRSymbol);
             ensure!(Self::is_txhash_available(symbol, &blockhash, &txhash), Error::<T>::TxhashUnavailable);
             ensure!(ledger::BondedPools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotBonded);
             let op_receiver = ledger::Module::<T>::receiver();
@@ -308,7 +351,6 @@ decl_module! {
         pub fn liquidity_unbond(origin, symbol: RSymbol, pool: Vec<u8>, value: u128, recipient: Vec<u8>) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(value > 0, Error::<T>::LiquidityUnbondZero);
-            ensure!(symbol != RSymbol::RFIS, Error::<T>::InvalidRSymbol);
             ensure!(ledger::BondedPools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotFound);
             match verify_pubkey(symbol, &recipient) {
                 false => Err(Error::<T>::InvalidPubkey)?,
@@ -337,10 +379,18 @@ decl_module! {
             let unbonding = Unbonding{who: who.clone(), symbol, pool: pool.clone(), rvalue: left_value, value: balance, current_era, unlock_era, recipient: recipient.clone()};
             let mut ac_unbonds = ledger::AccountUnbonds::<T>::get(&who, (symbol, &pool, unlock_era)).unwrap_or(vec![]);
             let mut pool_unbonds = ledger::PoolUnbonds::<T>::get((symbol, &pool, unlock_era)).unwrap_or(vec![]);
+
+            ensure!(ac_unbonds.len() <= MAX_UNLOCKING_CHUNKS, Error::<T>::NoMoreUnbondingChunks);
             let limit = ledger::EraUnbondLimit::get(symbol);
             ensure!(limit == 0 || pool_unbonds.len() < usize::from(limit), Error::<T>::PoolLimitReached);
+
             ac_unbonds.push(unbonding.clone());
             pool_unbonds.push(unbonding.clone());
+
+            let fees = Self::unbond_fees(symbol);
+            if fees > 0 {
+                T::Currency::transfer(&who, &receiver, fees.saturated_into(), KeepAlive)?;
+            }
             
             <T as Trait>::RCurrency::transfer(&who, &receiver, symbol, fee)?;
             <T as Trait>::RCurrency::burn(&who, symbol, left_value)?;
