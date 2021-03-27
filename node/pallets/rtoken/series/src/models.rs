@@ -71,14 +71,6 @@ impl<A: PartialEq> BondKey<A> {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct BondUnlockChunk {
-	/// Amount of funds to be unlocked.
-	pub value: u128,
-	/// Era number at which point it'll be unlocked.
-	pub era: u32,
-}
-
 /// Original tx type
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug)]
 pub enum OriginalTxType {

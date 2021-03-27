@@ -335,7 +335,7 @@ decl_module! {
             pipe.active = pipe.active.checked_sub(balance).ok_or(Error::<T>::Insufficient)?;
 
             let unbonding = Unbonding{who: who.clone(), symbol, pool: pool.clone(), rvalue: left_value, value: balance, current_era, unlock_era, recipient: recipient.clone()};
-            let mut ac_unbonds = ledger::AccountUnbonds::<T>::get(&who, (symbol, &pool)).unwrap_or(vec![]);
+            let mut ac_unbonds = ledger::AccountUnbonds::<T>::get(&who, (symbol, &pool, unlock_era)).unwrap_or(vec![]);
             let mut pool_unbonds = ledger::PoolUnbonds::<T>::get((symbol, &pool, unlock_era)).unwrap_or(vec![]);
             let limit = ledger::EraUnbondLimit::get(symbol);
             ensure!(limit == 0 || pool_unbonds.len() < usize::from(limit), Error::<T>::PoolLimitReached);
@@ -345,7 +345,7 @@ decl_module! {
             <T as Trait>::RCurrency::transfer(&who, &receiver, symbol, fee)?;
             <T as Trait>::RCurrency::burn(&who, symbol, left_value)?;
             ledger::BondPipelines::insert((symbol, &pool), pipe);
-            ledger::AccountUnbonds::<T>::insert(&who, (symbol, &pool), &ac_unbonds);
+            ledger::AccountUnbonds::<T>::insert(&who, (symbol, &pool, unlock_era), &ac_unbonds);
             ledger::PoolUnbonds::<T>::insert((symbol, &pool, unlock_era), &pool_unbonds);
 
             Self::deposit_event(RawEvent::LiquidityUnBond(who, symbol, pool, value, left_value, balance, recipient));
