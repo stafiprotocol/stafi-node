@@ -8,6 +8,7 @@ use frame_system::offchain::AppCrypto;
 pub fn verify_signature(symbol: RSymbol, pubkey: &Vec<u8>, signature: &Vec<u8>, txhash: &Vec<u8>) -> SigVerifyResult {
     match symbol.chain_type() {
         ChainType::Substrate => super::sr25519_verify(&pubkey, &signature, &txhash),
+        ChainType::Cosmos => super::cosmos_verify(&pubkey, &signature, &txhash),
     }
 }
 
@@ -19,6 +20,9 @@ pub fn verify_pubkey(symbol: RSymbol, pubkey: &Vec<u8>) -> bool {
                 return false;
             }
             return true;
+        },
+        ChainType::Cosmos => {
+            return super::check_cosmos_pubkey(&pubkey);
         },
     }
 }
@@ -47,4 +51,21 @@ pub fn sr25519_verify(pubkey: &Vec<u8>, signature: &Vec<u8>, txhash: &Vec<u8>) -
     }
 
     SigVerifyResult::Fail
+}
+
+pub fn cosmos_verify(pubkey: &Vec<u8>, _signature: &Vec<u8>, _txhash: &Vec<u8>) -> SigVerifyResult {
+    if !super::check_cosmos_pubkey(&pubkey) {
+        return SigVerifyResult::InvalidPubkey;
+    }
+    
+    // let vrf_result = <ReporterAppCrypto as AppCrypto<_,_>>::verify(&txhash, public.into(), sig.into());
+    if true {
+        return SigVerifyResult::Pass;
+    }
+
+    SigVerifyResult::Fail
+}
+
+pub fn check_cosmos_pubkey(pubkey: &Vec<u8>) -> bool {
+    return pubkey.len() == 33;
 }

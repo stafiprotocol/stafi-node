@@ -409,7 +409,7 @@ decl_module! {
             let who = ensure_signed(origin)?;
             ensure!(symbol.chain_type() != ChainType::Substrate, Error::<T>::InvalidRSymbol);
             ensure!(relayers::Module::<T>::is_relayer(symbol, &who), relayers::Error::<T>::MustBeRelayer);
-            ensure!(ledger::Pools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotFound);
+            ensure!(ledger::BondedPools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotFound);
 
             let current_era = rtoken_ledger::ChainEras::get(symbol).ok_or(Error::<T>::NoCurrentEra)?;
             ensure!(era <= current_era && era >= current_era - 14, Error::<T>::InvalidEra);

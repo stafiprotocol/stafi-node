@@ -21,6 +21,8 @@ pub enum RSymbol {
     RDOT,
 	/// rKSM
     RKSM,
+	/// rATOM
+    RATOM,
 }
 
 /// Rtoken Identifier
@@ -28,6 +30,8 @@ pub enum RSymbol {
 pub enum ChainType {
 	/// substrate
 	Substrate,
+	/// cosmos
+	Cosmos
 }
 
 impl RSymbol {
@@ -35,6 +39,7 @@ impl RSymbol {
 	pub fn chain_type(&self) -> ChainType {
 		match self {
 			RSymbol::RFIS | RSymbol::RDOT | RSymbol::RKSM => ChainType::Substrate,
+			RSymbol::RATOM => ChainType::Cosmos
 		}
 	}
 }
