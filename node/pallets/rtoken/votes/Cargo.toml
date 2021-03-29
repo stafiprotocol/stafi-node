@@ -21,6 +21,7 @@ frame-system = { branch = "master", default-features = false, git = 'https://git
 
 node-primitives = { path = "../../../primitives", default-features = false }
 rtoken-relayers = { path = "../relayers", default-features = false}
+rtoken-ledger = { path = "../ledger", default-features = false}
 
 [features]
 default = ["std"]
@@ -34,4 +35,5 @@ std = [
   "frame-support/std",
   "frame-system/std",
   "rtoken-relayers/std",
+  "rtoken-ledger/std",
 ]

@@ -102,7 +102,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 18,
+	spec_version: 19,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -842,7 +842,7 @@ impl pallet_vesting::Trait for Runtime {
 
 parameter_types! {
 	pub const ChainIdentity: ChainId = 1;
-	pub const ProposalLifetime: BlockNumber = 1000;
+	pub const ProposalLifetime: BlockNumber = 201600;
 }
 
 impl bridge_common::Trait for Runtime {
@@ -929,7 +929,7 @@ construct_runtime!(
 		RFis: rfis::{Module, Call, Storage, Event<T>, ValidateUnsigned},
 		RTokenRelayers: rtoken_relayers::{Module, Call, Storage, Event<T>},
 		RTokenVotes: rtoken_votes::{Module, Call, Storage, Event<T>},
-		RTokenLedger: rtoken_ledger::{Module, Call, Storage, Event},
+		RTokenLedger: rtoken_ledger::{Module, Call, Storage, Event<T>},
 		RTokenSeries: rtoken_series::{Module, Call, Storage, Event<T>},
 	}
 );
