@@ -85,3 +85,11 @@ pub enum OriginalTxType {
 	/// claim rewards
     ClaimRewards,
 }
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct UserUnlockChunk {
+    pub pool: Vec<u8>,
+    pub unlock_era: u32,
+    pub value: u128,
+    pub recipient: Vec<u8>
+}

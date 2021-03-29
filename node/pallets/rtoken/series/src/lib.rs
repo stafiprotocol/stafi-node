@@ -28,7 +28,7 @@ pub use models::*;
 pub mod signature;
 pub use signature::*;
 
-pub const MAX_UNLOCKING_CHUNKS: usize = 32;
+pub const MAX_UNLOCKING_CHUNKS: usize = 64;
 pub const MAX_WITHDRAWING_CHUNKS: usize = 100;
 
 pub trait Trait: system::Trait + rtoken_rate::Trait + rtoken_ledger::Trait + relayers::Trait {
@@ -148,6 +148,9 @@ decl_storage! {
 
         /// Unbond commission
         UnbondCommission get(fn unbond_commission): Perbill = Perbill::from_parts(2000000);
+
+        /// Account unbond records: who, symbol => [UserUnlockChunk]
+        pub AccountUnbonds get(fn account_unbonds): double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) RSymbol => Option<Vec<UserUnlockChunk>>;
 
         pub Signatures get(fn signatures): map hasher(twox_64_concat) (RSymbol, u32, Vec<u8>, OriginalTxType, Vec<u8>) => Option<Vec<Vec<u8>>>;
         pub AccountSignature get(fn account_signature): map hasher(blake2_128_concat) (T::AccountId, RSymbol, u32, Vec<u8>, OriginalTxType, Vec<u8>) => Option<Vec<u8>>;
@@ -273,7 +276,7 @@ decl_module! {
         }
 
         /// liquidity bond token to get rtoken
-        #[weight = 100_000_000_000]
+        #[weight = 10_000_000_000]
         pub fn liquidity_bond(origin, pubkey: Vec<u8>, signature: Vec<u8>, pool: Vec<u8>, blockhash: Vec<u8>, txhash: Vec<u8>, amount: u128, symbol: RSymbol) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(Self::bond_switch(), Error::<T>::BondSwitchClosed);
@@ -347,7 +350,7 @@ decl_module! {
         }
 
         /// liquitidy unbond to redeem token with rtoken
-        #[weight = 100_000_000_000]
+        #[weight = 30_000_000_000]
         pub fn liquidity_unbond(origin, symbol: RSymbol, pool: Vec<u8>, value: u128, recipient: Vec<u8>) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(value > 0, Error::<T>::LiquidityUnbondZero);
@@ -376,16 +379,22 @@ decl_module! {
             pipe.unbond = pipe.unbond.checked_add(balance).ok_or(Error::<T>::OverFlow)?;
             pipe.active = pipe.active.checked_sub(balance).ok_or(Error::<T>::Insufficient)?;
 
-            let unbonding = Unbonding{who: who.clone(), symbol, pool: pool.clone(), rvalue: left_value, value: balance, current_era, unlock_era, recipient: recipient.clone()};
-            let mut ac_unbonds = ledger::AccountUnbonds::<T>::get(&who, (symbol, &pool, unlock_era)).unwrap_or(vec![]);
-            let mut pool_unbonds = ledger::PoolUnbonds::<T>::get((symbol, &pool, unlock_era)).unwrap_or(vec![]);
-
+            let user_unlocking = Self::account_unbonds(&who, symbol).unwrap_or(vec![]);
+            let mut ac_unbonds: Vec<UserUnlockChunk> = user_unlocking.into_iter()
+                .filter(|chunk| if chunk.unlock_era > current_era {
+                    true
+                } else {
+                    false
+                })
+                .collect();
             ensure!(ac_unbonds.len() <= MAX_UNLOCKING_CHUNKS, Error::<T>::NoMoreUnbondingChunks);
-            let limit = ledger::EraUnbondLimit::get(symbol);
-            ensure!(limit == 0 || pool_unbonds.len() < usize::from(limit), Error::<T>::PoolLimitReached);
 
-            ac_unbonds.push(unbonding.clone());
-            pool_unbonds.push(unbonding.clone());
+            let mut pool_unbonds = ledger::PoolUnbonds::<T>::get((symbol, &pool, unlock_era)).unwrap_or(vec![]);
+            let limit = ledger::EraUnbondLimit::get(symbol);
+            ensure!(limit == 0 || pool_unbonds.len() <= usize::from(limit), Error::<T>::PoolLimitReached);
+
+            ac_unbonds.push(UserUnlockChunk { pool: pool.clone(), unlock_era: unlock_era, value: balance, recipient: recipient.clone() });
+            pool_unbonds.push(Unbonding { who: who.clone(), value: balance, recipient: recipient.clone() });
 
             let fees = Self::unbond_fees(symbol);
             if fees > 0 {
@@ -395,7 +404,7 @@ decl_module! {
             <T as Trait>::RCurrency::transfer(&who, &receiver, symbol, fee)?;
             <T as Trait>::RCurrency::burn(&who, symbol, left_value)?;
             ledger::BondPipelines::insert((symbol, &pool), pipe);
-            ledger::AccountUnbonds::<T>::insert(&who, (symbol, &pool, unlock_era), &ac_unbonds);
+            AccountUnbonds::<T>::insert(&who, symbol, &ac_unbonds);
             ledger::PoolUnbonds::<T>::insert((symbol, &pool, unlock_era), &pool_unbonds);
 
             Self::deposit_event(RawEvent::LiquidityUnBond(who, symbol, pool, value, left_value, balance, recipient));

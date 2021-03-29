@@ -101,8 +101,6 @@ decl_storage! {
         pub EraSnapShots get(fn era_snap_shots): map hasher(blake2_128_concat) (RSymbol, u32) => Option<Vec<T::Hash>>;
         pub Snapshots get(fn snap_shots): map hasher(blake2_128_concat) T::Hash => Option<BondSnapshot<T::AccountId>>;
 
-        /// Account unbond records: who => unbonds
-        pub AccountUnbonds get(fn account_unbonds): double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) (RSymbol, Vec<u8>, u32) => Option<Vec<Unbonding<T::AccountId>>>;
         /// pool unbond records: (symbol, pool, unlock_era) => unbonds
         pub PoolUnbonds get(fn pool_account_unbonds): map hasher(blake2_128_concat) (RSymbol, Vec<u8>, u32) => Option<Vec<Unbonding<T::AccountId>>>;
         /// pool era unbond number limit
@@ -158,6 +156,14 @@ decl_module! {
         pub fn set_receiver(origin, new_receiver: T::AccountId) -> DispatchResult {
             ensure_root(origin)?;
             <Receiver<T>>::put(new_receiver);
+            Ok(())
+        }
+
+        /// set era unbond limit
+        #[weight = 1_000_000]
+        pub fn set_era_unbond_limit(origin, symbol: RSymbol, limit: u16) -> DispatchResult {
+            ensure_root(origin)?;
+            EraUnbondLimit::insert(symbol, limit);
             Ok(())
         }
 
