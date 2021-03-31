@@ -101,8 +101,6 @@ decl_storage! {
         pub EraSnapShots get(fn era_snap_shots): map hasher(blake2_128_concat) (RSymbol, u32) => Option<Vec<T::Hash>>;
         pub Snapshots get(fn snap_shots): map hasher(blake2_128_concat) T::Hash => Option<BondSnapshot<T::AccountId>>;
 
-        /// Account unbond records: who => unbonds
-        pub AccountUnbonds get(fn account_unbonds): double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) (RSymbol, Vec<u8>, u32) => Option<Vec<Unbonding<T::AccountId>>>;
         /// pool unbond records: (symbol, pool, unlock_era) => unbonds
         pub PoolUnbonds get(fn pool_account_unbonds): map hasher(blake2_128_concat) (RSymbol, Vec<u8>, u32) => Option<Vec<Unbonding<T::AccountId>>>;
         /// pool era unbond number limit
@@ -153,11 +151,42 @@ decl_module! {
             Ok(())
         }
 
+        /// remove pool
+        #[weight = 1_000_000]
+        pub fn remove_pool(origin, symbol: RSymbol, pool: Vec<u8>) -> DispatchResult {
+            ensure_root(origin)?;
+
+            let chunk = Self::bond_pipelines((symbol, &pool)).unwrap_or_default();
+            ensure!(chunk.bond == 0 && chunk.unbond == 0 && chunk.active == 0, Error::<T>::ActiveAlreadySet);
+
+            let mut pools = Self::pools(symbol);
+            let location = pools.binary_search(&pool).ok().ok_or(Error::<T>::PoolNotFound)?;
+            pools.remove(location);
+            
+            let mut bonded_pools = Self::bonded_pools(symbol);
+            if let Ok(i) = bonded_pools.binary_search(&pool) {
+                bonded_pools.remove(i);
+            }
+
+            Pools::insert(symbol, pools);
+            BondedPools::insert(symbol, bonded_pools);
+
+            Ok(())
+        }
+
         /// set receiver
         #[weight = 1_000_000]
         pub fn set_receiver(origin, new_receiver: T::AccountId) -> DispatchResult {
             ensure_root(origin)?;
             <Receiver<T>>::put(new_receiver);
+            Ok(())
+        }
+
+        /// set era unbond limit
+        #[weight = 1_000_000]
+        pub fn set_era_unbond_limit(origin, symbol: RSymbol, limit: u16) -> DispatchResult {
+            ensure_root(origin)?;
+            EraUnbondLimit::insert(symbol, limit);
             Ok(())
         }
 
@@ -208,13 +237,6 @@ decl_module! {
             <SubAccounts>::insert((symbol, &pool), sub_accounts);
             <MultiThresholds>::insert((symbol, &pool), threshold);
 
-            Ok(())
-        }
-
-        /// init last voter
-        #[weight = 1_000_000]
-        pub fn init_last_voter(origin) -> DispatchResult {
-            T::VoterOrigin::ensure_origin(origin)?;
             Ok(())
         }
 
