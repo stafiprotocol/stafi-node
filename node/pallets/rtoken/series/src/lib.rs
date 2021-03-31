@@ -355,7 +355,7 @@ decl_module! {
             let who = ensure_signed(origin)?;
             ensure!(value > 0, Error::<T>::LiquidityUnbondZero);
             ensure!(ledger::BondedPools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotFound);
-            match verify_pubkey(symbol, &recipient) {
+            match verify_recipient(symbol, &recipient) {
                 false => Err(Error::<T>::InvalidPubkey)?,
                 _ => (),
             }
