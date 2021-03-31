@@ -313,7 +313,7 @@ decl_module! {
 
             <BondStates>::insert((symbol, &blockhash, &txhash), BondState::Dealing);
             <AccountBondCount<T>>::insert(&who, new_count);
-            <AccountBondRecords<T>>::insert((&who, new_count), &bondkey);
+            <AccountBondRecords<T>>::insert((&who, old_count), &bondkey);
             <BondRecords<T>>::insert(&bondkey, &record);
 
             Self::deposit_event(RawEvent::LiquidityBond(who, symbol, bond_id));
