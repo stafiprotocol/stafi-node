@@ -151,6 +151,29 @@ decl_module! {
             Ok(())
         }
 
+        /// remove pool
+        #[weight = 1_000_000]
+        pub fn remove_pool(origin, symbol: RSymbol, pool: Vec<u8>) -> DispatchResult {
+            ensure_root(origin)?;
+
+            let chunk = Self::bond_pipelines((symbol, &pool)).unwrap_or_default();
+            ensure!(chunk.bond == 0 && chunk.unbond == 0 && chunk.active == 0, Error::<T>::ActiveAlreadySet);
+
+            let mut pools = Self::pools(symbol);
+            let location = pools.binary_search(&pool).ok().ok_or(Error::<T>::PoolNotFound)?;
+            pools.remove(location);
+            
+            let mut bonded_pools = Self::bonded_pools(symbol);
+            if let Ok(i) = bonded_pools.binary_search(&pool) {
+                bonded_pools.remove(i);
+            }
+
+            Pools::insert(symbol, pools);
+            BondedPools::insert(symbol, bonded_pools);
+
+            Ok(())
+        }
+
         /// set receiver
         #[weight = 1_000_000]
         pub fn set_receiver(origin, new_receiver: T::AccountId) -> DispatchResult {
