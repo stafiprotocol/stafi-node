@@ -217,13 +217,6 @@ decl_module! {
             Ok(())
         }
 
-        /// init last voter
-        #[weight = 1_000_000]
-        pub fn init_last_voter(origin) -> DispatchResult {
-            T::VoterOrigin::ensure_origin(origin)?;
-            Ok(())
-        }
-
         /// set chain era
         #[weight = 1_000_000]
         pub fn set_chain_era(origin, symbol: RSymbol, new_era: u32) -> DispatchResult {
