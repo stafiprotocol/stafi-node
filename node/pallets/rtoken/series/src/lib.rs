@@ -311,7 +311,7 @@ decl_module! {
 
             <BondStates>::insert((symbol, &blockhash, &txhash), BondState::Dealing);
             <AccountBondCount<T>>::insert(&who, new_count);
-            <AccountBondRecords<T>>::insert((&who, new_count), &bondkey);
+            <AccountBondRecords<T>>::insert((&who, old_count), &bondkey);
             <BondRecords<T>>::insert(&bondkey, &record);
 
             Self::deposit_event(RawEvent::LiquidityBond(who, symbol, bond_id));
@@ -353,7 +353,7 @@ decl_module! {
             let who = ensure_signed(origin)?;
             ensure!(value > 0, Error::<T>::LiquidityUnbondZero);
             ensure!(ledger::BondedPools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotFound);
-            match verify_pubkey(symbol, &recipient) {
+            match verify_recipient(symbol, &recipient) {
                 false => Err(Error::<T>::InvalidPubkey)?,
                 _ => (),
             }
