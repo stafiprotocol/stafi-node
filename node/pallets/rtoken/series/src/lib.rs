@@ -133,8 +133,6 @@ decl_storage! {
         pub AccountBondRecords get(fn account_bond_records): map hasher(blake2_128_concat) (T::AccountId, u64) => Option<BondKey<T::Hash>>;
         /// bond success histories. (symbol, blockhash, txhash) => bool
         pub BondStates get(fn bond_states): map hasher(blake2_128_concat) (RSymbol, Vec<u8>, Vec<u8>) => Option<BondState>;
-        /// Recipient account for fees
-        Receiver get(fn receiver): Option<T::AccountId>;
 
         /// Proxy accounts for setting fees
         ProxyAccounts get(fn proxy_accounts): map hasher(twox_64_concat) T::AccountId => Option<u8>;
