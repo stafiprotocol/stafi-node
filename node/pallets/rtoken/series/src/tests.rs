@@ -14,10 +14,10 @@ fn sr25519_verify_should_work() {
             "26db25c52b007221331a844e5335e59874e45b03e81c3d76ff007377c2c17965"
         ))
     );
-    let message = hex!("38c5fb2d5b2e404291aba53921854875c1341b01c97af71f5f353743b7aadfce");
+    let message = hex!("26db25c52b007221331a844e5335e59874e45b03e81c3d76ff007377c2c17965");
     let signature = pair.sign(&message[..]);
     let Signature(bytes) = signature;
     assert!(<Sr25519Pair as TraitPair>::verify(&signature, &message[..], &public));
     println!("{:?}", hex::encode(bytes.to_vec()));
-    // 3a09e37ac5172f45061d8ee03a34be1e677bb5efd8538fe3f78d0085bf67342013b8de01f99e939926a8bfa8c6728bcff18539c6632cd58ea68a8c17e28de584
+    // 94986e713df3303e9f6e7e04b764bac73ab4cc57752e5bd9b2f238ffdc8d4b4ddb68d9095cf0cc6b33ba90a6b3c716631b1d6b4504c5b03e496cf354d348a887
 }

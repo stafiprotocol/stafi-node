@@ -79,6 +79,8 @@ decl_error! {
         ShotIdAlreadyProcessed,
         /// active already set
         ActiveAlreadySet,
+        /// bond reported
+        BondReported,
     }
 }
 
@@ -100,6 +102,9 @@ decl_storage! {
         pub BondPipelines get(fn bond_pipelines): map hasher(blake2_128_concat) (RSymbol, Vec<u8>) => Option<LinkChunk>;
         pub EraSnapShots get(fn era_snap_shots): map hasher(blake2_128_concat) (RSymbol, u32) => Option<Vec<T::Hash>>;
         pub Snapshots get(fn snap_shots): map hasher(blake2_128_concat) T::Hash => Option<BondSnapshot<T::AccountId>>;
+        
+        /// bond report flag
+        pub BondReportFlag get(fn bond_report_flag): map hasher(blake2_128_concat) T::Hash => Option<bool>;
 
         /// pool unbond records: (symbol, pool, unlock_era) => unbonds
         pub PoolUnbonds get(fn pool_account_unbonds): map hasher(blake2_128_concat) (RSymbol, Vec<u8>, u32) => Option<Vec<Unbonding<T::AccountId>>>;
@@ -273,6 +278,7 @@ decl_module! {
         #[weight = 1_000_000]
         pub fn bond_report(origin, shot_id: T::Hash) -> DispatchResult {
             T::VoterOrigin::ensure_origin(origin)?;
+            ensure!(Self::bond_report_flag(&shot_id).is_none(), Error::<T>::BondReported);
             ensure!(Self::snap_shots(&shot_id).is_some(), Error::<T>::BondShotIdNotFound);
             let snap = Self::snap_shots(&shot_id).unwrap();
 
@@ -284,6 +290,7 @@ decl_module! {
             chunk.bond = chunk.bond.saturating_sub(snap.bond);
             chunk.unbond = chunk.unbond.saturating_sub(snap.unbond);
 
+            <BondReportFlag<T>>::insert(&shot_id, true);
             <BondPipelines>::insert((snap.symbol, &snap.pool), chunk);
             Self::deposit_event(RawEvent::BondReport(shot_id, snap.symbol, snap.pool.clone(), snap.era, voter));
 
@@ -330,10 +337,14 @@ decl_module! {
                 rtoken_rate::EraRate::insert(symbol, snap.era, rate);
             }
 
+            let mut chunk = Self::bond_pipelines((snap.symbol, &snap.pool)).unwrap_or_default();
+            chunk.active = active;
+            <BondPipelines>::insert((snap.symbol, &snap.pool), chunk);
+
             if Self::pool_account_unbonds((symbol, &snap.pool, snap.era)).is_some() {
                 Self::deposit_event(RawEvent::WithdrawUnbond(shot_id, snap.symbol, snap.pool, snap.era, voter));
             }
-
+            
             Ok(())
         }
 

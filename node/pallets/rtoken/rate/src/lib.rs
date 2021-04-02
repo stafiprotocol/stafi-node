@@ -68,7 +68,7 @@ impl<T: Trait> Module<T> {
     pub fn rtoken_to_token(symbol: RSymbol, rbalance: u128) -> u128 {
         let op_rate = Rate::get(symbol);
         if op_rate.is_none() {
-            return 0;
+            return rbalance;
         }
 
         multiply_by_rational(rbalance, op_rate.unwrap().into(), RATEBASE.into()).unwrap_or(0)
