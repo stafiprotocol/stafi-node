@@ -18,6 +18,7 @@ use rtoken_balances::{traits::{Currency as RCurrency}};
 use node_primitives::{RSymbol, Balance, ChainType};
 use rtoken_ledger::{self as ledger, Unbonding};
 use rtoken_relayers as relayers;
+use codec::{Encode};
 
 #[cfg(test)]
 mod tests;
@@ -284,7 +285,7 @@ decl_module! {
             let op_receiver = ledger::Module::<T>::receiver();
             ensure!(op_receiver.is_some(), ledger::Error::<T>::NoReceiver);
 
-            match verify_signature(symbol, &pubkey, &signature, &txhash) {
+            match verify_signature(symbol, &pubkey, &signature, &who.encode()) {
                 SigVerifyResult::InvalidPubkey => Err(Error::<T>::InvalidPubkey)?,
                 SigVerifyResult::Fail => Err(Error::<T>::InvalidSignature)?,
                 _ => (),
