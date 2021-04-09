@@ -59,6 +59,8 @@ decl_event! {
 
 decl_error! {
     pub enum Error for Module<T: Trait> {
+        /// Got an OverFlow
+        OverFlow,
         /// pool already added
         PoolAlreadyAdded,
         /// pool not found
@@ -143,6 +145,9 @@ decl_module! {
 		#[weight = 1_000_000]
 		fn set_commission(origin, new_part: u32) -> DispatchResult {
             ensure_root(origin)?;
+
+            ensure!(new_part < 1000000000, Error::<T>::OverFlow);
+
             let old_commission = Self::commission();
             let new_commission = Perbill::from_parts(new_part);
 			Commission::put(new_commission);

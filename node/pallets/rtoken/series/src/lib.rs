@@ -241,6 +241,9 @@ decl_module! {
         #[weight = 1_000_000]
         pub fn set_unbond_commission(origin, new_part: u32) -> DispatchResult {
             ensure_root(origin)?;
+
+            ensure!(new_part < 1000000000, Error::<T>::OverFlow);
+
             let old_commission = Self::unbond_commission();
             let new_commission = Perbill::from_parts(new_part);
             UnbondCommission::put(new_commission);
@@ -388,7 +391,8 @@ decl_module! {
             free.checked_sub(value).ok_or(Error::<T>::Insufficient)?;
 
             let fee = Self::protocol_unbond_fee(value);
-            let left_value = value - fee;
+            let left_value = value.checked_sub(fee).ok_or(Error::<T>::Insufficient)?;
+            ensure!(left_value > 0, Error::<T>::Insufficient);
             let balance = rtoken_rate::Module::<T>::rtoken_to_token(symbol, left_value);
 
             let mut pipe = ledger::BondPipelines::get((symbol, &pool)).unwrap_or_default();
