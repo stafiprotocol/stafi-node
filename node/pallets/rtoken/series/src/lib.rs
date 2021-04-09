@@ -397,7 +397,7 @@ decl_module! {
 
             let user_unlocking = Self::account_unbonds(&who, symbol).unwrap_or(vec![]);
             let mut ac_unbonds: Vec<UserUnlockChunk> = user_unlocking.into_iter()
-                .filter(|chunk| if chunk.unlock_era > current_era - 7 {
+                .filter(|chunk| if chunk.unlock_era >= current_era {
                     true
                 } else {
                     false

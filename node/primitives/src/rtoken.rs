@@ -30,8 +30,8 @@ pub enum RSymbol {
 pub enum ChainType {
 	/// substrate
 	Substrate,
-	/// cosmos
-	Cosmos
+	/// tendermint
+	Tendermint
 }
 
 impl RSymbol {
@@ -39,7 +39,7 @@ impl RSymbol {
 	pub fn chain_type(&self) -> ChainType {
 		match self {
 			RSymbol::RFIS | RSymbol::RDOT | RSymbol::RKSM => ChainType::Substrate,
-			RSymbol::RATOM => ChainType::Cosmos
+			RSymbol::RATOM => ChainType::Tendermint
 		}
 	}
 }

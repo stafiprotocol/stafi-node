@@ -1,7 +1,7 @@
 use sp_std::prelude::*;
 use codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;
-use node_primitives::{RSymbol};
+use node_primitives::{RSymbol, ChainType};
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct LinkChunk {
@@ -57,7 +57,8 @@ impl<A> BondSnapshot<A> {
     }
 
     pub fn withdraw_reported(&self) -> bool {
-        self.bond_state == PoolBondState::WithdrawReported
+        self.bond_state == PoolBondState::WithdrawReported ||
+        (self.symbol.chain_type() == ChainType::Tendermint && self.active_reported())
     }
 
     pub fn update_state(&mut self, new_state: PoolBondState) {
