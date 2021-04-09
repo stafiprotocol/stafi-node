@@ -8,7 +8,7 @@ use frame_system::offchain::AppCrypto;
 pub fn verify_signature(symbol: RSymbol, pubkey: &Vec<u8>, signature: &Vec<u8>, message: &Vec<u8>) -> SigVerifyResult {
     match symbol.chain_type() {
         ChainType::Substrate => super::sr25519_verify(&pubkey, &signature, &message),
-        ChainType::Cosmos => super::cosmos_verify(&pubkey, &signature, &message),
+        ChainType::Tendermint => super::tendermint_verify(&pubkey, &signature, &message),
     }
 }
 
@@ -21,7 +21,7 @@ pub fn verify_recipient(symbol: RSymbol, recipient: &Vec<u8>) -> bool {
             }
             return true;
         },
-        ChainType::Cosmos => {
+        ChainType::Tendermint => {
             return recipient.len() == 20;
         },
     }
@@ -53,8 +53,8 @@ pub fn sr25519_verify(pubkey: &Vec<u8>, signature: &Vec<u8>, message: &Vec<u8>) 
     SigVerifyResult::Fail
 }
 
-pub fn cosmos_verify(pubkey: &Vec<u8>, _signature: &Vec<u8>, _message: &Vec<u8>) -> SigVerifyResult {
-    if !super::check_cosmos_pubkey(&pubkey) {
+pub fn tendermint_verify(pubkey: &Vec<u8>, _signature: &Vec<u8>, _message: &Vec<u8>) -> SigVerifyResult {
+    if !super::check_tendermint_pubkey(&pubkey) {
         return SigVerifyResult::InvalidPubkey;
     }
     
@@ -65,6 +65,6 @@ pub fn cosmos_verify(pubkey: &Vec<u8>, _signature: &Vec<u8>, _message: &Vec<u8>)
     SigVerifyResult::Fail
 }
 
-pub fn check_cosmos_pubkey(pubkey: &Vec<u8>) -> bool {
+pub fn check_tendermint_pubkey(pubkey: &Vec<u8>) -> bool {
     return pubkey.len() == 33;
 }

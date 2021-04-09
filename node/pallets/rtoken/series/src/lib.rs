@@ -78,6 +78,8 @@ decl_error! {
         InvalidProxyAccount,
         /// pool not found
         PoolNotFound,
+        /// No relay fees receiver
+        NoRelayFeesReceiver,
         /// liquidity bond Zero
         LiquidityBondZero,
         /// txhash unavailable
@@ -135,6 +137,9 @@ decl_storage! {
         /// bond success histories. (symbol, blockhash, txhash) => bool
         pub BondStates get(fn bond_states): map hasher(blake2_128_concat) (RSymbol, Vec<u8>, Vec<u8>) => Option<BondState>;
 
+        /// Recipient account for relay fees
+        pub RelayFeesReceiver get(fn relay_fees_receiver): Option<T::AccountId>;
+
         /// Proxy accounts for setting fees
         ProxyAccounts get(fn proxy_accounts): map hasher(twox_64_concat) T::AccountId => Option<u8>;
         /// fees to cover the commission happened on other chains
@@ -169,6 +174,14 @@ decl_module! {
             let state = Self::bond_switch();
             BondSwitch::put(!state);
 			Ok(())
+        }
+
+        /// set relay fees receiver
+        #[weight = 1_000_000]
+        pub fn set_relay_fees_receiver(origin, new_receiver: T::AccountId) -> DispatchResult {
+            ensure_root(origin)?;
+            <RelayFeesReceiver<T>>::put(new_receiver);
+            Ok(())
         }
 
         /// Set proxy accounts.
@@ -228,6 +241,9 @@ decl_module! {
         #[weight = 1_000_000]
         pub fn set_unbond_commission(origin, new_part: u32) -> DispatchResult {
             ensure_root(origin)?;
+
+            ensure!(new_part < 1000000000, Error::<T>::OverFlow);
+
             let old_commission = Self::unbond_commission();
             let new_commission = Perbill::from_parts(new_part);
             UnbondCommission::put(new_commission);
@@ -282,8 +298,8 @@ decl_module! {
             ensure!(amount > 0, Error::<T>::LiquidityBondZero);
             ensure!(Self::is_txhash_available(symbol, &blockhash, &txhash), Error::<T>::TxhashUnavailable);
             ensure!(ledger::BondedPools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotBonded);
-            let op_receiver = ledger::Module::<T>::receiver();
-            ensure!(op_receiver.is_some(), ledger::Error::<T>::NoReceiver);
+            let op_relay_fees_receiver = Self::relay_fees_receiver();
+            ensure!(op_relay_fees_receiver.is_some(), Error::<T>::NoRelayFeesReceiver);
 
             match verify_signature(symbol, &pubkey, &signature, &who.encode()) {
                 SigVerifyResult::InvalidPubkey => Err(Error::<T>::InvalidPubkey)?,
@@ -291,11 +307,11 @@ decl_module! {
                 _ => (),
             }
 
-            let limit = Self::pool_balance_limit(symbol);
-            let pipe = ledger::BondPipelines::get((symbol, &pool)).unwrap_or_default();
-            pipe.bond.checked_add(amount).ok_or(Error::<T>::OverFlow)?;
-            let will_active = pipe.active.checked_add(amount).ok_or(Error::<T>::OverFlow)?;
-            ensure!(limit == 0 || will_active <= limit, Error::<T>::PoolLimitReached);
+            // let limit = Self::pool_balance_limit(symbol);
+            // let pipe = ledger::BondPipelines::get((symbol, &pool)).unwrap_or_default();
+            // pipe.bond.checked_add(amount).ok_or(Error::<T>::OverFlow)?;
+            // let will_active = pipe.active.checked_add(amount).ok_or(Error::<T>::OverFlow)?;
+            // ensure!(limit == 0 || will_active <= limit, Error::<T>::PoolLimitReached);
 
             let record = BondRecord::new(who.clone(), symbol, pubkey.clone(), pool.clone(), blockhash.clone(), txhash.clone(), amount);
             let bond_id = <T::Hashing as Hash>::hash_of(&record);
@@ -306,8 +322,8 @@ decl_module! {
 
             let fees = Self::bond_fees(symbol);
             if fees > 0 {
-                let receiver = op_receiver.unwrap();
-                T::Currency::transfer(&who, &receiver, fees.saturated_into(), KeepAlive)?;
+                let relay_fees_receiver = op_relay_fees_receiver.unwrap();
+                T::Currency::transfer(&who, &relay_fees_receiver, fees.saturated_into(), KeepAlive)?;
             }
 
             <BondStates>::insert((symbol, &blockhash, &txhash), BondState::Dealing);
@@ -344,7 +360,7 @@ decl_module! {
             <BondStates>::insert((record.symbol, &record.blockhash, &record.txhash), BondState::Success);
 
             ledger::BondPipelines::insert((record.symbol, &record.pool), pipe);
-
+            
             Ok(())
         }
 
@@ -367,11 +383,16 @@ decl_module! {
             ensure!(op_receiver.is_some(), ledger::Error::<T>::NoReceiver);
             let receiver = op_receiver.unwrap();
 
+            let op_relay_fees_receiver = Self::relay_fees_receiver();
+            ensure!(op_relay_fees_receiver.is_some(), Error::<T>::NoRelayFeesReceiver);
+            let relay_fees_receiver = op_relay_fees_receiver.unwrap();
+
             let free = <T as Trait>::RCurrency::free_balance(&who, symbol);
             free.checked_sub(value).ok_or(Error::<T>::Insufficient)?;
 
-            let fee = Self::unbond_fee(value);
-            let left_value = value - fee;
+            let fee = Self::protocol_unbond_fee(value);
+            let left_value = value.checked_sub(fee).ok_or(Error::<T>::Insufficient)?;
+            ensure!(left_value > 0, Error::<T>::Insufficient);
             let balance = rtoken_rate::Module::<T>::rtoken_to_token(symbol, left_value);
 
             let mut pipe = ledger::BondPipelines::get((symbol, &pool)).unwrap_or_default();
@@ -380,7 +401,7 @@ decl_module! {
 
             let user_unlocking = Self::account_unbonds(&who, symbol).unwrap_or(vec![]);
             let mut ac_unbonds: Vec<UserUnlockChunk> = user_unlocking.into_iter()
-                .filter(|chunk| if chunk.unlock_era > current_era {
+                .filter(|chunk| if chunk.unlock_era >= current_era {
                     true
                 } else {
                     false
@@ -397,7 +418,7 @@ decl_module! {
 
             let fees = Self::unbond_fees(symbol);
             if fees > 0 {
-                T::Currency::transfer(&who, &receiver, fees.saturated_into(), KeepAlive)?;
+                T::Currency::transfer(&who, &relay_fees_receiver, fees.saturated_into(), KeepAlive)?;
             }
             
             <T as Trait>::RCurrency::transfer(&who, &receiver, symbol, fee)?;
@@ -420,7 +441,7 @@ decl_module! {
             ensure!(ledger::BondedPools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotFound);
 
             let current_era = rtoken_ledger::ChainEras::get(symbol).ok_or(Error::<T>::NoCurrentEra)?;
-            ensure!(era <= current_era && era >= current_era - 14, Error::<T>::InvalidEra);
+            ensure!(era <= current_era, Error::<T>::InvalidEra);
 
             ensure!(Self::account_signature((&who, symbol, era, &pool, tx_type, &proposal_id)).is_none(), Error::<T>::SignatureRepeated);
 
@@ -461,7 +482,7 @@ impl<T: Trait> Module<T> {
         state == BondState::Dealing
     }
 
-    fn unbond_fee(value: u128) -> u128 {
+    fn protocol_unbond_fee(value: u128) -> u128 {
         Self::unbond_commission() * value
     }
 }

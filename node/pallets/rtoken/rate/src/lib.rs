@@ -50,7 +50,7 @@ impl<T: Trait> Module<T> {
         let op_rate = <Rate>::get(symbol);
         if op_rate.is_none() || op_rate.unwrap() != new_rate {
             <Rate>::insert(symbol, new_rate);
-            Self::deposit_event(Event::RateSet(RATEBASE));
+            Self::deposit_event(Event::RateSet(new_rate));
         }
 
         new_rate
