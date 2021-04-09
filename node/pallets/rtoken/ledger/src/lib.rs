@@ -116,7 +116,6 @@ decl_storage! {
         pub BondPipelines get(fn bond_pipelines): map hasher(blake2_128_concat) (RSymbol, Vec<u8>) => Option<LinkChunk>;
         pub EraSnapShots get(fn era_snap_shots): map hasher(blake2_128_concat) (RSymbol, u32) => Option<Vec<T::Hash>>;
         pub Snapshots get(fn snap_shots): map hasher(blake2_128_concat) T::Hash => Option<BondSnapshot<T::AccountId>>;
-        pub CurrentShotId get(fn current_shot_id): map hasher(blake2_128_concat) (RSymbol, Vec<u8>) => Option<T::Hash>;
         pub CurrentEraSnapShots get(fn current_era_snap_shots): map hasher(blake2_128_concat) RSymbol => Option<Vec<T::Hash>>;
 
         /// pool unbond records: (symbol, pool, unlock_era) => unbonds
@@ -217,6 +216,9 @@ decl_module! {
             let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(symbol, amount);
             T::RCurrency::mint(&bond_receiver, symbol, rbalance)?;
 
+            if rtoken_rate::Rate::get(symbol).is_none() {
+                rtoken_rate::Module::<T>::set_rate(symbol, 0, 0);
+            }
             bonded_pools.push(pool.clone());
             <BondedPools>::insert(symbol, bonded_pools);
             <BondPipelines>::insert((symbol, &pool), LinkChunk {bond: 0, unbond: 0, active: amount});
@@ -272,7 +274,6 @@ decl_module! {
                 unbond: pipe.unbond, last_voter: voter.clone(), active: pipe.active, bond_state: PoolBondState::EraUpdated};
                 let shot_id = <T::Hashing as Hash>::hash_of(&snapshot);
                 <Snapshots<T>>::insert(&shot_id, snapshot.clone());
-                <CurrentShotId<T>>::insert((symbol, &snapshot.pool), &shot_id);
                 era_shots.push(shot_id.clone());
                 Self::deposit_event(RawEvent::EraPoolUpdated(shot_id, voter.clone()));
             }
