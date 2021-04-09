@@ -25,7 +25,7 @@ pub enum RSymbol {
     RATOM,
 }
 
-/// Rtoken Identifier
+/// Chain Type
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug)]
 pub enum ChainType {
 	/// substrate

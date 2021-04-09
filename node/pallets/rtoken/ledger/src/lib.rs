@@ -201,20 +201,16 @@ decl_module! {
 
         /// init bond pool
         #[weight = 1_000_000]
-        pub fn set_init_bond(origin, symbol: RSymbol, pool: Vec<u8>, amount: u128) -> DispatchResult {
+        pub fn set_init_bond(origin, symbol: RSymbol, pool: Vec<u8>, bond_receiver: T::AccountId, amount: u128) -> DispatchResult {
             ensure_root(origin)?;
             let pools = Self::pools(symbol);
             ensure!(pools.contains(&pool), Error::<T>::PoolNotFound);
 
             let mut bonded_pools = Self::bonded_pools(symbol);
             ensure!(!bonded_pools.contains(&pool), Error::<T>::RepeatInitBond);
-            
-            let op_receiver = Self::receiver();
-            ensure!(op_receiver.is_some(), Error::<T>::NoReceiver);
-            let receiver = op_receiver.unwrap();
 
             let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(symbol, amount);
-            T::RCurrency::mint(&receiver, symbol, rbalance)?;
+            T::RCurrency::mint(&bond_receiver, symbol, rbalance)?;
 
             bonded_pools.push(pool.clone());
             <BondedPools>::insert(symbol, bonded_pools);
