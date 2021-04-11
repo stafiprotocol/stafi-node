@@ -37,7 +37,7 @@ decl_event! {
         /// symbol, old_era, new_era
         EraUpdated(RSymbol, u32, u32),
         /// EraPoolUpdated
-        EraPoolUpdated(Hash, AccountId),
+        EraPoolUpdated(RSymbol, u32, Hash, AccountId),
         /// symbol, old_bonding_duration, new_bonding_duration
         BondingDurationUpdated(RSymbol, u32, u32),
         /// Commission has been updated.
@@ -47,13 +47,13 @@ decl_event! {
         /// pool sub account added: (symbol, pool, sub_account)
         PoolSubAccountAdded(RSymbol, Vec<u8>, Vec<u8>),
         /// bond report
-        BondReported(Hash, AccountId),
+        BondReported(RSymbol, Hash, AccountId),
         /// withdraw unbond
-        ActiveReported(Hash, AccountId),
+        ActiveReported(RSymbol, Hash, AccountId),
         /// withdraw reported
-        WithdrawReported(Hash, AccountId),
+        WithdrawReported(RSymbol, Hash, AccountId),
         /// transfer reported
-        TransferReported(Hash),
+        TransferReported(RSymbol, Hash),
     }
 }
 
@@ -115,20 +115,20 @@ decl_storage! {
         pub BondedPools get(fn bonded_pools): map hasher(blake2_128_concat) RSymbol => Vec<Vec<u8>>;
 
         /// place bond/unbond datas for pools
-        pub BondPipelines get(fn bond_pipelines): map hasher(blake2_128_concat) (RSymbol, Vec<u8>) => Option<LinkChunk>;
-        pub EraSnapShots get(fn era_snap_shots): map hasher(blake2_128_concat) (RSymbol, u32) => Option<Vec<T::Hash>>;
-        pub Snapshots get(fn snap_shots): map hasher(blake2_128_concat) T::Hash => Option<BondSnapshot<T::AccountId>>;
+        pub BondPipelines get(fn bond_pipelines): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) Vec<u8> => Option<LinkChunk>;
+        pub EraSnapShots get(fn era_snap_shots): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) u32 => Option<Vec<T::Hash>>;
+        pub Snapshots get(fn snap_shots): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) T::Hash => Option<BondSnapshot<T::AccountId>>;
         pub CurrentEraSnapShots get(fn current_era_snap_shots): map hasher(blake2_128_concat) RSymbol => Option<Vec<T::Hash>>;
 
         /// pool unbond records: (symbol, pool, unlock_era) => unbonds
-        pub PoolUnbonds get(fn pool_unbonds): map hasher(blake2_128_concat) (RSymbol, Vec<u8>, u32) => Option<Vec<Unbonding<T::AccountId>>>;
+        pub PoolUnbonds get(fn pool_unbonds): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) (Vec<u8>, u32) => Option<Vec<Unbonding<T::AccountId>>>;
         /// pool era unbond number limit
         pub EraUnbondLimit get(fn era_unbond_limit): map hasher(blake2_128_concat) RSymbol => u16;
 
         /// pool => Vec<SubAccounts>
-        pub SubAccounts get(fn sub_accounts): map hasher(blake2_128_concat) (RSymbol, Vec<u8>) => Vec<Vec<u8>>;
+        pub SubAccounts get(fn sub_accounts): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) Vec<u8> => Vec<Vec<u8>>;
         /// pool => Threshold
-        pub MultiThresholds get(fn multi_thresholds): map hasher(blake2_128_concat) (RSymbol, Vec<u8>) => Option<u16>;
+        pub MultiThresholds get(fn multi_thresholds): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) Vec<u8> => Option<u16>;
 
         /// last voter
         pub LastVoter get(fn last_voter): map hasher(blake2_128_concat) RSymbol => Option<T::AccountId>;
@@ -174,20 +174,22 @@ decl_module! {
         pub fn remove_pool(origin, symbol: RSymbol, pool: Vec<u8>) -> DispatchResult {
             ensure_root(origin)?;
 
-            let pipe = Self::bond_pipelines((symbol, &pool)).unwrap_or_default();
+            let mut bonded_pools = Self::bonded_pools(symbol);
+            let op_bonded_index = bonded_pools.iter().position(|p| p == &pool);
+            ensure!(op_bonded_index.is_some(), Error::<T>::PoolNotBonded);
+
+            let pipe = Self::bond_pipelines(symbol, &pool).unwrap_or_default();
             ensure!(pipe.bond == 0 && pipe.unbond == 0 && pipe.active == 0, Error::<T>::ActiveAlreadySet);
 
+            let bonded_index = op_bonded_index.unwrap();
+            bonded_pools.remove(bonded_index);
+
             let mut pools = Self::pools(symbol);
-            let location = pools.binary_search(&pool).ok().ok_or(Error::<T>::PoolNotFound)?;
-            pools.remove(location);
+            let op_index = pools.iter().position(|p| p == &pool).unwrap();
+            pools.remove(op_index);
 
-            let mut bonded_pools = Self::bonded_pools(symbol);
-            if let Ok(i) = bonded_pools.binary_search(&pool) {
-                bonded_pools.remove(i);
-            }
-
-            Pools::insert(symbol, pools);
             BondedPools::insert(symbol, bonded_pools);
+            Pools::insert(symbol, pools);
 
             Ok(())
         }
@@ -226,7 +228,7 @@ decl_module! {
             }
             bonded_pools.push(pool.clone());
             <BondedPools>::insert(symbol, bonded_pools);
-            <BondPipelines>::insert((symbol, &pool), LinkChunk {bond: 0, unbond: 0, active: amount});
+            <BondPipelines>::insert(symbol, &pool, LinkChunk {bond: 0, unbond: 0, active: amount});
 
             Ok(())
         }
@@ -250,9 +252,9 @@ decl_module! {
             ensure_root(origin)?;
             let pools = Self::pools(symbol);
             ensure!(pools.contains(&pool), Error::<T>::PoolNotFound);
-            ensure!(usize::from(threshold) <= sub_accounts.len(), "threshold bigger than length of sub_accounts");
-            <SubAccounts>::insert((symbol, &pool), sub_accounts);
-            <MultiThresholds>::insert((symbol, &pool), threshold);
+            ensure!(usize::from(threshold) <= sub_accounts.len(), "threshold bigger than size of sub_accounts");
+            <SubAccounts>::insert(symbol, &pool, sub_accounts);
+            <MultiThresholds>::insert(symbol, &pool, threshold);
 
             Ok(())
         }
@@ -274,16 +276,16 @@ decl_module! {
 
             let pools = Self::bonded_pools(symbol);
             for pool in pools {
-                let pipe = Self::bond_pipelines((symbol, &pool)).unwrap_or_default();
+                let pipe = Self::bond_pipelines(symbol, &pool).unwrap_or_default();
                 let snapshot = BondSnapshot {symbol, era: new_era, pool, bond: pipe.bond,
                 unbond: pipe.unbond, last_voter: voter.clone(), active: pipe.active, bond_state: PoolBondState::EraUpdated};
                 let shot_id = <T::Hashing as Hash>::hash_of(&snapshot);
-                <Snapshots<T>>::insert(&shot_id, snapshot.clone());
+                <Snapshots<T>>::insert(symbol, &shot_id, snapshot.clone());
                 era_shots.push(shot_id.clone());
-                Self::deposit_event(RawEvent::EraPoolUpdated(shot_id, voter.clone()));
+                Self::deposit_event(RawEvent::EraPoolUpdated(symbol, new_era, shot_id, voter.clone()));
             }
 
-            <EraSnapShots<T>>::insert((symbol, new_era), &era_shots);
+            <EraSnapShots<T>>::insert(symbol, new_era, &era_shots);
             <CurrentEraSnapShots<T>>::insert(symbol, era_shots);
             <ChainEras>::insert(symbol, new_era);
             Self::deposit_event(RawEvent::EraUpdated(symbol, old_era, new_era));
@@ -292,9 +294,9 @@ decl_module! {
 
         /// bond link success
         #[weight = 1_000_000]
-        pub fn bond_report(origin, shot_id: T::Hash) -> DispatchResult {
+        pub fn bond_report(origin, symbol: RSymbol, shot_id: T::Hash) -> DispatchResult {
             Self::ensure_voter_or_admin(origin)?;
-            let op_snap = Self::snap_shots(&shot_id);
+            let op_snap = Self::snap_shots(symbol, &shot_id);
             ensure!(op_snap.is_some(), Error::<T>::SnapShotNotFound);
 
             let mut snap = op_snap.unwrap();
@@ -304,28 +306,27 @@ decl_module! {
             ensure!(op_voter.is_some(), Error::<T>::LastVoterNobody);
             let voter = op_voter.unwrap();
             
-            let mut pipe = Self::bond_pipelines((snap.symbol, &snap.pool)).unwrap_or_default();
+            let mut pipe = Self::bond_pipelines(symbol, &snap.pool).unwrap_or_default();
             pipe.bond = pipe.bond.saturating_sub(snap.bond);
             pipe.unbond = pipe.unbond.saturating_sub(snap.unbond);
 
-            <BondPipelines>::insert((snap.symbol, &snap.pool), pipe);
+            <BondPipelines>::insert(symbol, &snap.pool, pipe);
             snap.update_state(PoolBondState::BondReported);
-            <Snapshots<T>>::insert(&shot_id, snap);
-            Self::deposit_event(RawEvent::BondReported(shot_id, voter));
+            <Snapshots<T>>::insert(symbol, &shot_id, snap);
+            Self::deposit_event(RawEvent::BondReported(symbol, shot_id, voter));
 
             Ok(())
         }
 
         /// set bond active of pool
         #[weight = 1_000_000]
-        pub fn active_report(origin, shot_id: T::Hash, active: u128) -> DispatchResult {
+        pub fn active_report(origin, symbol: RSymbol, shot_id: T::Hash, active: u128) -> DispatchResult {
             Self::ensure_voter_or_admin(origin)?;
 
-            let op_snap = Self::snap_shots(&shot_id);
+            let op_snap = Self::snap_shots(symbol, &shot_id);
             ensure!(op_snap.is_some(), Error::<T>::SnapShotNotFound);
             let mut snap = op_snap.unwrap();
             ensure!(snap.bond_reported(), Error::<T>::StateNotBondReported);
-            let symbol = snap.symbol;
 
             let op_rate = rtoken_rate::Rate::get(symbol);
             ensure!(op_rate.is_some(), "rate is none");
@@ -338,10 +339,15 @@ decl_module! {
             ensure!(op_voter.is_some(), Error::<T>::LastVoterNobody);
             let voter = op_voter.unwrap();
             
-            let mut era_shots = Self::era_snap_shots((symbol, snap.era)).unwrap_or(vec![]);
+            let mut era_shots = Self::era_snap_shots(symbol, snap.era).unwrap_or(vec![]);
+            let op_era_index = era_shots.iter().position(|shot| shot == &shot_id);
+            ensure!(op_era_index.is_some(), Error::<T>::ActiveAlreadySet);
+            let era_index = op_era_index.unwrap();
+
             let mut cur_era_shot = Self::current_era_snap_shots(symbol).unwrap_or(vec![]);
-            let era_location = era_shots.binary_search(&shot_id).ok().ok_or(Error::<T>::ActiveAlreadySet)?;
-            let cur_location = cur_era_shot.binary_search(&shot_id).ok().ok_or(Error::<T>::ActiveAlreadySet)?;
+            let op_cur_era_index = cur_era_shot.iter().position(|shot| shot == &shot_id);
+            ensure!(op_cur_era_index.is_some(), Error::<T>::ActiveAlreadySet);
+            let cur_era_index = op_cur_era_index.unwrap();
             
             let rbalance = T::RCurrency::total_issuance(symbol);
             let before = rtoken_rate::Module::<T>::rtoken_to_token(symbol, rbalance);
@@ -358,70 +364,71 @@ decl_module! {
                 rate = rtoken_rate::Module::<T>::set_rate(symbol, after, rbalance);
             }
 
-            era_shots.remove(era_location);
+            era_shots.remove(era_index);
             if era_shots.is_empty() {
                 rtoken_rate::EraRate::insert(symbol, snap.era, rate);
             }
-            <EraSnapShots<T>>::insert((symbol, snap.era), era_shots);
+            <EraSnapShots<T>>::insert(symbol, snap.era, era_shots);
 
-            let mut pipe = Self::bond_pipelines((snap.symbol, &snap.pool)).unwrap_or_default();
+            let mut pipe = Self::bond_pipelines(snap.symbol, &snap.pool).unwrap_or_default();
             pipe.active = active;
-            <BondPipelines>::insert((snap.symbol, &snap.pool), pipe);
+            <BondPipelines>::insert(snap.symbol, &snap.pool, pipe);
 
-            if Self::pool_unbonds((symbol, &snap.pool, snap.era)).is_some() {
+            if Self::pool_unbonds(symbol, (&snap.pool, snap.era)).is_some() {
                 snap.update_state(PoolBondState::ActiveReported);
-                Self::deposit_event(RawEvent::ActiveReported(shot_id.clone(), voter));
+                Self::deposit_event(RawEvent::ActiveReported(symbol, shot_id.clone(), voter));
             } else {
                 snap.update_state(PoolBondState::WithdrawSkipped);
-                cur_era_shot.remove(cur_location);
+                cur_era_shot.remove(cur_era_index);
                 <CurrentEraSnapShots<T>>::insert(symbol, cur_era_shot);
             }
 
-            <Snapshots<T>>::insert(&shot_id, snap);
+            <Snapshots<T>>::insert(symbol, &shot_id, snap);
             Ok(())
         }
 
         /// withdraw success
         #[weight = 1_000_000]
-        pub fn withdraw_report(origin, shot_id: T::Hash) -> DispatchResult {
+        pub fn withdraw_report(origin, symbol: RSymbol, shot_id: T::Hash) -> DispatchResult {
             Self::ensure_voter_or_admin(origin)?;
 
-            let op_snap = Self::snap_shots(&shot_id);
+            let op_snap = Self::snap_shots(symbol, &shot_id);
             ensure!(op_snap.is_some(), Error::<T>::SnapShotNotFound);
             let mut snap = op_snap.unwrap();
             ensure!(snap.active_reported(), Error::<T>::StateNotActiveReported);
 
-            let op_voter = Self::last_voter(snap.symbol);
+            let op_voter = Self::last_voter(symbol);
             ensure!(op_voter.is_some(), Error::<T>::LastVoterNobody);
             let voter = op_voter.unwrap();
 
             snap.update_state(PoolBondState::WithdrawReported);
-            <Snapshots<T>>::insert(&shot_id, snap);
-            Self::deposit_event(RawEvent::WithdrawReported(shot_id, voter));
+            <Snapshots<T>>::insert(symbol, &shot_id, snap);
+            Self::deposit_event(RawEvent::WithdrawReported(symbol, shot_id, voter));
 
             Ok(())
         }
 
         /// transfer success
         #[weight = 1_000_000]
-        pub fn transfer_report(origin, shot_id: T::Hash) -> DispatchResult {
+        pub fn transfer_report(origin, symbol: RSymbol, shot_id: T::Hash) -> DispatchResult {
             Self::ensure_voter_or_admin(origin)?;
 
-            let op_snap = Self::snap_shots(&shot_id);
+            let op_snap = Self::snap_shots(symbol, &shot_id);
             ensure!(op_snap.is_some(), Error::<T>::SnapShotNotFound);
             let mut snap = op_snap.unwrap();
             ensure!(snap.withdraw_reported(), Error::<T>::StateNotWithdrawReported);
-            let symbol = snap.symbol;
 
             let mut cur_era_shot = Self::current_era_snap_shots(symbol).unwrap_or(vec![]);
-            let location = cur_era_shot.binary_search(&shot_id).ok().ok_or(Error::<T>::TransferReported)?;
-            cur_era_shot.remove(location);
+            let op_index = cur_era_shot.iter().position(|shot| shot == &shot_id);
+            ensure!(op_index.is_some(), Error::<T>::TransferReported);
+            let cur_era_index = op_index.unwrap();
+            cur_era_shot.remove(cur_era_index);
 
             <CurrentEraSnapShots<T>>::insert(symbol, cur_era_shot);
             snap.update_state(PoolBondState::TransferReported);
-            <Snapshots<T>>::insert(&shot_id, snap);
+            <Snapshots<T>>::insert(symbol, &shot_id, snap);
 
-            Self::deposit_event(RawEvent::TransferReported(shot_id));
+            Self::deposit_event(RawEvent::TransferReported(symbol, shot_id));
             Ok(())
         }
     }

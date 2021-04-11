@@ -64,7 +64,7 @@ decl_event! {
         /// signatures enough
         SignaturesEnough(RSymbol, u32, Vec<u8>, OriginalTxType, Vec<u8>),
         /// Nomination Updated for a pool
-        NominationUpdated(RSymbol, Vec<u8>, Vec<Vec<u8>>),
+        NominationUpdated(RSymbol, Vec<u8>, Vec<Vec<u8>>, u32, AccountId),
         /// Validator Updated for a pool
         ValidatorUpdated(RSymbol, Vec<u8>, Vec<u8>, Vec<u8>),
     }
@@ -130,12 +130,12 @@ decl_storage! {
         /// switch of bond
         BondSwitch get(fn bond_switch): bool = true;
         /// (hash, rsymbol) => record
-        pub BondRecords get(fn bond_records): map hasher(blake2_128_concat) BondKey<T::Hash> => Option<BondRecord<T::AccountId>>;
-        pub BondReasons get(fn bond_reasons): map hasher(blake2_128_concat) BondKey<T::Hash> => Option<BondReason>;
-        pub AccountBondCount get(fn account_bond_count): map hasher(blake2_128_concat) T::AccountId => u64;
-        pub AccountBondRecords get(fn account_bond_records): map hasher(blake2_128_concat) (T::AccountId, u64) => Option<BondKey<T::Hash>>;
-        /// bond success histories. (symbol, blockhash, txhash) => bool
-        pub BondStates get(fn bond_states): map hasher(blake2_128_concat) (RSymbol, Vec<u8>, Vec<u8>) => Option<BondState>;
+        pub BondRecords get(fn bond_records): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) T::Hash => Option<BondRecord<T::AccountId>>;
+        pub BondReasons get(fn bond_reasons): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) T::Hash => Option<BondReason>;
+        pub AccountBondCount get(fn account_bond_count): double_map hasher(blake2_128_concat) RSymbol, hasher(twox_64_concat) T::AccountId => u64;
+        pub AccountBondRecords get(fn account_bond_records): double_map hasher(blake2_128_concat) RSymbol, hasher(twox_64_concat) (T::AccountId, u64) => Option<T::Hash>;
+        /// bond success histories. symbol, (blockhash, txhash) => bool
+        pub BondStates get(fn bond_states): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) (Vec<u8>, Vec<u8>) => Option<BondState>;
 
         /// Recipient account for relay fees
         pub RelayFeesReceiver get(fn relay_fees_receiver): Option<T::AccountId>;
@@ -154,12 +154,12 @@ decl_storage! {
         UnbondCommission get(fn unbond_commission): Perbill = Perbill::from_parts(2000000);
 
         /// Account unbond records: who, symbol => [UserUnlockChunk]
-        pub AccountUnbonds get(fn account_unbonds): double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) RSymbol => Option<Vec<UserUnlockChunk>>;
+        pub AccountUnbonds get(fn account_unbonds): double_map hasher(twox_64_concat) RSymbol, hasher(blake2_128_concat) T::AccountId => Option<Vec<UserUnlockChunk>>;
 
-        pub Signatures get(fn signatures): map hasher(twox_64_concat) (RSymbol, u32, Vec<u8>, OriginalTxType, Vec<u8>) => Option<Vec<Vec<u8>>>;
-        pub AccountSignature get(fn account_signature): map hasher(blake2_128_concat) (T::AccountId, RSymbol, u32, Vec<u8>, OriginalTxType, Vec<u8>) => Option<Vec<u8>>;
+        pub Signatures get(fn signatures): double_map hasher(twox_64_concat) RSymbol, hasher(twox_64_concat) (u32, Vec<u8>, OriginalTxType, Vec<u8>) => Option<Vec<Vec<u8>>>;
+        pub AccountSignature get(fn account_signature): double_map hasher(twox_64_concat) RSymbol, hasher(blake2_128_concat) (T::AccountId, u32, Vec<u8>, OriginalTxType, Vec<u8>) => Option<Vec<u8>>;
 
-        pub Nominated get(fn nominated): map hasher(twox_64_concat) (RSymbol, Vec<u8>) => Option<Vec<Vec<u8>>>;
+        pub Nominated get(fn nominated): double_map hasher(twox_64_concat) RSymbol, hasher(blake2_128_concat) Vec<u8> => Option<Vec<Vec<u8>>>;
     }
 }
 
@@ -256,21 +256,28 @@ decl_module! {
         #[weight = 1_000_000]
         pub fn init_nominations(origin, symbol: RSymbol, pool: Vec<u8>, validators: Vec<Vec<u8>>) -> DispatchResult {
             ensure_root(origin)?;
-            
-            ensure!(Self::nominated((symbol, &pool)).is_none(), Error::<T>::NominationsInitialized);
-            Nominated::insert((symbol, &pool), validators.clone());
+
+            let bonded_pools = ledger::BondedPools::get(symbol);
+            ensure!(bonded_pools.contains(&pool), ledger::Error::<T>::PoolNotBonded);
+            ensure!(Self::nominated(symbol, &pool).is_none(), Error::<T>::NominationsInitialized);
+            Nominated::insert(symbol, &pool, validators.clone());
 
             Ok(())
         }
 
         /// update nominatons
         #[weight = 1_000_000]
-        pub fn update_nominations(origin, symbol: RSymbol, pool: Vec<u8>, new_validators: Vec<Vec<u8>>) -> DispatchResult {
+        pub fn update_nominations(origin, symbol: RSymbol, pool: Vec<u8>, new_validators: Vec<Vec<u8>>, era: u32) -> DispatchResult {
             ensure_root(origin)?;
-            
-            Nominated::insert((symbol, &pool), new_validators.clone());
 
-            Self::deposit_event(RawEvent::NominationUpdated(symbol, pool, new_validators));
+            ensure!(ledger::BondedPools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotBonded);
+            let op_voter = ledger::LastVoter::<T>::get(symbol);
+            ensure!(op_voter.is_some(), ledger::Error::<T>::LastVoterNobody);
+            let voter = op_voter.unwrap();
+
+            Nominated::insert(symbol, &pool, new_validators.clone());
+
+            Self::deposit_event(RawEvent::NominationUpdated(symbol, pool, new_validators, era, voter));
             Ok(())
         }
 
@@ -278,13 +285,14 @@ decl_module! {
         #[weight = 1_000_000]
         pub fn update_validator(origin, symbol: RSymbol, pool: Vec<u8>, old_validator: Vec<u8>, new_validator: Vec<u8>) -> DispatchResult {
             ensure_root(origin)?;
+            ensure!(ledger::BondedPools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotBonded);
             
-            let mut validators = Self::nominated((symbol, &pool)).unwrap_or(vec![]);
+            let mut validators = Self::nominated(symbol, &pool).unwrap_or(vec![]);
             if let Ok(i) = validators.binary_search(&old_validator) {
                 validators.remove(i);
             }
             validators.push(new_validator.clone());
-            Nominated::insert((symbol, &pool), validators);
+            Nominated::insert(symbol, &pool, validators);
 
             Self::deposit_event(RawEvent::ValidatorUpdated(symbol, pool, old_validator, new_validator));
             Ok(())
@@ -307,17 +315,10 @@ decl_module! {
                 _ => (),
             }
 
-            // let limit = Self::pool_balance_limit(symbol);
-            // let pipe = ledger::BondPipelines::get((symbol, &pool)).unwrap_or_default();
-            // pipe.bond.checked_add(amount).ok_or(Error::<T>::OverFlow)?;
-            // let will_active = pipe.active.checked_add(amount).ok_or(Error::<T>::OverFlow)?;
-            // ensure!(limit == 0 || will_active <= limit, Error::<T>::PoolLimitReached);
-
             let record = BondRecord::new(who.clone(), symbol, pubkey.clone(), pool.clone(), blockhash.clone(), txhash.clone(), amount);
             let bond_id = <T::Hashing as Hash>::hash_of(&record);
-            let bondkey = BondKey::new(symbol, bond_id);
-            ensure!(Self::bond_records(&bondkey).is_none(), Error::<T>::BondRepeated);
-            let old_count = Self::account_bond_count(&who);
+            ensure!(Self::bond_records(symbol, &bond_id).is_none(), Error::<T>::BondRepeated);
+            let old_count = Self::account_bond_count(symbol, &who);
             let new_count = old_count.checked_add(1).ok_or(Error::<T>::OverFlow)?;
 
             let fees = Self::bond_fees(symbol);
@@ -326,10 +327,10 @@ decl_module! {
                 T::Currency::transfer(&who, &relay_fees_receiver, fees.saturated_into(), KeepAlive)?;
             }
 
-            <BondStates>::insert((symbol, &blockhash, &txhash), BondState::Dealing);
-            <AccountBondCount<T>>::insert(&who, new_count);
-            <AccountBondRecords<T>>::insert((&who, old_count), &bondkey);
-            <BondRecords<T>>::insert(&bondkey, &record);
+            <BondStates>::insert(symbol, (&blockhash, &txhash), BondState::Dealing);
+            <AccountBondCount<T>>::insert(symbol, &who, new_count);
+            <AccountBondRecords<T>>::insert(symbol, (&who, old_count), &bond_id);
+            <BondRecords<T>>::insert(symbol, &bond_id, &record);
 
             Self::deposit_event(RawEvent::LiquidityBond(who, symbol, bond_id));
             Ok(())
@@ -337,29 +338,29 @@ decl_module! {
 
         /// execute bond record
         #[weight = 100_000]
-        pub fn execute_bond_record(origin, bondkey: BondKey<T::Hash>, reason: BondReason) -> DispatchResult {
+        pub fn execute_bond_record(origin, symbol: RSymbol, bond_id: T::Hash, reason: BondReason) -> DispatchResult {
             T::VoterOrigin::ensure_origin(origin)?;
-            let op_record = Self::bond_records(&bondkey);
+            let op_record = Self::bond_records(symbol, &bond_id);
             ensure!(op_record.is_some(), Error::<T>::BondNotFound);
             let record = op_record.unwrap();
-            ensure!(Self::is_txhash_executable(record.symbol, &record.blockhash, &record.txhash), Error::<T>::TxhashUnexecutable);
+            ensure!(Self::is_txhash_executable(symbol, &record.blockhash, &record.txhash), Error::<T>::TxhashUnexecutable);
 
             if reason != BondReason::Pass {
-                <BondReasons<T>>::insert(&bondkey, reason);
-                <BondStates>::insert((record.symbol, &record.blockhash, &record.txhash), BondState::Fail);
+                <BondReasons<T>>::insert(symbol, &bond_id, reason);
+                <BondStates>::insert(symbol, (&record.blockhash, &record.txhash), BondState::Fail);
                 return Ok(())
             }
 
-            let mut pipe = ledger::BondPipelines::get((record.symbol, &record.pool)).unwrap_or_default();
+            let mut pipe = ledger::BondPipelines::get(symbol, &record.pool).unwrap_or_default();
             pipe.bond = pipe.bond.checked_add(record.amount).ok_or(Error::<T>::OverFlow)?;
             pipe.active = pipe.active.checked_add(record.amount).ok_or(Error::<T>::OverFlow)?;
 
             let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(record.symbol, record.amount);
-            <T as Trait>::RCurrency::mint(&record.bonder, record.symbol, rbalance)?;
-            <BondReasons<T>>::insert(&bondkey, reason);
-            <BondStates>::insert((record.symbol, &record.blockhash, &record.txhash), BondState::Success);
+            <T as Trait>::RCurrency::mint(&record.bonder, symbol, rbalance)?;
+            <BondReasons<T>>::insert(symbol, &bond_id, reason);
+            <BondStates>::insert(symbol, (&record.blockhash, &record.txhash), BondState::Success);
 
-            ledger::BondPipelines::insert((record.symbol, &record.pool), pipe);
+            ledger::BondPipelines::insert(symbol, &record.pool, pipe);
             
             Ok(())
         }
@@ -395,11 +396,11 @@ decl_module! {
             ensure!(left_value > 0, Error::<T>::Insufficient);
             let balance = rtoken_rate::Module::<T>::rtoken_to_token(symbol, left_value);
 
-            let mut pipe = ledger::BondPipelines::get((symbol, &pool)).unwrap_or_default();
+            let mut pipe = ledger::BondPipelines::get(symbol, &pool).unwrap_or_default();
             pipe.unbond = pipe.unbond.checked_add(balance).ok_or(Error::<T>::OverFlow)?;
             pipe.active = pipe.active.checked_sub(balance).ok_or(Error::<T>::Insufficient)?;
 
-            let user_unlocking = Self::account_unbonds(&who, symbol).unwrap_or(vec![]);
+            let user_unlocking = Self::account_unbonds(symbol, &who).unwrap_or(vec![]);
             let mut ac_unbonds: Vec<UserUnlockChunk> = user_unlocking.into_iter()
                 .filter(|chunk| if chunk.unlock_era >= current_era {
                     true
@@ -409,7 +410,7 @@ decl_module! {
                 .collect();
             ensure!(ac_unbonds.len() <= MAX_UNLOCKING_CHUNKS, Error::<T>::NoMoreUnbondingChunks);
 
-            let mut pool_unbonds = ledger::PoolUnbonds::<T>::get((symbol, &pool, unlock_era)).unwrap_or(vec![]);
+            let mut pool_unbonds = ledger::PoolUnbonds::<T>::get(symbol, (&pool, unlock_era)).unwrap_or(vec![]);
             let limit = ledger::EraUnbondLimit::get(symbol);
             ensure!(limit == 0 || pool_unbonds.len() <= usize::from(limit), Error::<T>::PoolLimitReached);
 
@@ -423,9 +424,9 @@ decl_module! {
             
             <T as Trait>::RCurrency::transfer(&who, &receiver, symbol, fee)?;
             <T as Trait>::RCurrency::burn(&who, symbol, left_value)?;
-            ledger::BondPipelines::insert((symbol, &pool), pipe);
-            AccountUnbonds::<T>::insert(&who, symbol, &ac_unbonds);
-            ledger::PoolUnbonds::<T>::insert((symbol, &pool, unlock_era), &pool_unbonds);
+            ledger::BondPipelines::insert(symbol, &pool, pipe);
+            AccountUnbonds::<T>::insert(symbol, &who, &ac_unbonds);
+            ledger::PoolUnbonds::<T>::insert(symbol, (&pool, unlock_era), &pool_unbonds);
 
             Self::deposit_event(RawEvent::LiquidityUnBond(who, symbol, pool, value, left_value, balance, recipient));
 
@@ -443,15 +444,15 @@ decl_module! {
             let current_era = rtoken_ledger::ChainEras::get(symbol).ok_or(Error::<T>::NoCurrentEra)?;
             ensure!(era <= current_era, Error::<T>::InvalidEra);
 
-            ensure!(Self::account_signature((&who, symbol, era, &pool, tx_type, &proposal_id)).is_none(), Error::<T>::SignatureRepeated);
+            ensure!(Self::account_signature(symbol, (&who, era, &pool, tx_type, &proposal_id)).is_none(), Error::<T>::SignatureRepeated);
 
-            let mut signatures = Signatures::get((symbol, era, &pool, tx_type, &proposal_id)).unwrap_or(vec![]);
+            let mut signatures = Signatures::get(symbol, (era, &pool, tx_type, &proposal_id)).unwrap_or(vec![]);
             ensure!(!signatures.contains(&signature), Error::<T>::SignatureRepeated);
 
             signatures.push(signature.clone());
-            Signatures::insert((symbol, era, &pool, tx_type, &proposal_id), &signatures);
+            Signatures::insert(symbol, (era, &pool, tx_type, &proposal_id), &signatures);
 
-            <AccountSignature<T>>::insert((&who, symbol, era, &pool, tx_type, &proposal_id), &signature);
+            <AccountSignature<T>>::insert(symbol, (&who, era, &pool, tx_type, &proposal_id), &signature);
 
             if signatures.len() == relayers::RelayerThreshold::get(symbol) as usize {
                 Self::deposit_event(RawEvent::SignaturesEnough(symbol, era, pool.clone(), tx_type, proposal_id.clone()));
@@ -465,7 +466,7 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
     fn is_txhash_available(symbol: RSymbol, blockhash: &Vec<u8>, txhash: &Vec<u8>) -> bool {
-        let op_state = Self::bond_states((symbol, &blockhash, &txhash));
+        let op_state = Self::bond_states(symbol, (&blockhash, &txhash));
         if op_state.is_none() {
             return true
         }
@@ -474,7 +475,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn is_txhash_executable(symbol: RSymbol, blockhash: &Vec<u8>, txhash: &Vec<u8>) -> bool {
-        let op_state = Self::bond_states((symbol, &blockhash, &txhash));
+        let op_state = Self::bond_states(symbol, (&blockhash, &txhash));
         if op_state.is_none() {
             return false
         }

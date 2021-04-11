@@ -8073,11 +8073,11 @@ dependencies = [
 [[package]]
 name = "substrate-wasm-builder-runner"
 version = "1.0.6"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#462bf9689e0d313d4cd2bb102d5cc8449ee262c7"
 
 [[package]]
 name = "substrate-wasm-builder-runner"
 version = "1.0.6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#462bf9689e0d313d4cd2bb102d5cc8449ee262c7"
 
 [[package]]
 name = "subtle"
