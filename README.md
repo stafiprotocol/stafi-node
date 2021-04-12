@@ -20,7 +20,7 @@ Welcome to participate in us. Download the source:
 ```bash
 git clone https://github.com/stafiprotocol/stafi-node.git
 cd stafi-node
-git checkout v0.3.2
+git checkout v0.3.3
 ```
 
 Install system dependencies(recommend ubuntu or macos):
@@ -140,15 +140,15 @@ You need to have some FIS tokens to participate in Seiya.
 - Join Stafi Faucet Group: [Click Here](https://t.me/StafiFaucet)
 - On the Faucet group, reply /faucet + Account
      + Example: /faucet 35Eb25MdWe3aBuehR3Abx9caw7S68za39aYijvnWB5V3uv3S
-- If your account meets the requirements for issuance, 200 tokens will be automatically distributed to your account, you can view your balance via [Stafi-apps](https://apps.stafi.io).
+- If your account meets the requirements for issuance, 500 tokens will be automatically distributed to your account, you can view your balance via [Stafi-apps](https://apps.stafi.io).
 
 ### Faucet distribution rules
 
-- Each Telegram account can receive 1 airdrop within 2 days.
+- Each Telegram account can receive 1 airdrop within 12 hours.
 - Each address can only receive airdrop for 1 time.
-- The address to receive the airdrop needs to be satisfied with: the address prefix should be start with number 3 ([Create an account](https://docs.stafi.io/guides/account-creation)).
+- The address to receive the airdrop needs to be satisfied with: the address prefix should be start with number 2 or 3 ([Create an account](https://docs.stafi.io/guides/account-creation)).
 - The maximum daily distribution of airdrops is 300, first come first served.
-- The number of each airdrop is a fixed value: 200.
+- The number of each airdrop is a fixed value: 500.
 
 
 ## Running using Docker

@@ -59,7 +59,6 @@ pub use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 use pallet_session::{historical as pallet_session_historical};
 use sp_inherents::{InherentData, CheckInherentsResult};
 use static_assertions::const_assert;
-// use rtoken_balances::RTokenIdentifier;
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -103,7 +102,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 10,
+	spec_version: 9,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
