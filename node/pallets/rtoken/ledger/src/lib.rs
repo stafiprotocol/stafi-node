@@ -102,8 +102,8 @@ decl_error! {
 
 decl_storage! {
     trait Store for Module<T: Trait> as RTokenLedger {
-        pub ChainEras get(fn chain_eras): map hasher(twox_64_concat) RSymbol => Option<u32>;
-        pub ChainBondingDuration get(fn chain_bonding_duration): map hasher(twox_64_concat) RSymbol => Option<u32>;
+        pub ChainEras get(fn chain_eras): map hasher(blake2_128_concat) RSymbol => Option<u32>;
+        pub ChainBondingDuration get(fn chain_bonding_duration): map hasher(blake2_128_concat) RSymbol => Option<u32>;
 
         /// commission of staking rewards
         Commission get(fn commission): Perbill = Perbill::from_percent(10);
@@ -111,27 +111,27 @@ decl_storage! {
         pub Receiver get(fn receiver): Option<T::AccountId>;
 
         /// Pools: maybe pubkeys
-        pub Pools get(fn pools): map hasher(twox_64_concat) RSymbol => Vec<Vec<u8>>;
-        pub BondedPools get(fn bonded_pools): map hasher(twox_64_concat) RSymbol => Vec<Vec<u8>>;
+        pub Pools get(fn pools): map hasher(blake2_128_concat) RSymbol => Vec<Vec<u8>>;
+        pub BondedPools get(fn bonded_pools): map hasher(blake2_128_concat) RSymbol => Vec<Vec<u8>>;
 
         /// place bond/unbond datas for pools
-        pub BondPipelines get(fn bond_pipelines): double_map hasher(twox_64_concat) RSymbol, hasher(twox_64_concat) Vec<u8> => Option<LinkChunk>;
-        pub EraSnapShots get(fn era_snap_shots): double_map hasher(twox_64_concat) RSymbol, hasher(twox_64_concat) u32 => Option<Vec<T::Hash>>;
-        pub Snapshots get(fn snap_shots): double_map hasher(twox_64_concat) RSymbol, hasher(blake2_128_concat) T::Hash => Option<BondSnapshot<T::AccountId>>;
-        pub CurrentEraSnapShots get(fn current_era_snap_shots): map hasher(twox_64_concat) RSymbol => Option<Vec<T::Hash>>;
+        pub BondPipelines get(fn bond_pipelines): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) Vec<u8> => Option<LinkChunk>;
+        pub EraSnapShots get(fn era_snap_shots): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) u32 => Option<Vec<T::Hash>>;
+        pub Snapshots get(fn snap_shots): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) T::Hash => Option<BondSnapshot<T::AccountId>>;
+        pub CurrentEraSnapShots get(fn current_era_snap_shots): map hasher(blake2_128_concat) RSymbol => Option<Vec<T::Hash>>;
 
         /// pool unbond records: (symbol, pool, unlock_era) => unbonds
-        pub PoolUnbonds get(fn pool_unbonds): double_map hasher(twox_64_concat) RSymbol, hasher(blake2_128_concat) (Vec<u8>, u32) => Option<Vec<Unbonding<T::AccountId>>>;
+        pub PoolUnbonds get(fn pool_unbonds): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) (Vec<u8>, u32) => Option<Vec<Unbonding<T::AccountId>>>;
         /// pool era unbond number limit
-        pub EraUnbondLimit get(fn era_unbond_limit): map hasher(twox_64_concat) RSymbol => u16;
+        pub EraUnbondLimit get(fn era_unbond_limit): map hasher(blake2_128_concat) RSymbol => u16;
 
         /// pool => Vec<SubAccounts>
-        pub SubAccounts get(fn sub_accounts): double_map hasher(twox_64_concat) RSymbol, hasher(twox_64_concat) Vec<u8> => Vec<Vec<u8>>;
+        pub SubAccounts get(fn sub_accounts): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) Vec<u8> => Vec<Vec<u8>>;
         /// pool => Threshold
-        pub MultiThresholds get(fn multi_thresholds): double_map hasher(twox_64_concat) RSymbol, hasher(twox_64_concat) Vec<u8> => Option<u16>;
+        pub MultiThresholds get(fn multi_thresholds): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) Vec<u8> => Option<u16>;
 
         /// last voter
-        pub LastVoter get(fn last_voter): map hasher(twox_64_concat) RSymbol => Option<T::AccountId>;
+        pub LastVoter get(fn last_voter): map hasher(blake2_128_concat) RSymbol => Option<T::AccountId>;
     }
 }
 
