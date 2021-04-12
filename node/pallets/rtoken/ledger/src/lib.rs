@@ -259,6 +259,14 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 1_000_000]
+        pub fn clear_current_era_snap_shots(origin, symbol: RSymbol) -> DispatchResult {
+            ensure_root(origin)?;
+            let empty: Vec<T::Hash> = vec![];
+            <CurrentEraSnapShots<T>>::insert(symbol, empty);
+            Ok(())
+        }
+
         /// set chain era
         #[weight = 1_000_000]
         pub fn set_chain_era(origin, symbol: RSymbol, new_era: u32) -> DispatchResult {
