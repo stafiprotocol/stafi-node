@@ -132,8 +132,8 @@ decl_storage! {
         /// (hash, rsymbol) => record
         pub BondRecords get(fn bond_records): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) T::Hash => Option<BondRecord<T::AccountId>>;
         pub BondReasons get(fn bond_reasons): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) T::Hash => Option<BondReason>;
-        pub AccountBondCount get(fn account_bond_count): double_map hasher(blake2_128_concat) RSymbol, hasher(twox_64_concat) T::AccountId => u64;
-        pub AccountBondRecords get(fn account_bond_records): double_map hasher(blake2_128_concat) RSymbol, hasher(twox_64_concat) (T::AccountId, u64) => Option<T::Hash>;
+        pub AccountBondCount get(fn account_bond_count): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) T::AccountId => u64;
+        pub AccountBondRecords get(fn account_bond_records): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) (T::AccountId, u64) => Option<T::Hash>;
         /// bond success histories. symbol, (blockhash, txhash) => bool
         pub BondStates get(fn bond_states): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) (Vec<u8>, Vec<u8>) => Option<BondState>;
 
@@ -141,25 +141,25 @@ decl_storage! {
         pub RelayFeesReceiver get(fn relay_fees_receiver): Option<T::AccountId>;
 
         /// Proxy accounts for setting fees
-        ProxyAccounts get(fn proxy_accounts): map hasher(twox_64_concat) T::AccountId => Option<u8>;
+        ProxyAccounts get(fn proxy_accounts): map hasher(blake2_128_concat) T::AccountId => Option<u8>;
         /// fees to cover the commission happened on other chains
-        pub BondFees get(fn bond_fees): map hasher(twox_64_concat) RSymbol => Balance = 1500000000000;
+        pub BondFees get(fn bond_fees): map hasher(blake2_128_concat) RSymbol => Balance = 1500000000000;
 
         /// fees to cover the commission happened on other chains
-        pub UnbondFees get(fn unbond_fees): map hasher(twox_64_concat) RSymbol => Balance = 3000000000000;
+        pub UnbondFees get(fn unbond_fees): map hasher(blake2_128_concat) RSymbol => Balance = 3000000000000;
 
-        PoolBalanceLimit get(fn pool_balance_limit): map hasher(twox_64_concat) RSymbol => u128;
+        PoolBalanceLimit get(fn pool_balance_limit): map hasher(blake2_128_concat) RSymbol => u128;
 
         /// Unbond commission
         UnbondCommission get(fn unbond_commission): Perbill = Perbill::from_parts(2000000);
 
         /// Account unbond records: who, symbol => [UserUnlockChunk]
-        pub AccountUnbonds get(fn account_unbonds): double_map hasher(blake2_128_concat) T::AccountId, hasher(twox_64_concat) RSymbol => Option<Vec<UserUnlockChunk>>;
+        pub AccountUnbonds get(fn account_unbonds): double_map hasher(blake2_128_concat) T::AccountId, hasher(blake2_128_concat) RSymbol => Option<Vec<UserUnlockChunk>>;
 
-        pub Signatures get(fn signatures): double_map hasher(twox_64_concat) RSymbol, hasher(twox_64_concat) (u32, Vec<u8>, OriginalTxType, Vec<u8>) => Option<Vec<Vec<u8>>>;
+        pub Signatures get(fn signatures): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) (u32, Vec<u8>, OriginalTxType, Vec<u8>) => Option<Vec<Vec<u8>>>;
         pub AccountSignature get(fn account_signature): map hasher(blake2_128_concat) (T::AccountId, RSymbol, u32, Vec<u8>, OriginalTxType, Vec<u8>) => Option<Vec<u8>>;
 
-        pub Nominated get(fn nominated): double_map hasher(twox_64_concat) RSymbol, hasher(blake2_128_concat) Vec<u8> => Option<Vec<Vec<u8>>>;
+        pub Nominated get(fn nominated): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) Vec<u8> => Option<Vec<Vec<u8>>>;
     }
 }
 
