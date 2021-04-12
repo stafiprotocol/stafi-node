@@ -17,7 +17,7 @@ pub trait Trait: system::Trait {
 
 decl_event! {
     pub enum Event {
-        RateSet(RateType),
+        RateSet(RSymbol, RateType),
     }
 }
 
@@ -42,7 +42,7 @@ impl<T: Trait> Module<T> {
     pub fn set_rate(symbol: RSymbol, total: u128, rtotal: u128) -> RateType {
         if total == 0 || rtotal == 0 {
             <Rate>::insert(symbol, RATEBASE);
-            Self::deposit_event(Event::RateSet(RATEBASE));
+            Self::deposit_event(Event::RateSet(symbol, RATEBASE));
             return RATEBASE;
         }
 
@@ -50,7 +50,7 @@ impl<T: Trait> Module<T> {
         let op_rate = <Rate>::get(symbol);
         if op_rate.is_none() || op_rate.unwrap() != new_rate {
             <Rate>::insert(symbol, new_rate);
-            Self::deposit_event(Event::RateSet(new_rate));
+            Self::deposit_event(Event::RateSet(symbol, new_rate));
         }
 
         new_rate

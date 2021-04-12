@@ -56,21 +56,6 @@ impl<A: PartialEq> BondRecord<A> {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct BondKey<Hash> {
-    pub symbol: RSymbol,
-    pub bond_id: Hash,
-}
-
-impl<A: PartialEq> BondKey<A> {
-    pub fn new(symbol: RSymbol, bond_id: A) -> Self {
-        Self {
-            symbol: symbol,
-            bond_id: bond_id,
-        }
-    }
-}
-
 /// Original tx type
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug)]
 pub enum OriginalTxType {
