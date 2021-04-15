@@ -30,7 +30,6 @@ pub mod signature;
 pub use signature::*;
 
 pub const MAX_UNLOCKING_CHUNKS: usize = 64;
-pub const MAX_WITHDRAWING_CHUNKS: usize = 100;
 
 pub trait Trait: system::Trait + rtoken_rate::Trait + rtoken_ledger::Trait + relayers::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
