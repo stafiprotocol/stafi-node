@@ -1,5 +1,5 @@
 [package]
-name = "claims"
+name = "xclaim"
 version = "0.4.1"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
@@ -14,7 +14,7 @@ frame-system = { branch = "master", default-features = false, git = 'https://git
 sp-runtime = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-std = { branch = "master", default-features = false, git = "https://github.com/stafiprotocol/stafi-blockchain.git" }
 
-node-primitives = { path = "../../primitives", default-features = false }
+node-primitives = { path = "../../../primitives", default-features = false }
 
 [features]
 default = ["std"]
