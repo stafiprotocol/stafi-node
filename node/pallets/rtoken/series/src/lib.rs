@@ -30,7 +30,6 @@ pub mod signature;
 pub use signature::*;
 
 pub const MAX_UNLOCKING_CHUNKS: usize = 64;
-pub const MAX_WITHDRAWING_CHUNKS: usize = 100;
 
 pub trait Trait: system::Trait + rtoken_rate::Trait + rtoken_ledger::Trait + relayers::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -160,6 +159,7 @@ decl_storage! {
         pub AccountSignature get(fn account_signature): map hasher(blake2_128_concat) (T::AccountId, RSymbol, u32, Vec<u8>, OriginalTxType, Vec<u8>) => Option<Vec<u8>>;
 
         pub Nominated get(fn nominated): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) Vec<u8> => Option<Vec<Vec<u8>>>;
+        pub EraNominated get(fn era_nominated): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) (Vec<u8>, u32) => Option<Vec<Vec<u8>>>;
     }
 }
 
@@ -274,6 +274,12 @@ decl_module! {
             let op_voter = ledger::LastVoter::<T>::get(symbol);
             ensure!(op_voter.is_some(), ledger::Error::<T>::LastVoterNobody);
             let voter = op_voter.unwrap();
+
+            let old_validators = Self::nominated(symbol, &pool).unwrap_or(vec![]);
+            if old_validators.len() > 0 {
+                let current_era = rtoken_ledger::ChainEras::get(symbol).unwrap_or(era);
+                EraNominated::insert(symbol, (&pool, current_era), old_validators);
+            }
 
             Nominated::insert(symbol, &pool, new_validators.clone());
 
