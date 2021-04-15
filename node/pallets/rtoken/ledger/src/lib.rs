@@ -309,10 +309,6 @@ decl_module! {
 
             let mut snap = op_snap.unwrap();
             ensure!(snap.era_updated(), Error::<T>::StateNotEraUpdated);
-
-            let op_voter = Self::last_voter(snap.symbol);
-            ensure!(op_voter.is_some(), Error::<T>::LastVoterNobody);
-            let voter = op_voter.unwrap();
             
             let mut pipe = Self::bond_pipelines(symbol, &snap.pool).unwrap_or_default();
             pipe.bond = pipe.bond.saturating_sub(snap.bond);
@@ -320,8 +316,8 @@ decl_module! {
 
             <BondPipelines>::insert(symbol, &snap.pool, pipe);
             snap.update_state(PoolBondState::BondReported);
-            <Snapshots<T>>::insert(symbol, &shot_id, snap);
-            Self::deposit_event(RawEvent::BondReported(symbol, shot_id, voter));
+            <Snapshots<T>>::insert(symbol, &shot_id, snap.clone());
+            Self::deposit_event(RawEvent::BondReported(symbol, shot_id, snap.last_voter));
 
             Ok(())
         }
@@ -342,10 +338,6 @@ decl_module! {
             let op_receiver = Self::receiver();
             ensure!(op_receiver.is_some(), Error::<T>::NoReceiver);
             let receiver = op_receiver.unwrap();
-
-            let op_voter = Self::last_voter(symbol);
-            ensure!(op_voter.is_some(), Error::<T>::LastVoterNobody);
-            let voter = op_voter.unwrap();
             
             let mut era_shots = Self::era_snap_shots(symbol, snap.era).unwrap_or(vec![]);
             let op_era_index = era_shots.iter().position(|shot| shot == &shot_id);
@@ -384,7 +376,7 @@ decl_module! {
 
             if Self::pool_unbonds(symbol, (&snap.pool, snap.era)).is_some() {
                 snap.update_state(PoolBondState::ActiveReported);
-                Self::deposit_event(RawEvent::ActiveReported(symbol, shot_id.clone(), voter));
+                Self::deposit_event(RawEvent::ActiveReported(symbol, shot_id.clone(), snap.last_voter.clone()));
             } else {
                 snap.update_state(PoolBondState::WithdrawSkipped);
                 cur_era_shot.remove(cur_era_index);
@@ -405,13 +397,9 @@ decl_module! {
             let mut snap = op_snap.unwrap();
             ensure!(snap.active_reported(), Error::<T>::StateNotActiveReported);
 
-            let op_voter = Self::last_voter(symbol);
-            ensure!(op_voter.is_some(), Error::<T>::LastVoterNobody);
-            let voter = op_voter.unwrap();
-
             snap.update_state(PoolBondState::WithdrawReported);
-            <Snapshots<T>>::insert(symbol, &shot_id, snap);
-            Self::deposit_event(RawEvent::WithdrawReported(symbol, shot_id, voter));
+            <Snapshots<T>>::insert(symbol, &shot_id, snap.clone());
+            Self::deposit_event(RawEvent::WithdrawReported(symbol, shot_id, snap.last_voter));
 
             Ok(())
         }
