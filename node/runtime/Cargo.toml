@@ -74,6 +74,7 @@ pallet-transaction-payment = { branch = "master", default-features = false, git 
 pallet-transaction-payment-rpc-runtime-api = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 pallet-vesting = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
+xtoken-balances = { version = "0.4.1", default-features = false, path = "../pallets/xtoken/balances" }
 rtoken-balances = { version = "0.4.1", default-features = false, path = "../pallets/rtoken/balances" }
 rtoken-rate = { version = "0.4.1", default-features = false, path = "../pallets/rtoken/rate" }
 rfis = { version = "0.4.1", default-features = false, path = "../pallets/rtoken/rfis" }
@@ -147,6 +148,7 @@ std = [
 	"sp-io/std",
 	"pallet-recovery/std",
 	"pallet-vesting/std",
+	"xtoken-balances/std",
 	"rtoken-balances/std",
 	"rtoken-rate/std",
 	"rfis/std",

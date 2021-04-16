@@ -343,6 +343,10 @@ impl pallet_balances::Trait for Runtime {
 	type WeightInfo = weights::pallet_balances::WeightInfo;
 }
 
+impl xtoken_balances::Trait for Runtime {
+	type Event = Event;
+}
+
 impl rtoken_balances::Trait for Runtime {
 	type Event = Event;
 }
@@ -860,6 +864,7 @@ parameter_types! {
 impl bridge_swap::Trait for Runtime {
 	type Currency = Balances;
 	type RCurrency = RBalances;
+	type XCurrency = XBalances;
 	type BridgeOrigin = bridge_common::EnsureBridge<Runtime>;
 	type NativeTokenId = NativeTokenId;
 }
@@ -922,6 +927,7 @@ construct_runtime!(
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 		Proxy: pallet_proxy::{Module, Call, Storage, Event<T>},
 		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
+		XBalances: xtoken_balances::{Module, Call, Storage, Event<T>},
 		RBalances: rtoken_balances::{Module, Call, Storage, Event<T>},
 		RTokenRate: rtoken_rate::{Module, Call, Storage, Event},
 		RFis: rfis::{Module, Call, Storage, Event<T>, ValidateUnsigned},
