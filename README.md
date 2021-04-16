@@ -20,7 +20,7 @@ Welcome to participate in us. Download the source:
 ```bash
 git clone https://github.com/stafiprotocol/stafi-node.git
 cd stafi-node
-git checkout v0.3.3
+git checkout v0.4.2
 ```
 
 Install system dependencies(recommend ubuntu or macos):
