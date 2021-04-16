@@ -102,7 +102,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 26,
+	spec_version: 27,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -341,6 +341,10 @@ impl pallet_balances::Trait for Runtime {
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = frame_system::Module<Runtime>;
 	type WeightInfo = weights::pallet_balances::WeightInfo;
+}
+
+impl xtoken_balances::Trait for Runtime {
+	type Event = Event;
 }
 
 impl rtoken_balances::Trait for Runtime {
@@ -860,6 +864,7 @@ parameter_types! {
 impl bridge_swap::Trait for Runtime {
 	type Currency = Balances;
 	type RCurrency = RBalances;
+	type XCurrency = XBalances;
 	type BridgeOrigin = bridge_common::EnsureBridge<Runtime>;
 	type NativeTokenId = NativeTokenId;
 }
@@ -884,6 +889,11 @@ impl rtoken_series::Trait for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type RCurrency = RBalances;
+}
+
+impl xclaim::Trait for Runtime {
+	type Event = Event;
+	type XCurrency = XBalances;
 }
 
 construct_runtime!(
@@ -924,6 +934,7 @@ construct_runtime!(
 		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
 		BridgeCommon: bridge_common::{Module, Call, Storage, Event<T>},
 		BridgeSwap: bridge_swap::{Module, Call},
+		XBalances: xtoken_balances::{Module, Call, Storage, Event<T>},
 		RBalances: rtoken_balances::{Module, Call, Storage, Event<T>},
 		RTokenRate: rtoken_rate::{Module, Call, Storage, Event},
 		RFis: rfis::{Module, Call, Storage, Event<T>, ValidateUnsigned},
@@ -931,6 +942,7 @@ construct_runtime!(
 		RTokenVotes: rtoken_votes::{Module, Call, Storage, Event<T>},
 		RTokenLedger: rtoken_ledger::{Module, Call, Storage, Event<T>},
 		RTokenSeries: rtoken_series::{Module, Call, Storage, Event<T>},
+		XClaim: xclaim::{Module, Call, Storage, Event<T>},
 	}
 );
 

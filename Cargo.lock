@@ -608,6 +608,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xtoken-balances",
 ]
 
 [[package]]
@@ -3890,6 +3891,8 @@ dependencies = [
  "sp-version",
  "static_assertions",
  "substrate-wasm-builder-runner",
+ "xclaim",
+ "xtoken-balances",
 ]
 
 [[package]]
@@ -9327,6 +9330,33 @@ dependencies = [
  "curve25519-dalek 3.0.0",
  "rand_core 0.5.1",
  "zeroize",
+]
+
+[[package]]
+name = "xclaim"
+version = "0.4.1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "parity-scale-codec",
+ "sp-runtime",
+ "sp-std",
+ "xtoken-balances",
+]
+
+[[package]]
+name = "xtoken-balances"
+version = "0.4.1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]

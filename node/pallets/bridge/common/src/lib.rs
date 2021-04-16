@@ -26,7 +26,7 @@ use sp_runtime::{
     RuntimeDebug, ModuleId,
     traits::{AccountIdConversion, StaticLookup, Dispatchable}
 };
-use node_primitives::{ChainId, Balance, RSymbol};
+use node_primitives::{ChainId, Balance, RSymbol, XSymbol};
 
 #[cfg(test)]
 mod mock;
@@ -233,6 +233,11 @@ decl_storage! {
         pub ResourceRsymbol get(fn resource_rsymbol): map hasher(blake2_128_concat) ResourceId => Option<RSymbol>;
         /// Rsymbol => ResourceId
         pub RsymbolResource get(fn rsymbol_resource): map hasher(blake2_128_concat) RSymbol => Option<ResourceId>;
+
+        /// rId => Xsymbol
+        pub ResourceXsymbol get(fn resource_xsymbol): map hasher(blake2_128_concat) ResourceId => Option<XSymbol>;
+        /// rsymbol => ResourceId
+        pub XsymbolResource get(fn xsymbol_resource): map hasher(blake2_128_concat) XSymbol => Option<ResourceId>;
     }
 }
 
@@ -344,6 +349,28 @@ decl_module! {
 
             <ResourceRsymbol>::remove(&resource_id);
             <RsymbolResource>::remove(&sym);
+
+            Ok(())
+        }
+
+        /// Map resourceId to Xsymbol
+        #[weight = 10_000]
+        pub fn map_resource_and_xsymbol(origin, resource_id: ResourceId, sym: XSymbol) -> DispatchResult {
+            Self::ensure_admin(origin)?;
+
+            <ResourceXsymbol>::insert(&resource_id, &sym);
+            <XsymbolResource>::insert(&sym, &resource_id);
+
+            Ok(())
+        }
+
+        /// Unmap resourceId to Xsymbol
+        #[weight = 10_000]
+        pub fn unmap_resource_and_xsymbol(origin, resource_id: ResourceId, sym: XSymbol) -> DispatchResult {
+            Self::ensure_admin(origin)?;
+
+            <ResourceXsymbol>::remove(&resource_id);
+            <XsymbolResource>::remove(&sym);
 
             Ok(())
         }
