@@ -16,17 +16,16 @@
 
 use sp_std::{prelude::*};
 use frame_support::{
-	decl_event, decl_storage, decl_module, decl_error, dispatch, ensure,
-	traits::{Currency, Get}
+	decl_event, decl_storage, decl_module, decl_error, dispatch::DispatchResult, ensure,
+	traits::{Get}
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 use sp_runtime::{
 	ModuleId,
-	traits::{
-		CheckedSub
-	},
+	traits::{AccountIdConversion}
 };
-use codec::{Encode};
+use node_primitives::{XSymbol};
+use xtoken_balances::{traits::{Currency as XCurrency}};
 
 const MODULE_ID: ModuleId = ModuleId(*b"xsym/clm");
 
@@ -34,8 +33,8 @@ const MODULE_ID: ModuleId = ModuleId(*b"xsym/clm");
 pub trait Trait: system::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
-    /// The currency trait.
-	type Currency: Currency<Self::AccountId>;
+    /// Currency mechanism of xtoken
+    type XCurrency: XCurrency<Self::AccountId>;
 }
 
 // This pallet's storage items.
@@ -68,11 +67,13 @@ decl_error! {
 		/// error.
 		PotUnderflow,
 		/// zero value
-		ValueZero
+		ValueZero,
 		/// invalid proxy account
 		InvalidProxyAccount,
 		/// Got an overflow after adding
         OverFlow,
+		/// Insufficient Xbalance
+		InsufficientXbalance,
 	}
 }
 
@@ -106,7 +107,7 @@ decl_module! {
 
         /// Make a claim
 		#[weight = T::DbWeight::get().reads_writes(5, 4) + 50_000_000]
-		pub fn claim(origin, XSymbol: symbol) -> dispatch::DispatchResult {
+		pub fn claim(origin, symbol: XSymbol) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
             let balance_claim = <Claims<T>>::get(&who, symbol).ok_or(Error::<T>::HasNoClaim)?;
@@ -115,9 +116,9 @@ decl_module! {
 
 			ensure!(balance_due > 0, Error::<T>::HasNoClaim);
 
-            let new_total = Self::total(symbol).checked_sub(&balance_due).ok_or(Error::<T>::PotUnderflow)?;
+            let new_total = Self::total(symbol).checked_sub(balance_due).ok_or(Error::<T>::PotUnderflow)?;
 
-			/// Todo: Transfer to user
+			T::XCurrency::transfer(&Self::account_id(), &who, symbol, balance_due)?;
 
             Total::insert(symbol, new_total);
             <Claimed<T>>::insert(&who, symbol, balance_claim);
@@ -127,8 +128,8 @@ decl_module! {
 		}
 
         /// Mint a new claim.
-		#[weight = T::DbWeight::get().reads_writes(2, 2) + 10_000_000]
-		pub fn mint_claim(origin, dest: T::AccountId, XSymbol: symbol, value: u128) -> dispatch::DispatchResult {
+		#[weight = 1_000_000]
+		pub fn mint_claim(origin, dest: T::AccountId, symbol: XSymbol, value: u128) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			ensure!(value > 0, Error::<T>::ValueZero);
@@ -138,7 +139,7 @@ decl_module! {
 			let balance_due = value.checked_add(old_balance).ok_or(Error::<T>::OverFlow)?;
 			let new_total = Self::total(symbol).checked_add(value).ok_or(Error::<T>::OverFlow)?;
 
-			/// Todo: Check new_total
+			ensure!(T::XCurrency::free_balance(&Self::account_id(), symbol) >= new_total, Error::<T>::InsufficientXbalance);
 
             Total::insert(symbol, new_total);
             <Claims<T>>::insert(dest, symbol, balance_due);

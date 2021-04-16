@@ -3891,6 +3891,7 @@ dependencies = [
  "sp-version",
  "static_assertions",
  "substrate-wasm-builder-runner 1.0.6 (git+https://github.com/stafiprotocol/stafi-blockchain.git)",
+ "xclaim",
  "xtoken-balances",
 ]
 
@@ -8075,11 +8076,11 @@ dependencies = [
 [[package]]
 name = "substrate-wasm-builder-runner"
 version = "1.0.6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#462bf9689e0d313d4cd2bb102d5cc8449ee262c7"
 
 [[package]]
 name = "substrate-wasm-builder-runner"
 version = "1.0.6"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#462bf9689e0d313d4cd2bb102d5cc8449ee262c7"
 
 [[package]]
 name = "subtle"
@@ -9333,6 +9334,19 @@ dependencies = [
  "curve25519-dalek 3.0.0",
  "rand_core 0.5.1",
  "zeroize",
+]
+
+[[package]]
+name = "xclaim"
+version = "0.4.1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "parity-scale-codec",
+ "sp-runtime",
+ "sp-std",
+ "xtoken-balances",
 ]
 
 [[package]]

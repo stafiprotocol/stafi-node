@@ -84,6 +84,7 @@ rtoken-relayers = { version = "0.4.1", default-features = false, path = "../pall
 rtoken-votes = { version = "0.4.1", default-features = false, path = "../pallets/rtoken/votes" }
 rtoken-ledger = { version = "0.4.1", default-features = false, path = "../pallets/rtoken/ledger" }
 rtoken-series = { version = "0.4.1", default-features = false, path = "../pallets/rtoken/series" }
+xclaim = { version = "0.4.1", default-features = false, path = "../pallets/claims/xclaim" }
 
 
 [build-dependencies]
@@ -158,6 +159,7 @@ std = [
 	"rtoken-votes/std",
 	"rtoken-ledger/std",
 	"rtoken-series/std",
+	"xclaim/std"
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

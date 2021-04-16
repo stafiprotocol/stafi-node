@@ -891,6 +891,11 @@ impl rtoken_series::Trait for Runtime {
 	type RCurrency = RBalances;
 }
 
+impl xclaim::Trait for Runtime {
+	type Event = Event;
+	type XCurrency = XBalances;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -937,6 +942,7 @@ construct_runtime!(
 		RTokenVotes: rtoken_votes::{Module, Call, Storage, Event<T>},
 		RTokenLedger: rtoken_ledger::{Module, Call, Storage, Event<T>},
 		RTokenSeries: rtoken_series::{Module, Call, Storage, Event<T>},
+		XClaim: xclaim::{Module, Call, Storage, Event<T>},
 	}
 );
 
