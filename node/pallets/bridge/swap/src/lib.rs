@@ -191,8 +191,7 @@ decl_module! {
             if fees > Zero::zero() {
                 T::Currency::transfer(&who, &fees_recipient_account, fees.into(), KeepAlive)?;
             }
-            let bridge_id = <bridge::Module<T>>::account_id();
-            T::XCurrency::transfer(&who, &bridge_id, symbol, amount)?;
+            T::XCurrency::burn(&who, symbol, amount)?;
 
             <bridge::Module<T>>::transfer_fungible(who, dest_id, resource, recipient, U256::from(amount))
         }
@@ -200,11 +199,11 @@ decl_module! {
         /// Allows the bridge to swap xtoken back
         #[weight = 195_000_000]
         pub fn transfer_xtoken_back(origin, recipient: T::AccountId, amount: u128, resource_id: ResourceId) -> DispatchResult {
-            let bridge_id = T::BridgeOrigin::ensure_origin(origin)?;
+            T::BridgeOrigin::ensure_origin(origin)?;
             let op_sym = <bridge::Module<T>>::resource_xsymbol(&resource_id);
             ensure!(op_sym.is_some(), Error::<T>::ResourceNotMapped);
             let sym = op_sym.unwrap();
-            T::XCurrency::transfer(&bridge_id, &recipient, sym, amount)?;
+            T::XCurrency::mint(&recipient, sym, amount)?;
             Ok(())
         }
     }
