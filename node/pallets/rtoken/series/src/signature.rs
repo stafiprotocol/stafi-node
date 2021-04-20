@@ -2,12 +2,12 @@ use sp_std::{prelude::*, convert::TryFrom};
 use codec::{Encode, Decode};
 use sp_runtime::RuntimeDebug;
 use sp_core::sr25519::{Public, Signature};
-use node_primitives::{RSymbol, ChainType, report::ReporterAppCrypto};
+use node_primitives::{RSymbol, ChainType, Sr25519AppCrypto, Ed25519AppCrypto, EcdsaAppCrypto};
 use frame_system::offchain::AppCrypto;
 
 pub fn verify_signature(symbol: RSymbol, pubkey: &Vec<u8>, signature: &Vec<u8>, message: &Vec<u8>) -> SigVerifyResult {
     match symbol.chain_type() {
-        ChainType::Substrate => super::sr25519_verify(&pubkey, &signature, &message),
+        ChainType::Substrate => super::substrate_verify(&pubkey, &signature, &message),
         ChainType::Tendermint => super::tendermint_verify(&pubkey, &signature, &message),
     }
 }
@@ -38,14 +38,26 @@ pub enum SigVerifyResult {
     Pass,
 }
 
-pub fn sr25519_verify(pubkey: &Vec<u8>, signature: &Vec<u8>, message: &Vec<u8>) -> SigVerifyResult {
+pub fn substrate_verify(pubkey: &Vec<u8>, signature: &Vec<u8>, message: &Vec<u8>) -> SigVerifyResult {
     let re_public = <Public as TryFrom<_>>::try_from(&pubkey[..]);
     if re_public.is_err() {
         return SigVerifyResult::InvalidPubkey;
     }
+
     let public = re_public.unwrap();
     let sig = Signature::from_slice(&signature);
-    let vrf_result = <ReporterAppCrypto as AppCrypto<_,_>>::verify(&message, public.into(), sig.into());
+
+    let mut vrf_result = <Sr25519AppCrypto as AppCrypto<_,_>>::verify(&message, public.into(), sig.clone().into());
+    if vrf_result {
+        return SigVerifyResult::Pass;
+    }
+
+    vrf_result = <Ed25519AppCrypto as AppCrypto<_,_>>::verify(&message, public.into(), sig.clone().into());
+    if vrf_result {
+        return SigVerifyResult::Pass;
+    }
+
+    vrf_result = <EcdsaAppCrypto as AppCrypto<_,_>>::verify(&message, public.into(), sig.into());
     if vrf_result {
         return SigVerifyResult::Pass;
     }

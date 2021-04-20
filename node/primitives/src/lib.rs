@@ -70,6 +70,10 @@ pub use rtoken::*;
 pub mod xtoken;
 pub use xtoken::*;
 
+/// Crypto
+pub mod crypto;
+pub use crypto::*;
+
 /// Custom validity errors used in Stafi while validating transactions.
 #[repr(u8)]
 pub enum ValidityError {
