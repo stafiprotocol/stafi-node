@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Stafi Protocol.
+// Copyright 2019-2021 Stafi Protocol.
 // This file is part of Stafi.
 
 // Stafi is distributed in the hope that it will be useful,

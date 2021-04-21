@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Stafi Protocol.
+// Copyright 2019-2021 Stafi Protocol.
 // This file is part of Stafi.
 
 // Stafi is distributed in the hope that it will be useful,
@@ -102,7 +102,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 27,
+	spec_version: 28,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,

@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Stafi Protocol.
+// Copyright 2019-2021 Stafi Protocol.
 // This file is part of Stafi.
 
 // Stafi is distributed in the hope that it will be useful,
@@ -20,9 +20,10 @@ use sp_io::hashing::blake2_128;
 
 #[test]
 fn new_resource_id() {
-    let rfis_resource_id = derive_resource_id(1, &blake2_128(b"RFIS"));
+    let rfis_resource_id = derive_resource_id(1, &blake2_128(b"WRA"));
     println!("{:?}", hex::encode(rfis_resource_id));
-    //result 000000000000000000000000000000df7e6fee39d3ace035c108833854667701
+    //result RFIS: 000000000000000000000000000000df7e6fee39d3ace035c108833854667701
+    // WRA: 000000000000000000000000000000cdd5da9607788c8f4a14c30fcbef84d101
 }
 
 #[test]

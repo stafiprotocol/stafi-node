@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Stafi Protocol.
+// Copyright 2019-2021 Stafi Protocol.
 // This file is part of Stafi.
 
 // Stafi is distributed in the hope that it will be useful,
@@ -69,6 +69,10 @@ pub use rtoken::*;
 /// Rtoken
 pub mod xtoken;
 pub use xtoken::*;
+
+/// Crypto
+pub mod crypto;
+pub use crypto::*;
 
 /// Custom validity errors used in Stafi while validating transactions.
 #[repr(u8)]

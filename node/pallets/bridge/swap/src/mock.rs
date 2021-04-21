@@ -1,4 +1,4 @@
-/// Copyright 2019-2020 Stafi Protocol.
+/// Copyright 2019-2021 Stafi Protocol.
 // This file is part of Stafi.
 
 // Stafi is distributed in the hope that it will be useful,
@@ -29,6 +29,7 @@ impl_outer_dispatch! {
 		frame_system::System,
 		balances::Balances,
 		rtoken_balances::RBalances,
+		xtoken_balances::XBalances,
 		bridge_common::BridgeCommon,
 		self::BridgeSwap,
 	}
@@ -96,6 +97,10 @@ impl pallet_balances::Trait for Test {
 	type WeightInfo = ();
 }
 
+impl xtoken_balances::Trait for Test {
+	type Event = ();
+}
+
 impl rtoken_balances::Trait for Test {
 	type Event = ();
 }
@@ -120,6 +125,7 @@ parameter_types! {
 impl Trait for Test {
 	type Currency = Balances;
 	type RCurrency = RBalances;
+	type XCurrency = XBalances;
 	type NativeTokenId = NativeTokenId;
 	type BridgeOrigin = bridge_common::EnsureBridge<Test>;
 }
@@ -139,6 +145,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 pub type System = frame_system::Module<Test>;
 pub type Balances = pallet_balances::Module<Test>;
 pub type RBalances = rtoken_balances::Module<Test>;
+pub type XBalances = xtoken_balances::Module<Test>;
 pub type BridgeCommon = bridge_common::Module<Test>;
 pub type BridgeSwap = Module<Test>;
 
