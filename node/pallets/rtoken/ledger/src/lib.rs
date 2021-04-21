@@ -113,8 +113,8 @@ decl_storage! {
         /// Pools: maybe pubkeys
         pub Pools get(fn pools): map hasher(blake2_128_concat) RSymbol => Vec<Vec<u8>>;
         pub BondedPools get(fn bonded_pools): map hasher(blake2_128_concat) RSymbol => Vec<Vec<u8>>;
-        /// Total actived
-        pub TotalActived get(fn total_actived): map hasher(blake2_128_concat) RSymbol => u128;
+        /// Total expected active
+        pub TotalExpectedActive get(fn total_expected_active): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) u32 => Option<u128>;
 
         /// place bond/unbond datas for pools
         pub BondPipelines get(fn bond_pipelines): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) Vec<u8> => Option<LinkChunk>;
@@ -269,21 +269,6 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = 1_000_000]
-        pub fn init_total_active(origin, symbol: RSymbol) -> DispatchResult {
-            ensure_root(origin)?;
-
-            let mut total: u128 = 0;
-            let pools = Self::bonded_pools(symbol);
-            for pool in pools {
-                let pipe = Self::bond_pipelines(symbol, &pool).unwrap_or_default();
-                total = total.saturating_add(pipe.active);
-            }
-
-            <TotalActived>::insert(symbol, total);
-            Ok(())
-        }
-
         /// set chain era
         #[weight = 1_000_000]
         pub fn set_chain_era(origin, symbol: RSymbol, new_era: u32) -> DispatchResult {
@@ -366,30 +351,27 @@ decl_module! {
             ensure!(op_cur_era_index.is_some(), Error::<T>::ActiveAlreadySet);
             let cur_era_index = op_cur_era_index.unwrap();
 
-            let before = Self::total_actived(symbol);
-            let after = before.saturating_add(active).saturating_sub(snap.active);
-            if after > before {
-                let fee = Self::commission() * (after - before);
+
+            if active > snap.active {
+                let fee = Self::commission() * (active - snap.active);
                 let rfee = rtoken_rate::Module::<T>::token_to_rtoken(symbol, fee);
                 T::RCurrency::mint(&receiver, symbol, rfee)?;
             }
 
-            let mut rate = op_rate.unwrap();
-            if after != before {
-                let rbalance = T::RCurrency::total_issuance(symbol);
-                rate = rtoken_rate::Module::<T>::set_rate(symbol, after, rbalance);
-            }
-
+            let mut pipe = Self::bond_pipelines(symbol, &snap.pool).unwrap_or_default();
+            let expected_active = pipe.active.saturating_add(active).saturating_sub(snap.active);
+            pipe.active = expected_active;
+            let mut total_expected_active = Self::total_expected_active(symbol, snap.era).unwrap_or(0);
+            total_expected_active = total_expected_active.saturating_add(expected_active);
             era_shots.remove(era_index);
             if era_shots.is_empty() {
+                let rbalance = T::RCurrency::total_issuance(symbol);
+                let rate = rtoken_rate::Module::<T>::set_rate(symbol, total_expected_active, rbalance);
                 rtoken_rate::EraRate::insert(symbol, snap.era, rate);
             }
             <EraSnapShots<T>>::insert(symbol, snap.era, era_shots);
-
-            let mut pipe = Self::bond_pipelines(symbol, &snap.pool).unwrap_or_default();
-            pipe.active = active;
             <BondPipelines>::insert(symbol, &snap.pool, pipe);
-            <TotalActived>::insert(symbol, after);
+            <TotalExpectedActive>::insert(symbol, snap.era, total_expected_active);
 
             if Self::pool_unbonds(symbol, (&snap.pool, snap.era)).is_some() {
                 snap.update_state(PoolBondState::ActiveReported);
