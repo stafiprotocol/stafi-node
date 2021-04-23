@@ -269,6 +269,14 @@ decl_module! {
             Ok(())
         }
 
+        /// just for test
+        #[weight = 1_000_000]
+        pub fn reset_chain_era(origin, symbol: RSymbol, new_era: u32) -> DispatchResult {
+            ensure_root(origin)?;
+            <ChainEras>::insert(symbol, new_era);
+            Ok(())
+        }
+
         /// set chain era
         #[weight = 1_000_000]
         pub fn set_chain_era(origin, symbol: RSymbol, new_era: u32) -> DispatchResult {
