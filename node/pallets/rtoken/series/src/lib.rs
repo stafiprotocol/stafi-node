@@ -489,7 +489,7 @@ impl<T: Trait> Module<T> {
             return false
         }
         let state = op_state.unwrap();
-        state == BondState::Dealing
+        state == BondState::Dealing || state == BondState::Fail
     }
 
     fn protocol_unbond_fee(value: u128) -> u128 {
