@@ -25,7 +25,7 @@ fn sr25519_verify_should_work() {
 
 #[test]
 fn ethereum_verify_should_work() {
-    let msg = hex!("1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8").to_vec();
+    let msg = hex!("1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8");
     let sig = hex!["82dbd11468a4fe72682e656a03bcb5817f4470b9e41a25ed0e0a50f7fdb22c380070999361924984f66fb5d7772049539207c73d836f4578579638df3513ae6700"].to_vec();
     let signer = hex!["Bca9567A9e8D5F6F58C419d32aF6190F74C880e6"].to_vec();
 
@@ -36,7 +36,7 @@ fn ethereum_verify_should_work() {
 
 #[test]
 fn ethereum_verify_should_not_work() {
-    let msg = hex!("1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8").to_vec();
+    let msg = hex!("1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8");
     let sig = hex!["82dbd11468a4fe72682e656a03bcb5817f4470b9e41a25ed0e0a50f7fdb22c380070999361924984f66fb5d7772049539207c73d836f4578579638df3513ae6700"].to_vec();
     let signer = hex!["aca9567A9e8D5F6F58C419d32aF6190F74C880e6"].to_vec();
 

@@ -13,10 +13,13 @@ use frame_system::offchain::AppCrypto;
 
 pub fn verify_signature(symbol: RSymbol, pubkey: &Vec<u8>, signature: &Vec<u8>, message: &Vec<u8>) -> SigVerifyResult {
     match symbol.chain_type() {
-        ChainType::Substrate => super::substrate_verify(&pubkey, &signature, &message),
-        ChainType::Tendermint => super::tendermint_verify(&pubkey, &signature, &message),
-        ChainType::Solana => super::ed25519_verify(&pubkey, &signature, &message),
-        ChainType::Ethereum => ethereum_verify(&pubkey, &signature, &message),
+        ChainType::Substrate => substrate_verify(&pubkey, &signature, &message),
+        ChainType::Tendermint => tendermint_verify(&pubkey, &signature, &message),
+        ChainType::Solana => ed25519_verify(&pubkey, &signature, &message),
+        ChainType::Ethereum => {
+            let msg = &keccak_256(&message[..]);
+            ethereum_verify(&pubkey, &signature, msg)
+        },
     }
 }
 
@@ -86,7 +89,7 @@ pub fn substrate_verify(pubkey: &Vec<u8>, signature: &Vec<u8>, message: &Vec<u8>
 }
 
 pub fn tendermint_verify(pubkey: &Vec<u8>, _signature: &Vec<u8>, _message: &Vec<u8>) -> SigVerifyResult {
-    if !super::check_tendermint_pubkey(&pubkey) {
+    if !check_tendermint_pubkey(&pubkey) {
         return SigVerifyResult::InvalidPubkey;
     }
     
@@ -118,17 +121,13 @@ pub fn ed25519_verify(pubkey: &Vec<u8>, signature: &Vec<u8>, message: &Vec<u8>) 
     SigVerifyResult::Fail
 }
 
-pub fn ethereum_verify(pubkey: &Vec<u8>, signature: &Vec<u8>, message: &Vec<u8>) -> SigVerifyResult {
+pub fn ethereum_verify(pubkey: &Vec<u8>, signature: &Vec<u8>, msg: &[u8; 32]) -> SigVerifyResult {
     if pubkey.len() != 20 {
         return SigVerifyResult::InvalidPubkey;
     }
 
     let mut sig = [0u8; 65];
     sig.copy_from_slice(&signature);
-
-    let mut msg = [0u8; 32];
-    msg.copy_from_slice(&message);
-
 
     let signer = eth_recover(&sig, &msg).unwrap().to_vec();
     if &signer == pubkey {
