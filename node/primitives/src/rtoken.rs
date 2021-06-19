@@ -24,7 +24,9 @@ pub enum RSymbol {
 	/// rATOM
     RATOM,
 	/// rSOL
-	RSOL
+	RSOL,
+	/// rMatic
+	RMATIC,
 }
 
 /// Chain Type
@@ -35,7 +37,9 @@ pub enum ChainType {
 	/// tendermint
 	Tendermint,
 	/// solana
-	Solana
+	Solana,
+	/// ethereum
+	Ethereum,
 }
 
 impl RSymbol {
@@ -44,7 +48,8 @@ impl RSymbol {
 		match self {
 			RSymbol::RFIS | RSymbol::RDOT | RSymbol::RKSM => ChainType::Substrate,
 			RSymbol::RATOM => ChainType::Tendermint,
-			RSymbol::RSOL => ChainType::Solana
+			RSymbol::RSOL => ChainType::Solana,
+			RSymbol::RMATIC => ChainType::Ethereum,
 		}
 	}
 }
