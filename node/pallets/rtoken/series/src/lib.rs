@@ -450,7 +450,7 @@ decl_module! {
             ensure!(relayers::Module::<T>::is_relayer(symbol, &who), relayers::Error::<T>::MustBeRelayer);
             ensure!(ledger::BondedPools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotFound);
 
-            let current_era = rtoken_ledger::ChainEras::get(symbol).ok_or(Error::<T>::NoCurrentEra)?;
+            let current_era = ledger::ChainEras::get(symbol).ok_or(Error::<T>::NoCurrentEra)?;
             ensure!(era <= current_era, Error::<T>::InvalidEra);
 
             ensure!(Self::account_signature((&who, symbol, era, &pool, tx_type, &proposal_id)).is_none(), Error::<T>::SignatureRepeated);
@@ -463,7 +463,7 @@ decl_module! {
 
             <AccountSignature<T>>::insert((&who, symbol, era, &pool, tx_type, &proposal_id), &signature);
 
-            if signatures.len() == relayers::RelayerThreshold::get(symbol) as usize {
+            if signatures.len() == ledger::MultiThresholds::get(symbol, &pool).unwrap_or(0) as usize {
                 Self::deposit_event(RawEvent::SignaturesEnough(symbol, era, pool.clone(), tx_type, proposal_id.clone()));
             }
 
