@@ -235,6 +235,34 @@ decl_module! {
             Ok(())
         }
 
+        /// remove and init pool - just for test
+        #[weight = 1_000_000]
+        pub fn remove_pool_and_init_bond(origin, symbol: RSymbol, pool: Vec<u8>, new_pool: Vec<u8>, amount: u128) -> DispatchResult {
+            ensure_root(origin)?;
+
+            let mut bonded_pools = Self::bonded_pools(symbol);
+            let op_bonded_index = bonded_pools.iter().position(|p| p == &pool);
+            ensure!(op_bonded_index.is_some(), Error::<T>::PoolNotBonded);
+
+            let bonded_index = op_bonded_index.unwrap();
+            bonded_pools.remove(bonded_index);
+
+            let mut pools = Self::pools(symbol);
+            let op_index = pools.iter().position(|p| p == &pool).unwrap();
+            pools.remove(op_index);
+
+            bonded_pools.push(new_pool.clone());
+            pools.push(new_pool.clone());
+
+            BondedPools::insert(symbol, bonded_pools);
+            Pools::insert(symbol, pools);
+
+            <BondPipelines>::insert(symbol, &new_pool, LinkChunk {bond: amount, unbond: 0, active: amount});
+            <BondPipelines>::remove(symbol, &pool);
+
+            Ok(())
+        }
+
         /// set chain bonding duration
         #[weight = 1_000_000]
         pub fn set_chain_bonding_duration(origin, symbol: RSymbol, new_bonding_duration: u32) -> DispatchResult {
