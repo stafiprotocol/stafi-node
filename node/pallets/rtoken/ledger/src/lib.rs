@@ -96,7 +96,9 @@ decl_error! {
         /// state not withdraw reported
         StateNotWithdrawReported,
         /// Last era not continuable
-        LastEraNotContinuable
+        LastEraNotContinuable,
+        /// none rate error
+        RateIsNone,
     }
 }
 
@@ -134,6 +136,9 @@ decl_storage! {
 
         /// last voter
         pub LastVoter get(fn last_voter): map hasher(blake2_128_concat) RSymbol => Option<T::AccountId>;
+
+        /// bond at least
+        pub LeastBond get(fn least_bond): map hasher(blake2_128_concat) RSymbol => Option<u128>;
     }
 }
 
@@ -269,6 +274,15 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 1_000_000]
+        pub fn set_least_bond(origin, symbol: RSymbol, least: u128) -> DispatchResult {
+            ensure_root(origin)?;
+
+            <LeastBond>::insert(symbol, least);
+            Ok(())
+        }
+
+
         /// set chain era
         #[weight = 1_000_000]
         pub fn set_chain_era(origin, symbol: RSymbol, new_era: u32) -> DispatchResult {
@@ -311,7 +325,7 @@ decl_module! {
 
             let mut snap = op_snap.unwrap();
             ensure!(snap.era_updated(), Error::<T>::StateNotEraUpdated);
-            
+
             let mut pipe = Self::bond_pipelines(symbol, &snap.pool).unwrap_or_default();
             pipe.bond = pipe.bond.saturating_sub(snap.bond);
             pipe.unbond = pipe.unbond.saturating_sub(snap.unbond);
@@ -333,14 +347,12 @@ decl_module! {
             ensure!(op_snap.is_some(), Error::<T>::SnapShotNotFound);
             let mut snap = op_snap.unwrap();
             ensure!(snap.bond_reported(), Error::<T>::StateNotBondReported);
-
-            let op_rate = rtoken_rate::Rate::get(symbol);
-            ensure!(op_rate.is_some(), "rate is none");
+            ensure!(rtoken_rate::Rate::get(symbol).is_some(), Error::<T>::RateIsNone);
 
             let op_receiver = Self::receiver();
             ensure!(op_receiver.is_some(), Error::<T>::NoReceiver);
             let receiver = op_receiver.unwrap();
-            
+
             let mut era_shots = Self::era_snap_shots(symbol, snap.era).unwrap_or(vec![]);
             let op_era_index = era_shots.iter().position(|shot| shot == &shot_id);
             ensure!(op_era_index.is_some(), Error::<T>::ActiveAlreadySet);
@@ -363,6 +375,61 @@ decl_module! {
             pipe.active = expected_active;
             let mut total_expected_active = Self::total_expected_active(symbol, snap.era).unwrap_or(0);
             total_expected_active = total_expected_active.saturating_add(expected_active);
+            era_shots.remove(era_index);
+            if era_shots.is_empty() {
+                let rbalance = T::RCurrency::total_issuance(symbol);
+                let rate = rtoken_rate::Module::<T>::set_rate(symbol, total_expected_active, rbalance);
+                rtoken_rate::EraRate::insert(symbol, snap.era, rate);
+            }
+            <EraSnapShots<T>>::insert(symbol, snap.era, era_shots);
+            <BondPipelines>::insert(symbol, &snap.pool, pipe);
+            <TotalExpectedActive>::insert(symbol, snap.era, total_expected_active);
+
+            if Self::pool_unbonds(symbol, (&snap.pool, snap.era)).is_some() {
+                snap.update_state(PoolBondState::ActiveReported);
+                Self::deposit_event(RawEvent::ActiveReported(symbol, shot_id.clone(), snap.last_voter.clone()));
+            } else {
+                snap.update_state(PoolBondState::WithdrawSkipped);
+                cur_era_shot.remove(cur_era_index);
+                <CurrentEraSnapShots<T>>::insert(symbol, cur_era_shot);
+            }
+
+            <Snapshots<T>>::insert(symbol, &shot_id, snap);
+            Ok(())
+        }
+
+        /// bond and report active
+        #[weight = 1_000_000]
+        pub fn bond_and_report_active(origin, symbol: RSymbol, shot_id: T::Hash, reward: u128) -> DispatchResult {
+            Self::ensure_voter_or_admin(origin)?;
+            let mut snap = Self::snap_shots(symbol, &shot_id).ok_or(Error::<T>::SnapShotNotFound)?;
+            ensure!(snap.era_updated(), Error::<T>::StateNotEraUpdated);
+            ensure!(rtoken_rate::Rate::get(symbol).is_some(), Error::<T>::RateIsNone);
+
+            let mut pipe = Self::bond_pipelines(symbol, &snap.pool).unwrap_or_default();
+            let least_bond = Self::least_bond(symbol).unwrap_or(0);
+            if snap.unbond != 0 || pipe.bond > least_bond {
+                pipe.bond = pipe.bond.saturating_sub(snap.bond).saturating_add(reward);
+            } else {
+                pipe.bond = pipe.bond.saturating_add(reward);
+            }
+            pipe.unbond = pipe.unbond.saturating_sub(snap.unbond);
+
+            let receiver = Self::receiver().ok_or(Error::<T>::NoReceiver)?;
+            let mut era_shots = Self::era_snap_shots(symbol, snap.era).unwrap_or(vec![]);
+            let era_index = era_shots.iter().position(|shot| shot == &shot_id).ok_or(Error::<T>::ActiveAlreadySet)?;
+
+            let mut cur_era_shot = Self::current_era_snap_shots(symbol).unwrap_or(vec![]);
+            let cur_era_index = cur_era_shot.iter().position(|shot| shot == &shot_id).ok_or(Error::<T>::ActiveAlreadySet)?;
+
+            if reward > 0 {
+                let fee = Self::commission() * reward;
+                let rfee = rtoken_rate::Module::<T>::token_to_rtoken(symbol, fee);
+                T::RCurrency::mint(&receiver, symbol, rfee)?;
+            }
+
+            pipe.active = pipe.active.saturating_add(reward);
+            let total_expected_active = Self::total_expected_active(symbol, snap.era).unwrap_or(0).saturating_add(pipe.active);
             era_shots.remove(era_index);
             if era_shots.is_empty() {
                 let rbalance = T::RCurrency::total_issuance(symbol);
