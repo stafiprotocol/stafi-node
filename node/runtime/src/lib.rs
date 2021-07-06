@@ -849,6 +849,10 @@ parameter_types! {
 	pub const ProposalLifetime: BlockNumber = 201600;
 }
 
+impl bridge_relayers::Trait for Runtime {
+	type Event = Event;
+}
+
 impl bridge_common::Trait for Runtime {
 	type Event = Event;
 	type AdminOrigin = EnsureRoot<AccountId>;
@@ -932,6 +936,7 @@ construct_runtime!(
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 		Proxy: pallet_proxy::{Module, Call, Storage, Event<T>},
 		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
+		BridgeRelayers: bridge_relayers::{Module, Call, Storage, Event<T>},
 		BridgeCommon: bridge_common::{Module, Call, Storage, Event<T>},
 		BridgeSwap: bridge_swap::{Module, Call},
 		XBalances: xtoken_balances::{Module, Call, Storage, Event<T>},

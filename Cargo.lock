@@ -580,9 +580,25 @@ dependencies = [
 name = "bridge-common"
 version = "0.4.4"
 dependencies = [
+ "bridge-relayers",
  "frame-support",
  "frame-system",
  "hex",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "bridge-relayers"
+version = "0.4.4"
+dependencies = [
+ "frame-support",
+ "frame-system",
  "node-primitives",
  "parity-scale-codec",
  "serde",
@@ -3824,6 +3840,7 @@ name = "node-runtime"
 version = "0.4.4"
 dependencies = [
  "bridge-common",
+ "bridge-relayers",
  "bridge-swap",
  "frame-benchmarking",
  "frame-executive",

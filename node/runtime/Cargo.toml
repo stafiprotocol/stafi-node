@@ -78,6 +78,7 @@ xtoken-balances = { version = "0.4.4", default-features = false, path = "../pall
 rtoken-balances = { version = "0.4.4", default-features = false, path = "../pallets/rtoken/balances" }
 rtoken-rate = { version = "0.4.4", default-features = false, path = "../pallets/rtoken/rate" }
 rfis = { version = "0.4.4", default-features = false, path = "../pallets/rtoken/rfis" }
+bridge-relayers = { version = "0.4.4", default-features = false, path = "../pallets/bridge/relayers" }
 bridge-common = { version = "0.4.4", default-features = false, path = "../pallets/bridge/common", package = "bridge-common" }
 bridge-swap = { version = "0.4.4", default-features = false, path = "../pallets/bridge/swap", package = "bridge-swap" }
 rtoken-relayers = { version = "0.4.4", default-features = false, path = "../pallets/rtoken/relayers" }
@@ -148,6 +149,7 @@ std = [
 	"rtoken-balances/std",
 	"rtoken-rate/std",
 	"rfis/std",
+	"bridge-relayers/std",
 	"bridge-common/std",
 	"bridge-swap/std",
 	"rtoken-relayers/std",
