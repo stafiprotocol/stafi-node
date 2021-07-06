@@ -400,20 +400,19 @@ decl_module! {
 
         /// bond and report active
         #[weight = 1_000_000]
-        pub fn bond_and_report_active(origin, symbol: RSymbol, shot_id: T::Hash, reward: u128) -> DispatchResult {
+        pub fn bond_and_report_active(origin, symbol: RSymbol, shot_id: T::Hash, active: u128) -> DispatchResult {
             Self::ensure_voter_or_admin(origin)?;
             let mut snap = Self::snap_shots(symbol, &shot_id).ok_or(Error::<T>::SnapShotNotFound)?;
             ensure!(snap.era_updated(), Error::<T>::StateNotEraUpdated);
             ensure!(rtoken_rate::Rate::get(symbol).is_some(), Error::<T>::RateIsNone);
 
-            let mut pipe = Self::bond_pipelines(symbol, &snap.pool).unwrap_or_default();
             let least_bond = Self::least_bond(symbol).unwrap_or(0);
-            if snap.unbond != 0 || pipe.bond > least_bond {
-                pipe.bond = pipe.bond.saturating_sub(snap.bond).saturating_add(reward);
-            } else {
-                pipe.bond = pipe.bond.saturating_add(reward);
-            }
+            let mut pipe = Self::bond_pipelines(symbol, &snap.pool).unwrap_or_default();
             pipe.unbond = pipe.unbond.saturating_sub(snap.unbond);
+            pipe.bond = pipe.bond.saturating_add(active).saturating_sub(snap.active);
+            if snap.unbond != 0 || pipe.bond > least_bond {
+                pipe.bond = pipe.bond.saturating_sub(snap.bond);
+            }
 
             let receiver = Self::receiver().ok_or(Error::<T>::NoReceiver)?;
             let mut era_shots = Self::era_snap_shots(symbol, snap.era).unwrap_or(vec![]);
@@ -422,14 +421,15 @@ decl_module! {
             let mut cur_era_shot = Self::current_era_snap_shots(symbol).unwrap_or(vec![]);
             let cur_era_index = cur_era_shot.iter().position(|shot| shot == &shot_id).ok_or(Error::<T>::ActiveAlreadySet)?;
 
-            if reward > 0 {
-                let fee = Self::commission() * reward;
+            if active > snap.active {
+                let fee = Self::commission() * (active - snap.active);
                 let rfee = rtoken_rate::Module::<T>::token_to_rtoken(symbol, fee);
                 T::RCurrency::mint(&receiver, symbol, rfee)?;
             }
 
-            pipe.active = pipe.active.saturating_add(reward);
-            let total_expected_active = Self::total_expected_active(symbol, snap.era).unwrap_or(0).saturating_add(pipe.active);
+            let expected_active = pipe.active.saturating_add(active).saturating_sub(snap.active);
+            pipe.active = expected_active;
+            let total_expected_active = Self::total_expected_active(symbol, snap.era).unwrap_or(0).saturating_add(expected_active);
             era_shots.remove(era_index);
             if era_shots.is_empty() {
                 let rbalance = T::RCurrency::total_issuance(symbol);
