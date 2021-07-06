@@ -849,6 +849,10 @@ parameter_types! {
 	pub const ProposalLifetime: BlockNumber = 201600;
 }
 
+impl bridge_relayers::Trait for Runtime {
+	type Event = Event;
+}
+
 impl bridge_common::Trait for Runtime {
 	type Event = Event;
 	type AdminOrigin = EnsureRoot<AccountId>;
@@ -936,6 +940,7 @@ construct_runtime!(
 		RBalances: rtoken_balances::{Module, Call, Storage, Event<T>},
 		RTokenRate: rtoken_rate::{Module, Call, Storage, Event},
 		RFis: rfis::{Module, Call, Storage, Event<T>, ValidateUnsigned},
+		BridgeRelayers: bridge_relayers::{Module, Call, Storage, Event<T>},
 		BridgeCommon: bridge_common::{Module, Call, Storage, Event<T>},
 		BridgeSwap: bridge_swap::{Module, Call},
 		RTokenRelayers: rtoken_relayers::{Module, Call, Storage, Event<T>},

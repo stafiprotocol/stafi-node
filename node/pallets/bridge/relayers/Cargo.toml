@@ -1,9 +1,8 @@
 [package]
-name = "bridge-common"
+name = "bridge-relayers"
 version = "0.4.4"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
-
 
 [dependencies]
 # third-party dependencies
@@ -14,17 +13,13 @@ serde = { version = "1.0.102", optional = true }
 sp-std = { branch = "master", default-features = false, git = "https://github.com/stafiprotocol/stafi-blockchain.git" }
 sp-runtime = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-core = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-node-primitives = { path = "../../../primitives", default-features = false }
+sp-io = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
 # frame dependencies
 frame-support = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 frame-system = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
-bridge-relayers = { path = "../relayers", default-features = false}
-
-[dev-dependencies]
-sp-io = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-hex = { version = "0.4", default-features = false}
+node-primitives = { path = "../../../primitives", default-features = false }
 
 [features]
 default = ["std"]
@@ -34,7 +29,7 @@ std = [
   "sp-std/std",
   "sp-runtime/std",
   "sp-core/std",
+  "sp-io/std",
   "frame-support/std",
   "frame-system/std",
-  "bridge-relayers/std",
 ]

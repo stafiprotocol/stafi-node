@@ -27,6 +27,7 @@ use sp_runtime::{
     traits::{AccountIdConversion, StaticLookup, Dispatchable}
 };
 use node_primitives::{ChainId, Balance, RSymbol, XSymbol};
+use bridge_relayers as brelayers;
 
 #[cfg(test)]
 mod mock;
@@ -113,7 +114,7 @@ impl<AccountId, BlockNumber: Default> Default for ProposalVotes<AccountId, Block
     }
 }
 
-pub trait Trait: system::Trait {
+pub trait Trait: system::Trait + brelayers::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
     /// Origin used to administer the pallet
     type AdminOrigin: EnsureOrigin<Self::Origin>;
@@ -128,7 +129,7 @@ pub trait Trait: system::Trait {
 
 decl_event! {
     pub enum Event<T> where
-        AccountId = <T as system::Trait>::AccountId 
+        AccountId = <T as system::Trait>::AccountId
     {
         /// Vote threshold has changed (new_threshold)
         RelayerThresholdChanged(u32),
@@ -210,7 +211,7 @@ decl_storage! {
 
         /// True if the bridge is paused.
         pub IsPaused get(fn is_paused): bool = false;
-        
+
         /// Number of votes required for a proposal to execute
         RelayerThreshold get(fn relayer_threshold): u32 = DEFAULT_RELAYER_THRESHOLD;
 
@@ -308,7 +309,7 @@ decl_module! {
 
             <Relayers<T>>::insert(&relayer, true);
             <RelayerCount>::mutate(|i| *i += 1);
-    
+
             Self::deposit_event(RawEvent::RelayerAdded(relayer));
             Ok(())
         }
@@ -386,7 +387,8 @@ decl_module! {
         #[weight = (call.get_dispatch_info().weight + 195_000_000, call.get_dispatch_info().class, Pays::Yes)]
         pub fn acknowledge_proposal(origin, nonce: DepositNonce, src_id: ChainId, resource_id: ResourceId, call: Box<T::Proposal>) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            ensure!(Self::is_relayer(&who), Error::<T>::MustBeRelayer);
+
+            ensure!(brelayers::Module::<T>::is_relayer(src_id, &who), brelayers::Error::<T>::MustBeRelayer);
             ensure!(Self::chain_whitelisted(src_id), Error::<T>::ChainNotWhitelisted);
             ensure!(Self::resources(resource_id).is_some(), Error::<T>::ResourceDoesNotExist);
 
@@ -597,7 +599,7 @@ impl<T: Trait> Module<T> {
         ensure!(!votes.is_expired(now), Error::<T>::ProposalExpired);
 
         votes.voted.push(who.clone());
-        votes.derivate(Self::relayer_threshold(), now);
+        votes.derivate(brelayers::RelayerThreshold::get(src_id), now);
         <Votes<T>>::insert(src_id, (nonce, prop.clone()), votes);
 
         Self::deposit_event(RawEvent::VoteFor(src_id, nonce, who.clone()));

@@ -580,9 +580,25 @@ dependencies = [
 name = "bridge-common"
 version = "0.4.4"
 dependencies = [
+ "bridge-relayers",
  "frame-support",
  "frame-system",
  "hex",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "bridge-relayers"
+version = "0.4.4"
+dependencies = [
+ "frame-support",
+ "frame-system",
  "node-primitives",
  "parity-scale-codec",
  "serde",
@@ -3824,6 +3840,7 @@ name = "node-runtime"
 version = "0.4.4"
 dependencies = [
  "bridge-common",
+ "bridge-relayers",
  "bridge-swap",
  "frame-benchmarking",
  "frame-executive",
@@ -8076,11 +8093,11 @@ dependencies = [
 [[package]]
 name = "substrate-wasm-builder-runner"
 version = "1.0.6"
+source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#462bf9689e0d313d4cd2bb102d5cc8449ee262c7"
 
 [[package]]
 name = "substrate-wasm-builder-runner"
 version = "1.0.6"
-source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#462bf9689e0d313d4cd2bb102d5cc8449ee262c7"
 
 [[package]]
 name = "subtle"
