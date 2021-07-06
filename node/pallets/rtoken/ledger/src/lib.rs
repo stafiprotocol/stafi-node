@@ -99,6 +99,8 @@ decl_error! {
         LastEraNotContinuable,
         /// none rate error
         RateIsNone,
+        /// invalid pure bond report
+        InvalidPureBondReport,
     }
 }
 
@@ -338,6 +340,21 @@ decl_module! {
             Ok(())
         }
 
+        /// bond pure report
+        #[weight = 1_000_000]
+        pub fn bond_pure_report(origin, symbol: RSymbol, shot_id: T::Hash) -> DispatchResult {
+            Self::ensure_voter_or_admin(origin)?;
+            let mut snap = Self::snap_shots(symbol, &shot_id).ok_or(Error::<T>::SnapShotNotFound)?;
+            let least_bond = Self::least_bond(symbol).unwrap_or(0);
+            ensure!(snap.unbond == 0 && snap.bond <= least_bond, Error::<T>::InvalidPureBondReport);
+            ensure!(snap.era_updated(), Error::<T>::StateNotEraUpdated);
+            snap.update_state(PoolBondState::BondReported);
+            <Snapshots<T>>::insert(symbol, &shot_id, snap.clone());
+            Self::deposit_event(RawEvent::BondReported(symbol, shot_id, snap.last_voter));
+
+            Ok(())
+        }
+
         /// set bond active of pool
         #[weight = 1_000_000]
         pub fn active_report(origin, symbol: RSymbol, shot_id: T::Hash, active: u128) -> DispatchResult {
@@ -362,7 +379,6 @@ decl_module! {
             let op_cur_era_index = cur_era_shot.iter().position(|shot| shot == &shot_id);
             ensure!(op_cur_era_index.is_some(), Error::<T>::ActiveAlreadySet);
             let cur_era_index = op_cur_era_index.unwrap();
-
 
             if active > snap.active {
                 let fee = Self::commission() * (active - snap.active);
@@ -400,19 +416,15 @@ decl_module! {
 
         /// bond and report active
         #[weight = 1_000_000]
-        pub fn bond_and_report_active(origin, symbol: RSymbol, shot_id: T::Hash, active: u128) -> DispatchResult {
+        pub fn bond_and_report_active(origin, symbol: RSymbol, shot_id: T::Hash, active: u128, reward: u128) -> DispatchResult {
             Self::ensure_voter_or_admin(origin)?;
             let mut snap = Self::snap_shots(symbol, &shot_id).ok_or(Error::<T>::SnapShotNotFound)?;
             ensure!(snap.era_updated(), Error::<T>::StateNotEraUpdated);
             ensure!(rtoken_rate::Rate::get(symbol).is_some(), Error::<T>::RateIsNone);
 
-            let least_bond = Self::least_bond(symbol).unwrap_or(0);
             let mut pipe = Self::bond_pipelines(symbol, &snap.pool).unwrap_or_default();
+            pipe.bond = pipe.bond.saturating_sub(snap.bond).saturating_add(reward);
             pipe.unbond = pipe.unbond.saturating_sub(snap.unbond);
-            pipe.bond = pipe.bond.saturating_add(active).saturating_sub(snap.active);
-            if snap.unbond != 0 || pipe.bond > least_bond {
-                pipe.bond = pipe.bond.saturating_sub(snap.bond);
-            }
 
             let receiver = Self::receiver().ok_or(Error::<T>::NoReceiver)?;
             let mut era_shots = Self::era_snap_shots(symbol, snap.era).unwrap_or(vec![]);
@@ -421,13 +433,14 @@ decl_module! {
             let mut cur_era_shot = Self::current_era_snap_shots(symbol).unwrap_or(vec![]);
             let cur_era_index = cur_era_shot.iter().position(|shot| shot == &shot_id).ok_or(Error::<T>::ActiveAlreadySet)?;
 
-            if active > snap.active {
-                let fee = Self::commission() * (active - snap.active);
+            let future_active = active.saturating_add(reward);
+            if future_active > snap.active {
+                let fee = Self::commission() * (future_active - snap.active);
                 let rfee = rtoken_rate::Module::<T>::token_to_rtoken(symbol, fee);
                 T::RCurrency::mint(&receiver, symbol, rfee)?;
             }
 
-            let expected_active = pipe.active.saturating_add(active).saturating_sub(snap.active);
+            let expected_active = pipe.active.saturating_add(future_active).saturating_sub(snap.active);
             pipe.active = expected_active;
             let total_expected_active = Self::total_expected_active(symbol, snap.era).unwrap_or(0).saturating_add(expected_active);
             era_shots.remove(era_index);
