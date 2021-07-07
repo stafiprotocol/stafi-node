@@ -85,6 +85,8 @@ rtoken-votes = { version = "0.4.4", default-features = false, path = "../pallets
 rtoken-ledger = { version = "0.4.4", default-features = false, path = "../pallets/rtoken/ledger" }
 rtoken-series = { version = "0.4.4", default-features = false, path = "../pallets/rtoken/series" }
 xclaim = { version = "0.4.4", default-features = false, path = "../pallets/claims/xclaim" }
+rdex-monitors = { version = "0.4.4", default-features = false, path = "../pallets/rdex/monitors" }
+rdex-oracle = { version = "0.4.4", default-features = false, path = "../pallets/rdex/oracle" }
 
 
 [build-dependencies]
@@ -159,7 +161,9 @@ std = [
 	"rtoken-votes/std",
 	"rtoken-ledger/std",
 	"rtoken-series/std",
-	"xclaim/std"
+	"xclaim/std",
+	"rdex-monitors/std",
+	"rdex-oracle/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",
