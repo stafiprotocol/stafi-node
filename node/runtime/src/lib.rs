@@ -896,12 +896,15 @@ impl xclaim::Trait for Runtime {
 	type XCurrency = XBalances;
 }
 
-impl rdex_monitors::Trait for Runtime {
+impl rdex_requestor::Trait for Runtime {
 	type Event = Event;
 }
 
 impl rdex_oracle::Trait for Runtime {
 	type Event = Event;
+}
+
+impl rdex_token_price::Trait for Runtime {
 }
 
 
@@ -952,8 +955,9 @@ construct_runtime!(
 		RTokenLedger: rtoken_ledger::{Module, Call, Storage, Event<T>},
 		RTokenSeries: rtoken_series::{Module, Call, Storage, Event<T>},
 		XClaim: xclaim::{Module, Call, Storage, Event<T>},
-		RDexMonitors: rdex_monitors::{Module, Call, Storage, Event<T>},
+		RDexRequestor: rdex_requestor::{Module, Call, Storage, Event<T>},
 		RDexOracle: rdex_oracle::{Module, Call, Storage, Event<T>},
+		RDexTokenPrice: rdex_token_price::{Module, Call, Storage},
 	}
 );
 

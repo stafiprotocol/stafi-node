@@ -3868,8 +3868,9 @@ dependencies = [
  "pallet-utility",
  "pallet-vesting",
  "parity-scale-codec",
- "rdex-monitors",
  "rdex-oracle",
+ "rdex-requestor",
+ "rdex-token-price",
  "rfis",
  "rtoken-balances",
  "rtoken-ledger",
@@ -5510,7 +5511,24 @@ dependencies = [
 ]
 
 [[package]]
-name = "rdex-monitors"
+name = "rdex-oracle"
+version = "0.4.4"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "parity-scale-codec",
+ "rdex-requestor",
+ "rdex-token-price",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "rdex-requestor"
 version = "0.4.4"
 dependencies = [
  "frame-support",
@@ -5524,14 +5542,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "rdex-oracle"
+name = "rdex-token-price"
 version = "0.4.4"
 dependencies = [
  "frame-support",
  "frame-system",
  "node-primitives",
  "parity-scale-codec",
- "rdex-monitors",
  "serde",
  "sp-core",
  "sp-io",

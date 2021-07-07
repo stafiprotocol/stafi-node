@@ -1,5 +1,5 @@
 [package]
-name = "rdex-oracle"
+name = "rdex-token-price"
 version = "0.4.4"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
@@ -20,9 +20,6 @@ frame-support = { branch = "master", default-features = false, git = 'https://gi
 frame-system = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
 node-primitives = { path = "../../../primitives", default-features = false }
-rdex-requestor = { path = "../requestor", default-features = false}
-rdex-token-price = { path = "../token-price", default-features = false}
-
 
 [features]
 default = ["std"]
@@ -35,6 +32,4 @@ std = [
   "sp-io/std",
   "frame-support/std",
   "frame-system/std",
-  "rdex-requestor/std",
-  "rdex-token-price/std",
 ]
