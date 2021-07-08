@@ -6,7 +6,7 @@ use frame_support::{
     dispatch::DispatchResult, ensure
 };
 
-use frame_system::{self as system, ensure_root};
+use frame_system::{self as system, ensure_root}; 
 use sp_runtime::{
     traits::{StaticLookup}
 };

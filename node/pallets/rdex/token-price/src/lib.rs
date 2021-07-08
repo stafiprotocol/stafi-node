@@ -14,6 +14,7 @@ pub trait Trait: system::Trait {
 decl_storage! {
     trait Store for Module<T: Trait> as RDexTokenPrice {
         pub EraVersion get(fn era_version): u32 = 0;
+        pub EraBlockNumber get(fn era_block_number): u32 = 15;
         /// rsymbol=>price
         pub CurrrentRTokenPrice get(fn current_rtoken_price):
             map hasher(blake2_128_concat) RSymbol => u128;
@@ -27,14 +28,6 @@ decl_storage! {
         /// (era_version,era)=>price
         pub HisFisPrice get(fn his_fis_price):
             map hasher(blake2_128_concat) (u32,u32) => u128;
-
-        /// rsymbol=>rate
-        pub CurrentFisPerRToken get(fn current_fis_per_rtoken):
-            map hasher(blake2_128_concat) RSymbol => u128;
-
-        /// rsymbol=>(era_version,era)=>rate
-        pub HisFisPerRToken get(fn his_fis_per_rtoken):
-            double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) (u32, u32) => u128;
 
         /// rsymbol=>(era_version,era)=>vec<price>
         pub RTokenPrices get(fn rtoken_prices):
