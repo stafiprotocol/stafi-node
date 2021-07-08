@@ -3870,6 +3870,7 @@ dependencies = [
  "parity-scale-codec",
  "rdex-oracle",
  "rdex-requestor",
+ "rdex-swap",
  "rdex-token-price",
  "rfis",
  "rtoken-balances",
@@ -5534,6 +5535,22 @@ dependencies = [
  "frame-support",
  "frame-system",
  "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "rdex-swap"
+version = "0.4.4"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "parity-scale-codec",
+ "rdex-token-price",
  "serde",
  "sp-core",
  "sp-io",

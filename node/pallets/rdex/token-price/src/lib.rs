@@ -15,7 +15,7 @@ decl_storage! {
         pub EraVersion get(fn era_version): u32 = 0;
         pub EraBlockNumber get(fn era_block_number): u32 = DEFAULT_ERA_BLOCK_NUMBER;
         /// rsymbol=>price
-        pub CurrrentRTokenPrice get(fn current_rtoken_price):
+        pub CurrentRTokenPrice get(fn current_rtoken_price):
             map hasher(blake2_128_concat) RSymbol => u128;
 
         /// rsymbol=>(era_version,era)=>price

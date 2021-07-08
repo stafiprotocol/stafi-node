@@ -88,6 +88,7 @@ xclaim = { version = "0.4.4", default-features = false, path = "../pallets/claim
 rdex-requestor = { version = "0.4.4", default-features = false, path = "../pallets/rdex/requestor" }
 rdex-oracle = { version = "0.4.4", default-features = false, path = "../pallets/rdex/oracle" }
 rdex-token-price = { version = "0.4.4", default-features = false, path = "../pallets/rdex/token-price" }
+rdex-swap = { version = "0.4.4", default-features = false, path = "../pallets/rdex/swap" }
 
 
 [build-dependencies]
@@ -166,6 +167,7 @@ std = [
 	"rdex-requestor/std",
 	"rdex-oracle/std",
 	"rdex-token-price/std",
+	"rdex-swap/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

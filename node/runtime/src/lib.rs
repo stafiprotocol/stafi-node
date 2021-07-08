@@ -907,6 +907,10 @@ impl rdex_oracle::Trait for Runtime {
 impl rdex_token_price::Trait for Runtime {
 }
 
+impl rdex_swap::Trait for Runtime {
+	type Event = Event;
+}
+
 
 construct_runtime!(
 	pub enum Runtime where
@@ -958,6 +962,7 @@ construct_runtime!(
 		RDexRequestor: rdex_requestor::{Module, Call, Storage, Event<T>},
 		RDexOracle: rdex_oracle::{Module, Call, Storage, Event<T>},
 		RDexTokenPrice: rdex_token_price::{Module, Call, Storage},
+		RDexSwap: rdex_swap::{Module, Call, Storage, Event<T>},
 	}
 );
 

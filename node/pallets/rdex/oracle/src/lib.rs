@@ -71,7 +71,7 @@ decl_module! {
                 let will_use_price = prices.get(prices.len() / 2).unwrap_or(&u128::MIN);
                 ensure!(*will_use_price != u128::MIN, Error::<T>::PriceZero);
 
-                token_price::CurrrentRTokenPrice::insert(symbol, will_use_price);
+                token_price::CurrentRTokenPrice::insert(symbol, will_use_price);
                 token_price::HisRTokenPrice::insert(symbol, (era_version, era), will_use_price);
 
                 if era > DEFAULT_DATA_RESERVE_ERA {
