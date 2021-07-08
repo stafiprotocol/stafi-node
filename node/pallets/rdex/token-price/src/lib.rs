@@ -1,20 +1,19 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{
-    decl_module, decl_storage,
-};
+use frame_support::{decl_module, decl_storage};
 use sp_std::prelude::*;
 
 use frame_system::{self as system};
 use node_primitives::RSymbol;
 
-pub trait Trait: system::Trait {
-}
+pub const DEFAULT_ERA_BLOCK_NUMBER: u32 = 20;
+
+pub trait Trait: system::Trait {}
 
 decl_storage! {
     trait Store for Module<T: Trait> as RDexTokenPrice {
         pub EraVersion get(fn era_version): u32 = 0;
-        pub EraBlockNumber get(fn era_block_number): u32 = 15;
+        pub EraBlockNumber get(fn era_block_number): u32 = DEFAULT_ERA_BLOCK_NUMBER;
         /// rsymbol=>price
         pub CurrrentRTokenPrice get(fn current_rtoken_price):
             map hasher(blake2_128_concat) RSymbol => u128;
