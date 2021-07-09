@@ -1,23 +1,21 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure,
-    traits::{Currency, ExistenceRequirement::{KeepAlive}},
+    decl_error, decl_event, decl_module, decl_storage,
+    dispatch::DispatchResult,
+    ensure,
+    traits::{Currency, ExistenceRequirement::KeepAlive},
 };
 use sp_std::prelude::*;
 
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::{RSymbol};
+use node_primitives::RSymbol;
 use rdex_token_price as token_price;
-use rtoken_balances::{traits::{Currency as RCurrency}};
+use rtoken_balances::traits::Currency as RCurrency;
 
-use sp_runtime::{
-    traits::{
-        SaturatedConversion,
-    }
-};
+use sp_runtime::traits::SaturatedConversion;
 
-pub trait Trait: system::Trait + token_price::Trait{
+pub trait Trait: system::Trait + token_price::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
     /// currency of rtoken
     type RCurrency: RCurrency<Self::AccountId>;
@@ -29,16 +27,8 @@ decl_event! {
     pub enum Event<T> where
         AccountId = <T as system::Trait>::AccountId
     {
-        /// rtoken prices vec enough: rsymbol, era_version, era, price
-        RTokenPriceEnough(RSymbol, u32, u32, u128),
-        /// submit rtoken price: account, rsymbol, era_version, era, price
-        SubmitRtokenPrice(AccountId, RSymbol, u32, u32, u128),
-        /// fis prices vec enough: era_version, era, price
-        FisPriceEnough(u32, u32, u128),
-        /// submit fis price: account, era_version, era, price
-        SubmitFisPrice(AccountId, u32, u32, u128),
-        /// EraBlockNumberChanged: era_version, block_number
-        EraBlockNumberChanged(u32, u32),
+        /// swap rtoken to fis: account, symbol, rtoken amount, fis amount, fee
+        SwapRTokenToFis(AccountId, RSymbol, u128, u128, u128),
     }
 }
 
@@ -60,11 +50,13 @@ decl_error! {
 decl_storage! {
     trait Store for Module<T: Trait> as RDexSwap {
         /// swap total switch, default closed
-        pub SwapTotalClosed get(fn swap_total_closed): bool = true;
+        pub SwapTotalSwitch get(fn swap_total_switch): bool = false;
         /// swap rtoken switch, default open
-        pub SwapRTokenClosed get(fn swap_rtoken_closed): map hasher(blake2_128_concat)  RSymbol => bool;
+        pub SwapRTokenSwitch get(fn swap_rtoken_switch): map hasher(blake2_128_concat)  RSymbol => bool = true;
         /// fund address
         pub FundAddress get(fn fund_address): Option<T::AccountId>;
+        /// swap fee rates
+        pub SwapFeeRates get(fn swap_fee_rates): map hasher(blake2_128_concat) RSymbol => u128 = 1;
     }
 }
 
@@ -80,36 +72,39 @@ decl_module! {
             let fis_price = token_price::CurrentFisPrice::get() as u128;
             let rtoken_price = token_price::CurrentRTokenPrice::get(symbol) as u128;
             let op_fund_addr = Self::fund_address();
-            ensure!(op_fund_addr.is_some(),Error::<T>::NoFundAddress);
+            ensure!(op_fund_addr.is_some(), Error::<T>::NoFundAddress);
             let fund_addr = op_fund_addr.unwrap();
 
             // check
-            ensure!(!Self::swap_total_closed(), Error::<T>::SwapTotalClosed);
-            ensure!(!Self::swap_rtoken_closed(symbol), Error::<T>::SwapRtokenClosed);
+            ensure!(Self::swap_total_switch(), Error::<T>::SwapTotalClosed);
+            ensure!(Self::swap_rtoken_switch(symbol), Error::<T>::SwapRtokenClosed);
             ensure!(rtoken_amount != u128::MIN, Error::<T>::ParamsErr);
             ensure!(fis_price != u128::MIN && rtoken_price != u128::MIN, Error::<T>::PriceZero);
-            let fis_amount = (rtoken_price * rtoken_amount) / fis_price;
+            let mut fis_amount = (rtoken_price * rtoken_amount) / fis_price;
+            let fee = Self::swap_fee(symbol, fis_amount);
+            fis_amount -= fee;
+
             T::Currency::transfer(&fund_addr, &who, fis_amount.saturated_into(), KeepAlive)?;
             T::RCurrency::transfer(&who, &fund_addr, symbol, rtoken_amount)?;
+            Self::deposit_event(RawEvent::SwapRTokenToFis(who.clone(), symbol, rtoken_amount, fis_amount, fee));
             Ok(())
         }
 
-
         /// turn on/off swap total switch, default closed
         #[weight = 1_000_000]
-        fn swap_total_switch(origin) -> DispatchResult {
+        fn toggle_swap_total_switch(origin) -> DispatchResult {
             ensure_root(origin)?;
-            let state = Self::swap_total_closed();
-            SwapTotalClosed::put(!state);
+            let state = Self::swap_total_switch();
+            SwapTotalSwitch::put(!state);
             Ok(())
         }
 
         /// turn on/off swap rtoken switch, default opened
         #[weight = 1_000_000]
-        fn swap_rtoken_switch(origin, symbol: RSymbol) -> DispatchResult {
+        fn toggle_swap_rtoken_switch(origin, symbol: RSymbol) -> DispatchResult {
             ensure_root(origin)?;
-            let state = Self::swap_rtoken_closed(symbol);
-            SwapRTokenClosed::insert(symbol, !state);
+            let state = Self::swap_rtoken_switch(symbol);
+            SwapRTokenSwitch::insert(symbol, !state);
             Ok(())
         }
 
@@ -121,6 +116,14 @@ decl_module! {
             Ok(())
         }
 
+        /// set swap fee rate
+        #[weight = 1_000_000]
+        fn set_swap_fee_rate(origin, symbol: RSymbol, rate: u128) -> DispatchResult {
+            ensure_root(origin)?;
+            SwapFeeRates::insert(symbol, rate);
+            Ok(())
+        }
+
         /// init bond pool
         #[weight = 1_000_000]
         pub fn mint_rtoken(origin, symbol: RSymbol, receiver: T::AccountId, amount: u128) -> DispatchResult {
@@ -128,5 +131,12 @@ decl_module! {
             T::RCurrency::mint(&receiver, symbol, amount)?;
             Ok(())
         }
+    }
+}
+
+impl<T: Trait> Module<T> {
+    /// get swap_fee
+    fn swap_fee(symbol: RSymbol, amount: u128) -> u128 {
+        amount * Self::swap_fee_rates(symbol) / 1000
     }
 }
