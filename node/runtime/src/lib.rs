@@ -909,6 +909,8 @@ impl rdex_token_price::Trait for Runtime {
 
 impl rdex_swap::Trait for Runtime {
 	type Event = Event;
+	type Currency = Balances;
+	type RCurrency = RBalances;
 }
 
 

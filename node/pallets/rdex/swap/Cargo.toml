@@ -18,9 +18,10 @@ sp-io = { branch = "master", default-features = false, git = 'https://github.com
 # frame dependencies
 frame-support = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 frame-system = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-
+pallet-staking = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 node-primitives = { path = "../../../primitives", default-features = false }
 rdex-token-price = { path = "../token-price", default-features = false}
+rtoken-balances = { path = "../../rtoken/balances", default-features = false}
 
 
 [features]
@@ -34,5 +35,7 @@ std = [
   "sp-io/std",
   "frame-support/std",
   "frame-system/std",
+  "pallet-staking/std",
   "rdex-token-price/std",
+  "rtoken-balances/std",
 ]
