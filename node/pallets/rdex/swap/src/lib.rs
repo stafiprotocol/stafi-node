@@ -9,11 +9,11 @@ use frame_support::{
 use sp_std::prelude::*;
 
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::{RSymbol, Balance};
+use node_primitives::{Balance, RSymbol};
 use rdex_token_price as token_price;
 use rtoken_balances::traits::Currency as RCurrency;
-
-use sp_runtime::traits::SaturatedConversion;
+use sp_arithmetic::helpers_128bit::multiply_by_rational;
+use sp_runtime::traits::{SaturatedConversion};
 
 pub trait Trait: system::Trait + token_price::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -50,6 +50,8 @@ decl_error! {
         FisAmountNotEnough,
         /// over slide limit
         OverSlideLimit,
+        /// fis amount of swapped is  zero
+        FisAmountZero
     }
 }
 
@@ -83,23 +85,25 @@ decl_module! {
 
             ensure!(Self::swap_total_switch(), Error::<T>::SwapTotalClosed);
             ensure!(Self::swap_rtoken_switch(symbol), Error::<T>::SwapRtokenClosed);
-            ensure!(rtoken_amount != u128::MIN, Error::<T>::ParamsErr);
-            ensure!(fis_price != u128::MIN && rtoken_price != u128::MIN, Error::<T>::PriceZero);
+            ensure!(rtoken_amount > u128::MIN, Error::<T>::ParamsErr);
+            ensure!(expect_fis_amount > u128::MIN, Error::<T>::ParamsErr);
+            ensure!(fis_price > u128::MIN && rtoken_price > u128::MIN, Error::<T>::PriceZero);
             ensure!(T::RCurrency::free_balance(&who, symbol) >= rtoken_amount, Error::<T>::RTokenAmountNotEnough);
 
-
-            let mut fis_amount = (rtoken_price * rtoken_amount) / fis_price;
+            let mut fis_amount = multiply_by_rational(rtoken_price, rtoken_amount, fis_price).unwrap_or(u128::MIN) as u128;
             let fee = Self::swap_fees(symbol);
-            fis_amount -= fee;
+            fis_amount = fis_amount.saturating_sub(fee);
+            ensure!(fis_amount > u128::MIN, Error::<T>::FisAmountZero);
+
             let diff: u128;
             if expect_fis_amount > fis_amount {
-                diff = expect_fis_amount - fis_amount;
+                diff = expect_fis_amount.saturating_sub(fis_amount);
             }else{
-                diff = fis_amount - expect_fis_amount;
+                diff = fis_amount.saturating_sub(expect_fis_amount);
             }
-            let real_slide = diff * 1000000000000 / expect_fis_amount;
-            ensure!(real_slide <= slide_limit, Error::<T>::OverSlideLimit);
+            let real_slide = multiply_by_rational(diff, 1000000000000, expect_fis_amount).unwrap_or(u128::MAX) as u128;
 
+            ensure!(real_slide <= slide_limit, Error::<T>::OverSlideLimit);
             ensure!(T::Currency::free_balance(&fund_addr).saturated_into::<u128>() >= fis_amount, Error::<T>::FisAmountNotEnough);
 
             T::RCurrency::transfer(&who, &fund_addr, symbol, rtoken_amount)?;
@@ -152,6 +156,4 @@ decl_module! {
     }
 }
 
-impl<T: Trait> Module<T> {
-    
-}
+impl<T: Trait> Module<T> {}
