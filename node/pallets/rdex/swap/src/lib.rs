@@ -9,7 +9,7 @@ use frame_support::{
 use sp_std::prelude::*;
 
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::RSymbol;
+use node_primitives::{RSymbol, Balance};
 use rdex_token_price as token_price;
 use rtoken_balances::traits::Currency as RCurrency;
 
@@ -44,6 +44,12 @@ decl_error! {
         SwapRtokenClosed,
         /// no fund address
         NoFundAddress,
+        /// rtoken amount not enough
+        RTokenAmountNotEnough,
+        /// fis amount not enough
+        FisAmountNotEnough,
+        /// over slide limit
+        OverSlideLimit,
     }
 }
 
@@ -55,8 +61,8 @@ decl_storage! {
         pub SwapRTokenSwitch get(fn swap_rtoken_switch): map hasher(blake2_128_concat)  RSymbol => bool = true;
         /// fund address
         pub FundAddress get(fn fund_address): Option<T::AccountId>;
-        /// swap fee rates
-        pub SwapFeeRates get(fn swap_fee_rates): map hasher(blake2_128_concat) RSymbol => u128 = 1;
+        /// swap fee of rtokens
+        pub SwapFees get(fn swap_fees): map hasher(blake2_128_concat) RSymbol => Balance = 1500000000000;
     }
 }
 
@@ -64,28 +70,40 @@ decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event() = default;
 
-        /// Submit rtoken price
+        /// swap rtoken for fis
         #[weight = 10_000_000]
-        pub fn swap_rtoken_to_fis(origin, symbol: RSymbol, rtoken_amount: u128) -> DispatchResult {
+        pub fn swap_rtoken_for_fis(origin, symbol: RSymbol, rtoken_amount: u128, expect_fis_amount: u128, slide_limit: u128) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            let _era_version = token_price::EraVersion::get() as u32;
+            let _era_version = token_price::PeriodVersion::get() as u32;
             let fis_price = token_price::CurrentFisPrice::get() as u128;
             let rtoken_price = token_price::CurrentRTokenPrice::get(symbol) as u128;
             let op_fund_addr = Self::fund_address();
             ensure!(op_fund_addr.is_some(), Error::<T>::NoFundAddress);
             let fund_addr = op_fund_addr.unwrap();
 
-            // check
             ensure!(Self::swap_total_switch(), Error::<T>::SwapTotalClosed);
             ensure!(Self::swap_rtoken_switch(symbol), Error::<T>::SwapRtokenClosed);
             ensure!(rtoken_amount != u128::MIN, Error::<T>::ParamsErr);
             ensure!(fis_price != u128::MIN && rtoken_price != u128::MIN, Error::<T>::PriceZero);
-            let mut fis_amount = (rtoken_price * rtoken_amount) / fis_price;
-            let fee = Self::swap_fee(symbol, fis_amount);
-            fis_amount -= fee;
+            ensure!(T::RCurrency::free_balance(&who, symbol) >= rtoken_amount, Error::<T>::RTokenAmountNotEnough);
 
-            T::Currency::transfer(&fund_addr, &who, fis_amount.saturated_into(), KeepAlive)?;
+
+            let mut fis_amount = (rtoken_price * rtoken_amount) / fis_price;
+            let fee = Self::swap_fees(symbol);
+            fis_amount -= fee;
+            let diff: u128;
+            if expect_fis_amount > fis_amount {
+                diff = expect_fis_amount - fis_amount;
+            }else{
+                diff = fis_amount - expect_fis_amount;
+            }
+            let real_slide = diff * 1000000000000 / expect_fis_amount;
+            ensure!(real_slide <= slide_limit, Error::<T>::OverSlideLimit);
+
+            ensure!(T::Currency::free_balance(&fund_addr).saturated_into::<u128>() >= fis_amount, Error::<T>::FisAmountNotEnough);
+
             T::RCurrency::transfer(&who, &fund_addr, symbol, rtoken_amount)?;
+            T::Currency::transfer(&fund_addr, &who, fis_amount.saturated_into(), KeepAlive)?;
             Self::deposit_event(RawEvent::SwapRTokenToFis(who.clone(), symbol, rtoken_amount, fis_amount, fee));
             Ok(())
         }
@@ -116,15 +134,15 @@ decl_module! {
             Ok(())
         }
 
-        /// set swap fee rate
+        /// set swap fee
         #[weight = 1_000_000]
-        fn set_swap_fee_rate(origin, symbol: RSymbol, rate: u128) -> DispatchResult {
+        fn set_swap_fee(origin, symbol: RSymbol, fee: Balance) -> DispatchResult {
             ensure_root(origin)?;
-            SwapFeeRates::insert(symbol, rate);
+            SwapFees::insert(symbol, fee);
             Ok(())
         }
 
-        /// init bond pool
+        /// fot test
         #[weight = 1_000_000]
         pub fn mint_rtoken(origin, symbol: RSymbol, receiver: T::AccountId, amount: u128) -> DispatchResult {
             ensure_root(origin)?;
@@ -135,8 +153,5 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
-    /// get swap_fee
-    fn swap_fee(symbol: RSymbol, amount: u128) -> u128 {
-        amount * Self::swap_fee_rates(symbol) / 1000
-    }
+    
 }

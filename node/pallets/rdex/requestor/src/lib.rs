@@ -7,9 +7,6 @@ use frame_support::{
 };
 
 use frame_system::{self as system, ensure_root}; 
-use sp_runtime::{
-    traits::{StaticLookup}
-};
 
 pub trait Trait: system::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -71,9 +68,8 @@ decl_module! {
 
         /// Adds a new requestor to the requestor set.
         #[weight = 10_000]
-        pub fn add_requestor(origin, who: <T::Lookup as StaticLookup>::Source) -> DispatchResult {
+        pub fn add_requestor(origin, requestor: T::AccountId) -> DispatchResult {
             ensure_root(origin)?;
-            let requestor = T::Lookup::lookup(who)?;
             ensure!(!Self::is_requestor(&requestor), Error::<T>::RequestorAlreadyExists);
 
             <Requestors<T>>::insert(&requestor, true);
@@ -84,9 +80,8 @@ decl_module! {
 
         /// Removes an existing requestor from the set.
         #[weight = 10_000]
-        pub fn remove_requestor(origin, who: <T::Lookup as StaticLookup>::Source) -> DispatchResult {
+        pub fn remove_requestor(origin, requestor: T::AccountId) -> DispatchResult {
             ensure_root(origin)?;
-            let requestor = T::Lookup::lookup(who)?;
             ensure!(Self::is_requestor(&requestor), Error::<T>::RequestorInvalid);
 
             <Requestors<T>>::remove(&requestor);
