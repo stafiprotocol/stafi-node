@@ -48,7 +48,7 @@ decl_storage! {
         pub RelayerThreshold get(fn relayer_threshold): map hasher(blake2_128_concat) ChainId => u32;
 
         /// Tracks current relayer set
-        pub Relayers get(fn relayers): double_map hasher(blake2_128_concat) ChainId, hasher(twox_64_concat) T::AccountId => bool;
+        pub Relayers get(fn relayers): double_map hasher(blake2_128_concat) ChainId, hasher(blake2_128_concat) T::AccountId => bool;
 
         /// Number of relayers in set
         pub RelayerCount get(fn relayer_count): map hasher(blake2_128_concat) ChainId => u32;
