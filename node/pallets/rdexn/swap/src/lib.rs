@@ -9,7 +9,7 @@ use frame_support::{
 use sp_std::prelude::*;
 
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::{Balance, RSymbol};
+use node_primitives::{RSymbol};
 use rtoken_balances::traits::Currency as RCurrency;
 use rtoken_rate as RTokenRate;
 use rdexn_payers as RDexnPayers;
@@ -78,7 +78,7 @@ decl_storage! {
         /// fund address
         pub FundAddress get(fn fund_address): Option<T::AccountId>;
         /// swap fee of rtokens
-        pub SwapFees get(fn swap_fees): map hasher(blake2_128_concat) RSymbol => Balance = 0;
+        pub SwapFees get(fn swap_fees): map hasher(blake2_128_concat) RSymbol => u128 = 0;
         /// swap rate that admin can set 
         pub SwapRates get(fn swap_rates): map hasher(blake2_128_concat) (RSymbol, u8) => Option<SwapRate>;
         // trans info
@@ -219,9 +219,17 @@ decl_module! {
             Ok(())
         }
 
+        /// set native reserve
+        #[weight = 1_000_000]
+        fn set_native_token_reserve(origin, symbol: RSymbol, reserve: u128) -> DispatchResult {
+            ensure_root(origin)?;
+            NativeTokenReserves::insert(symbol, reserve);
+            Ok(())
+        }
+
         /// set swap fee
         #[weight = 1_000_000]
-        fn set_swap_fee(origin, symbol: RSymbol, fee: Balance) -> DispatchResult {
+        fn set_swap_fee(origin, symbol: RSymbol, fee: u128) -> DispatchResult {
             ensure_root(origin)?;
             SwapFees::insert(symbol, fee);
             Ok(())
