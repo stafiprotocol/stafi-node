@@ -896,6 +896,21 @@ impl xclaim::Trait for Runtime {
 	type XCurrency = XBalances;
 }
 
+impl rdexn_payers::Trait for Runtime {
+	type Event = Event;
+}
+
+impl rdexn_signatures::Trait for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+}
+
+impl rdexn_swap::Trait for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type RCurrency = RBalances;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -943,6 +958,9 @@ construct_runtime!(
 		RTokenLedger: rtoken_ledger::{Module, Call, Storage, Event<T>},
 		RTokenSeries: rtoken_series::{Module, Call, Storage, Event<T>},
 		XClaim: xclaim::{Module, Call, Storage, Event<T>},
+		RDexPayers: rdexn_payers::{Module, Call, Storage, Event<T>},
+		RDexSignatures: rdexn_signatures::{Module, Call, Storage, Event<T>},
+		RDexSwap: rdexn_swap::{Module, Call, Storage, Event<T>},
 	}
 );
 

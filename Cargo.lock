@@ -3866,6 +3866,9 @@ dependencies = [
  "pallet-utility",
  "pallet-vesting",
  "parity-scale-codec",
+ "rdexn-payers",
+ "rdexn-signatures",
+ "rdexn-swap",
  "rfis",
  "rtoken-balances",
  "rtoken-ledger",
@@ -5503,6 +5506,60 @@ dependencies = [
  "crossbeam-utils 0.8.0",
  "lazy_static",
  "num_cpus",
+]
+
+[[package]]
+name = "rdexn-payers"
+version = "0.4.4"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "rdexn-signatures"
+version = "0.4.4"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "hex",
+ "hex-literal",
+ "node-primitives",
+ "parity-scale-codec",
+ "rdexn-payers",
+ "rtoken-rate",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "rdexn-swap"
+version = "0.4.4"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "pallet-staking",
+ "parity-scale-codec",
+ "rdexn-payers",
+ "rtoken-balances",
+ "rtoken-rate",
+ "serde",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
