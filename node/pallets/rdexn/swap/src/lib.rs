@@ -31,7 +31,13 @@ decl_event! {
         AccountId = <T as system::Trait>::AccountId
     {
         /// swap rtoken to native: account, symbol, trans block, rtoken amount, out amount, rtoken rate, swap rate
-        SwapRTokenToNative(AccountId, RSymbol, u64, u128, u128, u64, u128),
+        SwapRTokenToNative(AccountId, Vec<u8>, RSymbol, u64, u128, u128, u64, u128),
+        /// report with block: account, symbol, deal block
+        ReportTransReslutWithBLock(AccountId, RSymbol, u64),
+        /// report with index: account, symbol, deal block
+        ReportTransReslutWithIndex(AccountId, RSymbol, u64, u32),
+        /// report with index: account, symbol, deal block
+        ReportTransReslutWithIndexBlockEnd(AccountId, RSymbol, u64),
     }
 }
 
@@ -101,7 +107,7 @@ decl_module! {
         fn deposit_event() = default;
          /// swap rtoken for native token
          #[weight = 10_000_000]
-        pub fn swap_rtoken_for_native_token(origin, symbol: RSymbol, rtoken_amount: u128, min_out_amount: u128, grade: u8) -> DispatchResult {
+        pub fn swap_rtoken_for_native_token(origin, receiver: Vec<u8>, symbol: RSymbol, rtoken_amount: u128, min_out_amount: u128, grade: u8) -> DispatchResult {
             let who = ensure_signed(origin)?;   
             let now_block = system::Module::<T>::block_number().saturated_into::<u64>();
             let fund_addr = Self::fund_address().ok_or(Error::<T>::NoFundAddress)?; 
@@ -115,6 +121,7 @@ decl_module! {
             ensure!(Self::swap_rtoken_switch(symbol), Error::<T>::SwapRtokenClosed);
             ensure!(rtoken_amount > u128::MIN, Error::<T>::ParamsErr);
             ensure!(min_out_amount > u128::MIN, Error::<T>::ParamsErr);
+            ensure!(receiver.len() > 0, Error::<T>::ParamsErr);
             ensure!(rtoken_rate > 0, Error::<T>::RTokenRateFailed);
             ensure!(swap_rate.rate > 0, Error::<T>::SwapRateFailed);
             ensure!(T::RCurrency::free_balance(&who, symbol) >= rtoken_amount, Error::<T>::RTokenAmountNotEnough);
@@ -129,11 +136,11 @@ decl_module! {
             ensure!(out_amount < out_reserve, Error::<T>::NativeTokenReserveNotEnough);
 
             //update state
-            trans_block_trans_info.push(TransInfo{account: who.clone(), value: out_amount,is_deal: false});
+            trans_block_trans_info.push(TransInfo{account: who.clone(), receiver: receiver.clone(), value: out_amount,is_deal: false});
             <TransInfos<T>>::insert((symbol, trans_block), trans_block_trans_info);
             NativeTokenReserves::insert(symbol, out_reserve.saturating_sub(out_amount));
             T::RCurrency::transfer(&who, &fund_addr, symbol, rtoken_amount)?;
-            Self::deposit_event(RawEvent::SwapRTokenToNative(who.clone(), symbol, trans_block, rtoken_amount, out_amount, rtoken_rate, swap_rate.rate));
+            Self::deposit_event(RawEvent::SwapRTokenToNative(who.clone(), receiver.clone(), symbol, trans_block, rtoken_amount, out_amount, rtoken_rate, swap_rate.rate));
             Ok(())
         }
 
@@ -157,6 +164,7 @@ decl_module! {
                 for trans_info in trans_block_trans_info.iter_mut() {
                     trans_info.is_deal = true;
                 }
+                Self::deposit_event(RawEvent::ReportTransReslutWithBLock(who.clone(), symbol, block));
             }
             Ok(())
         }
@@ -179,6 +187,7 @@ decl_module! {
             if vote_infos.len() == RDexnPayers::PayerThreshold::get(symbol) as usize {
                 let trans_info = trans_block_trans_info.get_mut(index as usize).ok_or(Error::<T>::GetTransInfoFailed)?;
                 trans_info.is_deal = true;
+                Self::deposit_event(RawEvent::ReportTransReslutWithIndex(who.clone(), symbol, block, index));
                 let mut block_deal_ok = true;
                 for trans in trans_block_trans_info.iter() {
                     if !trans.is_deal{
@@ -188,6 +197,7 @@ decl_module! {
                 }
                 if block_deal_ok{
                     LatestDealBlock::insert(symbol, block);
+                    Self::deposit_event(RawEvent::ReportTransReslutWithIndexBlockEnd(who.clone(), symbol, block));
                 }
             }
             Ok(())

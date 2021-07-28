@@ -7,20 +7,12 @@ use node_primitives::{RSymbol};
 pub struct TransInfo<AccountId> {
     /// account
     pub account: AccountId,
+    /// receiver
+    pub receiver: Vec<u8>,
     /// value
     pub value: u128,
     /// deal state
     pub is_deal: bool,
-}
-
-impl<A: PartialEq> TransInfo<A> {
-    pub fn new(account: A, value: u128, is_deal: bool) -> Self {
-        Self {
-            account: account,
-            value: value,
-            is_deal: is_deal,
-        }
-    }
 }
 
 
