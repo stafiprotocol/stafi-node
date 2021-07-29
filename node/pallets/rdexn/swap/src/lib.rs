@@ -4,12 +4,12 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::DispatchResult,
     ensure,
-    traits::{Currency},
+    traits::{Currency, ExistenceRequirement::{KeepAlive}},
 };
 use sp_std::prelude::*;
 
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::{RSymbol};
+use node_primitives::{Balance, RSymbol};
 use rtoken_balances::traits::Currency as RCurrency;
 use rtoken_rate as RTokenRate;
 use rdexn_payers as RDexnPayers;
@@ -30,8 +30,8 @@ decl_event! {
     pub enum Event<T> where
         AccountId = <T as system::Trait>::AccountId
     {
-        /// swap rtoken to native: account, symbol, trans block, rtoken amount, out amount, rtoken rate, swap rate
-        SwapRTokenToNative(AccountId, Vec<u8>, RSymbol, u64, u128, u128, u64, u128),
+        /// swap rtoken to native: account, symbol, trans block,fee amount, rtoken amount, out amount, rtoken rate, swap rate
+        SwapRTokenToNative(AccountId, Vec<u8>, RSymbol, u64, Balance, u128, u128, u64, u128),
         /// report with block: account, symbol, deal block
         ReportTransReslutWithBLock(AccountId, RSymbol, u64),
         /// report with index: account, symbol, deal block
@@ -84,7 +84,7 @@ decl_storage! {
         /// fund address
         pub FundAddress get(fn fund_address): Option<T::AccountId>;
         /// swap fee of rtokens
-        pub SwapFees get(fn swap_fees): map hasher(blake2_128_concat) RSymbol => u128 = 0;
+        pub SwapFees get(fn swap_fees): map hasher(blake2_128_concat) RSymbol => Balance = 1500000000000;
         /// swap rate that admin can set 
         pub SwapRates get(fn swap_rates): map hasher(blake2_128_concat) (RSymbol, u8) => Option<SwapRate>;
         // trans info
@@ -125,22 +125,26 @@ decl_module! {
             ensure!(rtoken_rate > 0, Error::<T>::RTokenRateFailed);
             ensure!(swap_rate.rate > 0, Error::<T>::SwapRateFailed);
             ensure!(T::RCurrency::free_balance(&who, symbol) >= rtoken_amount, Error::<T>::RTokenAmountNotEnough);
-            ensure!(rtoken_amount > fee_amount, Error::<T>::RTokenAmountNotEnough);
+
             // check limit per block
             let mut trans_block_trans_info = Self::trans_infos((symbol, trans_block)).unwrap_or(vec![]);
             ensure!(trans_block_trans_info.len() < Self::swap_limit_per_block() as usize, Error::<T>::OverSwapLimitPerBlock);
+            
             // check min out amount and reserve amount
-            let swap_use_rtoken_amount = multiply_by_rational(rtoken_amount.saturating_sub(fee_amount), swap_rate.rate, RATEBASE.into()).unwrap_or(u128::MIN) as u128;
+            let swap_use_rtoken_amount = multiply_by_rational(rtoken_amount, swap_rate.rate, RATEBASE.into()).unwrap_or(u128::MIN) as u128;
             let out_amount = RTokenRate::Module::<T>::rtoken_to_token(symbol, swap_use_rtoken_amount);
             ensure!(out_amount >= min_out_amount, Error::<T>::LessThanMinOutAmount);
             ensure!(out_amount < out_reserve, Error::<T>::NativeTokenReserveNotEnough);
 
             //update state
+            if fee_amount > 0 {
+                T::Currency::transfer(&who, &fund_addr, fee_amount.saturated_into(), KeepAlive)?;
+            }
+            T::RCurrency::transfer(&who, &fund_addr, symbol, rtoken_amount)?;
             trans_block_trans_info.push(TransInfo{account: who.clone(), receiver: receiver.clone(), value: out_amount,is_deal: false});
             <TransInfos<T>>::insert((symbol, trans_block), trans_block_trans_info);
             NativeTokenReserves::insert(symbol, out_reserve.saturating_sub(out_amount));
-            T::RCurrency::transfer(&who, &fund_addr, symbol, rtoken_amount)?;
-            Self::deposit_event(RawEvent::SwapRTokenToNative(who.clone(), receiver.clone(), symbol, trans_block, rtoken_amount, out_amount, rtoken_rate, swap_rate.rate));
+            Self::deposit_event(RawEvent::SwapRTokenToNative(who.clone(), receiver.clone(), symbol, trans_block, fee_amount, rtoken_amount, out_amount, rtoken_rate, swap_rate.rate));
             Ok(())
         }
 
@@ -239,7 +243,7 @@ decl_module! {
 
         /// set swap fee
         #[weight = 1_000_000]
-        fn set_swap_fee(origin, symbol: RSymbol, fee: u128) -> DispatchResult {
+        fn set_swap_fee(origin, symbol: RSymbol, fee: Balance) -> DispatchResult {
             ensure_root(origin)?;
             SwapFees::insert(symbol, fee);
             Ok(())
