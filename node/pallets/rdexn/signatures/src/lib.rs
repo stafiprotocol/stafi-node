@@ -27,10 +27,8 @@ decl_event! {
     pub enum Event<T> where
         <T as frame_system::Trait>::AccountId
     {
-        /// submit signatures
+        /// submit signatures: account, symbol, block, proposalId, signature
         SubmitSignatures(AccountId, RSymbol, u64, Vec<u8>, Vec<u8>),
-        /// signatures enough
-        SignaturesEnough(RSymbol, u64, Vec<u8>),
     }
 }
 
@@ -60,21 +58,15 @@ decl_module! {
             let who = ensure_signed(origin)?;
             ensure!(symbol.chain_type() != ChainType::Substrate, Error::<T>::InvalidRSymbol);
             ensure!(payers::Module::<T>::is_payer(symbol, &who), payers::Error::<T>::MustBePayer);
-
-
             ensure!(Self::account_signature((&who, symbol, block, &proposal_id)).is_none(), Error::<T>::SignatureRepeated);
 
             let mut signatures = Signatures::get(symbol, (block, &proposal_id)).unwrap_or(vec![]);
             ensure!(!signatures.contains(&signature), Error::<T>::SignatureRepeated);
 
+            //update state
             signatures.push(signature.clone());
             Signatures::insert(symbol, (block, &proposal_id), &signatures);
-
             <AccountSignature<T>>::insert((&who, symbol, block, &proposal_id), &signature);
-
-            if signatures.len() == payers::PayerThreshold::get(symbol) as usize {
-                Self::deposit_event(RawEvent::SignaturesEnough(symbol, block, proposal_id.clone()));
-            }
 
             Self::deposit_event(RawEvent::SubmitSignatures(who.clone(), symbol, block, proposal_id, signature));
             Ok(())
