@@ -958,9 +958,9 @@ construct_runtime!(
 		RTokenLedger: rtoken_ledger::{Module, Call, Storage, Event<T>},
 		RTokenSeries: rtoken_series::{Module, Call, Storage, Event<T>},
 		XClaim: xclaim::{Module, Call, Storage, Event<T>},
-		RDexPayers: rdexn_payers::{Module, Call, Storage, Event<T>},
-		RDexSignatures: rdexn_signatures::{Module, Call, Storage, Event<T>},
-		RDexSwap: rdexn_swap::{Module, Call, Storage, Event<T>},
+		RDexnPayers: rdexn_payers::{Module, Call, Storage, Event<T>},
+		RDexnSignatures: rdexn_signatures::{Module, Call, Storage, Event<T>},
+		RDexnSwap: rdexn_swap::{Module, Call, Storage, Event<T>},
 	}
 );
 
