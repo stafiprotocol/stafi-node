@@ -249,7 +249,7 @@ decl_module! {
             Ok(())
         }
 
-        /// set swap fee
+        /// set swap rate
         #[weight = 1_000_000]
         fn set_swap_rate(origin, symbol: RSymbol, grade: u8, lock_number: u64, rate: u128) -> DispatchResult {
             ensure_root(origin)?;
@@ -269,6 +269,17 @@ decl_module! {
         fn set_swap_limit_per_block(origin, limit: u32) -> DispatchResult {
             ensure_root(origin)?;
             SwapLimitPerBlock::put(limit);
+            Ok(())
+        }
+
+        #[weight = 1_000_000]
+        fn set_latest_deal_block(origin, symbol: RSymbol, block: u64) -> DispatchResult {
+            ensure_root(origin)?;
+            LatestDealBlock::insert(symbol, block);
+            let mut trans_block_trans_info = Self::trans_infos((symbol, block)).unwrap_or(vec![]);
+            for trans_info in trans_block_trans_info.iter_mut() {
+                trans_info.is_deal = true;
+            }
             Ok(())
         }
     }
