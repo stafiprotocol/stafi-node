@@ -48,7 +48,7 @@ decl_storage! {
         pub PayerThreshold get(fn payer_threshold): map hasher(blake2_128_concat) RSymbol => u32;
 
         /// Tracks current payer set
-        pub Payers get(fn payers): double_map hasher(blake2_128_concat) RSymbol, hasher(twox_64_concat) T::AccountId => bool;
+        pub Payers get(fn payers): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) T::AccountId => bool;
 
         /// Number of payers in set
         pub PayerCount get(fn payer_count): map hasher(blake2_128_concat) RSymbol => u32;

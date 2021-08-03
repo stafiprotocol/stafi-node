@@ -23,6 +23,7 @@ sp-arithmetic = { branch = "master", default-features = false, git = 'https://gi
 node-primitives = { path = "../../../primitives", default-features = false }
 rtoken-balances = { path = "../../rtoken/balances", default-features = false}
 rtoken-rate = { path = "../../rtoken/rate", default-features = false}
+rtoken-series = { path = "../../rtoken/series", default-features = false}
 rdexn-payers = { path = "../payers", default-features = false}
 
 
@@ -41,5 +42,6 @@ std = [
   "pallet-staking/std",
   "rtoken-balances/std",
   "rtoken-rate/std",
+  "rtoken-series/std",
   "rdexn-payers/std",
 ]

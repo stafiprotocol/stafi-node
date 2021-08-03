@@ -5571,6 +5571,7 @@ dependencies = [
  "rdexn-payers",
  "rtoken-balances",
  "rtoken-rate",
+ "rtoken-series",
  "serde",
  "sp-arithmetic",
  "sp-core",

@@ -11,6 +11,7 @@ use sp_std::prelude::*;
 use frame_system::{self as system, ensure_root, ensure_signed};
 use node_primitives::{Balance, RSymbol};
 use rtoken_balances::traits::Currency as RCurrency;
+use rtoken_series::signature::verify_recipient;
 use rtoken_rate as RTokenRate;
 use rdexn_payers as RDexnPayers;
 use sp_arithmetic::helpers_128bit::multiply_by_rational;
@@ -47,6 +48,8 @@ decl_error! {
         PriceZero,
         /// params err
         ParamsErr,
+        /// receiver invalid
+        ReceiverInvalid,
         /// swap total switch is closed
         SwapTotalClosed,
         /// swap rtoken switch is closed
@@ -96,7 +99,7 @@ decl_storage! {
         /// other chain native token reserve
         pub NativeTokenReserves get(fn native_token_reserves): map hasher(blake2_128_concat) RSymbol => u128;
         /// vote info
-        pub VoteInfos get(fn vote_infos): map hasher(blake2_128_concat) (RSymbol,u64) => Option<Vec<T::AccountId>>;
+        pub VoteInfos get(fn vote_infos): map hasher(blake2_128_concat) (RSymbol, u64) => Option<Vec<T::AccountId>>;
         /// vote info with index
         pub VoteInfosWithIndex get(fn vote_infos_with_index): map hasher(blake2_128_concat) (RSymbol, u64, u32) => Option<Vec<T::AccountId>>;
     }
@@ -105,8 +108,8 @@ decl_storage! {
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event() = default;
-         /// swap rtoken for native token
-         #[weight = 10_000_000]
+        /// swap rtoken for native token
+        #[weight = 10_000_000]
         pub fn swap_rtoken_for_native_token(origin, receiver: Vec<u8>, symbol: RSymbol, rtoken_amount: u128, min_out_amount: u128, grade: u8) -> DispatchResult {
             let who = ensure_signed(origin)?;   
             let now_block = system::Module::<T>::block_number().saturated_into::<u64>();
@@ -117,14 +120,20 @@ decl_module! {
             let trans_block = now_block.checked_add(swap_rate.lock_number).ok_or(Error::<T>::OverFlow)?;
             let out_reserve = Self::native_token_reserves(symbol);
 
+            
             ensure!(Self::swap_total_switch(), Error::<T>::SwapTotalClosed);
             ensure!(Self::swap_rtoken_switch(symbol), Error::<T>::SwapRtokenClosed);
             ensure!(rtoken_amount > u128::MIN, Error::<T>::ParamsErr);
             ensure!(min_out_amount > u128::MIN, Error::<T>::ParamsErr);
-            ensure!(receiver.len() > 0, Error::<T>::ParamsErr);
             ensure!(rtoken_rate > 0, Error::<T>::RTokenRateFailed);
             ensure!(swap_rate.rate > 0, Error::<T>::SwapRateFailed);
             ensure!(T::RCurrency::free_balance(&who, symbol) >= rtoken_amount, Error::<T>::RTokenAmountNotEnough);
+
+            // check receiver
+            match verify_recipient(symbol, &receiver) {
+                false => Err(Error::<T>::ReceiverInvalid)?,
+                _ => (),
+            }
 
             // check limit per block
             let mut trans_block_trans_info = Self::trans_infos((symbol, trans_block)).unwrap_or(vec![]);
@@ -141,7 +150,7 @@ decl_module! {
                 T::Currency::transfer(&who, &fund_addr, fee_amount.saturated_into(), KeepAlive)?;
             }
             T::RCurrency::transfer(&who, &fund_addr, symbol, rtoken_amount)?;
-            trans_block_trans_info.push(TransInfo{account: who.clone(), receiver: receiver.clone(), value: out_amount,is_deal: false});
+            trans_block_trans_info.push(TransInfo{account: who.clone(), receiver: receiver.clone(), value: out_amount, is_deal: false});
             <TransInfos<T>>::insert((symbol, trans_block), trans_block_trans_info);
             NativeTokenReserves::insert(symbol, out_reserve.saturating_sub(out_amount));
             Self::deposit_event(RawEvent::SwapRTokenToNative(who.clone(), receiver.clone(), symbol, trans_block, fee_amount, rtoken_amount, out_amount, rtoken_rate, swap_rate.rate));
@@ -194,12 +203,12 @@ decl_module! {
                 Self::deposit_event(RawEvent::ReportTransReslutWithIndex(who.clone(), symbol, block, index));
                 let mut block_deal_ok = true;
                 for trans in trans_block_trans_info.iter() {
-                    if !trans.is_deal{
+                    if !trans.is_deal {
                         block_deal_ok = false;
                         break;
                     }
                 }
-                if block_deal_ok{
+                if block_deal_ok {
                     LatestDealBlock::insert(symbol, block);
                     Self::deposit_event(RawEvent::ReportTransReslutWithIndexBlockEnd(who.clone(), symbol, block));
                 }
@@ -254,14 +263,6 @@ decl_module! {
         fn set_swap_rate(origin, symbol: RSymbol, grade: u8, lock_number: u64, rate: u128) -> DispatchResult {
             ensure_root(origin)?;
             SwapRates::insert((symbol, grade), SwapRate{lock_number, rate});
-            Ok(())
-        }
-
-        #[weight = 1_000_000]
-        fn init_default_swap_rate(origin, symbol: RSymbol, rate: u128) -> DispatchResult {
-            ensure_root(origin)?;
-            let lock_number = 0 as u64;
-            SwapRates::insert((symbol, 0), SwapRate{lock_number, rate});
             Ok(())
         }
 
