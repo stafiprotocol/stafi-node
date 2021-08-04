@@ -5544,7 +5544,7 @@ dependencies = [
 
 [[package]]
 name = "rdexn-payers"
-version = "0.4.4"
+version = "0.4.5"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5559,7 +5559,7 @@ dependencies = [
 
 [[package]]
 name = "rdexn-signatures"
-version = "0.4.4"
+version = "0.4.5"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5578,7 +5578,7 @@ dependencies = [
 
 [[package]]
 name = "rdexn-swap"
-version = "0.4.4"
+version = "0.4.5"
 dependencies = [
  "frame-support",
  "frame-system",
