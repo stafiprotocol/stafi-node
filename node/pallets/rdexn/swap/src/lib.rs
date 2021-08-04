@@ -91,7 +91,7 @@ decl_storage! {
         /// swap rate that admin can set 
         pub SwapRates get(fn swap_rates): map hasher(blake2_128_concat) (RSymbol, u8) => Option<SwapRate>;
         // trans info
-        pub TransInfos get(fn trans_infos): map hasher(blake2_128_concat) (RSymbol, u64) => Option<Vec<TransInfo<T::AccountId>>>;
+        pub TransInfos get(fn trans_infos): map hasher(blake2_128_concat) (RSymbol, u64) => Option<Vec<SwapTransactionInfo<T::AccountId>>>;
         /// latest deal block number
         pub LatestDealBlock get(fn latest_deal_block): map hasher(blake2_128_concat) RSymbol => u64;
         /// swap number limit per block
@@ -150,7 +150,7 @@ decl_module! {
                 T::Currency::transfer(&who, &fund_addr, fee_amount.saturated_into(), KeepAlive)?;
             }
             T::RCurrency::transfer(&who, &fund_addr, symbol, rtoken_amount)?;
-            trans_block_trans_info.push(TransInfo{account: who.clone(), receiver: receiver.clone(), value: out_amount, is_deal: false});
+            trans_block_trans_info.push(SwapTransactionInfo{account: who.clone(), receiver: receiver.clone(), value: out_amount, is_deal: false});
             <TransInfos<T>>::insert((symbol, trans_block), trans_block_trans_info);
             NativeTokenReserves::insert(symbol, out_reserve.saturating_sub(out_amount));
             Self::deposit_event(RawEvent::SwapRTokenToNative(who.clone(), receiver.clone(), symbol, trans_block, fee_amount, rtoken_amount, out_amount, rtoken_rate, swap_rate.rate));
