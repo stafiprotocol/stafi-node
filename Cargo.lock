@@ -2010,6 +2010,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f5f3913fa0bfe7ee1fd8248b6b9f42a5af4b9d65ec2dd2c3c26132b950ecfc2"
 
 [[package]]
+name = "general-signature"
+version = "0.4.5"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "hex",
+ "hex-literal",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "generator"
 version = "0.6.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5565,13 +5582,13 @@ version = "0.4.4"
 dependencies = [
  "frame-support",
  "frame-system",
+ "general-signature",
  "node-primitives",
  "pallet-staking",
  "parity-scale-codec",
  "rdexn-payers",
  "rtoken-balances",
  "rtoken-rate",
- "rtoken-series",
  "serde",
  "sp-arithmetic",
  "sp-core",

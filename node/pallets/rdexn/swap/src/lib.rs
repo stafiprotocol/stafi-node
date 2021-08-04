@@ -11,7 +11,7 @@ use sp_std::prelude::*;
 use frame_system::{self as system, ensure_root, ensure_signed};
 use node_primitives::{Balance, RSymbol};
 use rtoken_balances::traits::Currency as RCurrency;
-use rtoken_series::signature::verify_recipient;
+use general_signature::verify_recipient;
 use rtoken_rate as RTokenRate;
 use rdexn_payers as RDexnPayers;
 use sp_arithmetic::helpers_128bit::multiply_by_rational;
@@ -109,7 +109,7 @@ decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event() = default;
         /// swap rtoken for native token
-        #[weight = 10_000_000]
+        #[weight = 10_000_000_000]
         pub fn swap_rtoken_for_native_token(origin, receiver: Vec<u8>, symbol: RSymbol, rtoken_amount: u128, min_out_amount: u128, grade: u8) -> DispatchResult {
             let who = ensure_signed(origin)?;   
             let now_block = system::Module::<T>::block_number().saturated_into::<u64>();
@@ -159,7 +159,7 @@ decl_module! {
 
 
         /// report transfer result with block
-        #[weight = 10_000_000]
+        #[weight = 100_000]
         pub fn report_transfer_result_with_block(origin, symbol: RSymbol, block: u64) -> DispatchResult {
             let who = ensure_signed(origin)?;
             // check
@@ -183,7 +183,7 @@ decl_module! {
         }
 
         /// report transfer result with index
-        #[weight = 10_000_000]
+        #[weight = 100_000]
         pub fn report_transfer_result_with_index(origin, symbol: RSymbol, block: u64, index: u32) -> DispatchResult {
             let who = ensure_signed(origin)?;
             // check
@@ -217,7 +217,7 @@ decl_module! {
         }
 
         /// turn on/off swap total switch, default closed
-        #[weight = 1_000_000]
+        #[weight = 100_000]
         fn toggle_swap_total_switch(origin) -> DispatchResult {
             ensure_root(origin)?;
             let state = Self::swap_total_switch();
@@ -226,7 +226,7 @@ decl_module! {
         }
 
         /// turn on/off swap rtoken switch, default opened
-        #[weight = 1_000_000]
+        #[weight = 100_000]
         fn toggle_swap_rtoken_switch(origin, symbol: RSymbol) -> DispatchResult {
             ensure_root(origin)?;
             let state = Self::swap_rtoken_switch(symbol);
@@ -235,7 +235,7 @@ decl_module! {
         }
 
         /// set fund address
-        #[weight = 1_000_000]
+        #[weight = 100_000]
         fn set_fund_address(origin, address: T::AccountId) -> DispatchResult {
             ensure_root(origin)?;
             <FundAddress<T>>::put(address);
@@ -243,7 +243,7 @@ decl_module! {
         }
 
         /// set native reserve
-        #[weight = 1_000_000]
+        #[weight = 100_000]
         fn set_native_token_reserve(origin, symbol: RSymbol, reserve: u128) -> DispatchResult {
             ensure_root(origin)?;
             NativeTokenReserves::insert(symbol, reserve);
@@ -251,7 +251,7 @@ decl_module! {
         }
 
         /// set swap fee
-        #[weight = 1_000_000]
+        #[weight = 100_000]
         fn set_swap_fee(origin, symbol: RSymbol, fee: Balance) -> DispatchResult {
             ensure_root(origin)?;
             SwapFees::insert(symbol, fee);
@@ -259,21 +259,21 @@ decl_module! {
         }
 
         /// set swap rate
-        #[weight = 1_000_000]
+        #[weight = 100_000]
         fn set_swap_rate(origin, symbol: RSymbol, grade: u8, lock_number: u64, rate: u128) -> DispatchResult {
             ensure_root(origin)?;
             SwapRates::insert((symbol, grade), SwapRate{lock_number, rate});
             Ok(())
         }
 
-        #[weight = 1_000_000]
+        #[weight = 100_000]
         fn set_swap_limit_per_block(origin, limit: u32) -> DispatchResult {
             ensure_root(origin)?;
             SwapLimitPerBlock::put(limit);
             Ok(())
         }
 
-        #[weight = 1_000_000]
+        #[weight = 100_000]
         fn set_latest_deal_block(origin, symbol: RSymbol, block: u64) -> DispatchResult {
             ensure_root(origin)?;
             LatestDealBlock::insert(symbol, block);

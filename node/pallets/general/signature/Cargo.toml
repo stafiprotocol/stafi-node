@@ -1,8 +1,9 @@
 [package]
-name = "rdexn-swap"
-version = "0.4.4"
+name = "general-signature"
+version = "0.4.5"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
+
 
 [dependencies]
 # third-party dependencies
@@ -18,14 +19,12 @@ sp-io = { branch = "master", default-features = false, git = 'https://github.com
 # frame dependencies
 frame-support = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 frame-system = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-staking = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-arithmetic = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-node-primitives = { path = "../../../primitives", default-features = false }
-rtoken-balances = { path = "../../rtoken/balances", default-features = false}
-rtoken-rate = { path = "../../rtoken/rate", default-features = false}
-general-signature = { path = "../../general/signature", default-features = false}
-rdexn-payers = { path = "../payers", default-features = false}
 
+node-primitives = { path = "../../../primitives", default-features = false }
+
+[dev-dependencies]
+hex = "0.4"
+hex-literal = "0.3.1"
 
 [features]
 default = ["std"]
@@ -38,10 +37,4 @@ std = [
   "sp-io/std",
   "frame-support/std",
   "frame-system/std",
-  "sp-arithmetic/std",
-  "pallet-staking/std",
-  "rtoken-balances/std",
-  "rtoken-rate/std",
-  "general-signature/std",
-  "rdexn-payers/std",
 ]
