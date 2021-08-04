@@ -12,10 +12,6 @@ use frame_system::{self as system, ensure_signed};
 use node_primitives::{RSymbol, ChainType};
 use rdexn_payers as payers;
 
-#[cfg(test)]
-mod tests;
-
-pub const MAX_UNLOCKING_CHUNKS: usize = 64;
 
 pub trait Trait: system::Trait + rtoken_rate::Trait + payers::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
