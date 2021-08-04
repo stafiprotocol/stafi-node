@@ -101,8 +101,8 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// Per convention: if the runtime behavior changes, increment spec_version
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
-	// is and increment impl_version.
-	spec_version: 33,
+	// is and increment impl_version
+	spec_version: 34,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -900,6 +900,21 @@ impl xclaim::Trait for Runtime {
 	type XCurrency = XBalances;
 }
 
+impl rdexn_payers::Trait for Runtime {
+	type Event = Event;
+}
+
+impl rdexn_signatures::Trait for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+}
+
+impl rdexn_swap::Trait for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type RCurrency = RBalances;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -948,6 +963,9 @@ construct_runtime!(
 		RTokenLedger: rtoken_ledger::{Module, Call, Storage, Event<T>},
 		RTokenSeries: rtoken_series::{Module, Call, Storage, Event<T>},
 		XClaim: xclaim::{Module, Call, Storage, Event<T>},
+		RDexnPayers: rdexn_payers::{Module, Call, Storage, Event<T>},
+		RDexnSignatures: rdexn_signatures::{Module, Call, Storage, Event<T>},
+		RDexnSwap: rdexn_swap::{Module, Call, Storage, Event<T>},
 	}
 );
 
