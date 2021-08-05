@@ -34,11 +34,11 @@ decl_event! {
         /// swap rtoken to native: account, symbol, trans block,fee amount, rtoken amount, out amount, rtoken rate, swap rate
         SwapRTokenToNative(AccountId, Vec<u8>, RSymbol, u64, Balance, u128, u128, u64, u128),
         /// report with block: account, symbol, deal block
-        ReportTransReslutWithBLock(AccountId, RSymbol, u64),
+        ReportTransResultWithBlock(AccountId, RSymbol, u64),
         /// report with index: account, symbol, deal block
-        ReportTransReslutWithIndex(AccountId, RSymbol, u64, u32),
+        ReportTransResultWithIndex(AccountId, RSymbol, u64, u32),
         /// report with index: account, symbol, deal block
-        ReportTransReslutWithIndexBlockEnd(AccountId, RSymbol, u64),
+        ReportTransResultWithIndexBlockEnd(AccountId, RSymbol, u64),
     }
 }
 
@@ -177,7 +177,8 @@ decl_module! {
                 for trans_info in trans_block_trans_info.iter_mut() {
                     trans_info.is_deal = true;
                 }
-                Self::deposit_event(RawEvent::ReportTransReslutWithBLock(who.clone(), symbol, block));
+                <TransInfos<T>>::insert((symbol, block), trans_block_trans_info);
+                Self::deposit_event(RawEvent::ReportTransResultWithBlock(who.clone(), symbol, block));
             }
             Ok(())
         }
@@ -200,7 +201,8 @@ decl_module! {
             if vote_infos.len() == RDexnPayers::PayerThreshold::get(symbol) as usize {
                 let trans_info = trans_block_trans_info.get_mut(index as usize).ok_or(Error::<T>::GetTransInfoFailed)?;
                 trans_info.is_deal = true;
-                Self::deposit_event(RawEvent::ReportTransReslutWithIndex(who.clone(), symbol, block, index));
+                <TransInfos<T>>::insert((symbol, block), trans_block_trans_info.clone());
+                Self::deposit_event(RawEvent::ReportTransResultWithIndex(who.clone(), symbol, block, index));
                 let mut block_deal_ok = true;
                 for trans in trans_block_trans_info.iter() {
                     if !trans.is_deal {
@@ -210,7 +212,7 @@ decl_module! {
                 }
                 if block_deal_ok {
                     LatestDealBlock::insert(symbol, block);
-                    Self::deposit_event(RawEvent::ReportTransReslutWithIndexBlockEnd(who.clone(), symbol, block));
+                    Self::deposit_event(RawEvent::ReportTransResultWithIndexBlockEnd(who.clone(), symbol, block));
                 }
             }
             Ok(())
