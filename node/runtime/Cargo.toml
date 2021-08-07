@@ -1,6 +1,6 @@
 [package]
 name = "node-runtime"
-version = "0.4.4"
+version = "0.4.5"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
 build = "build.rs"
@@ -74,17 +74,18 @@ pallet-transaction-payment = { branch = "master", default-features = false, git 
 pallet-transaction-payment-rpc-runtime-api = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 pallet-vesting = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
-xtoken-balances = { version = "0.4.4", default-features = false, path = "../pallets/xtoken/balances" }
-rtoken-balances = { version = "0.4.4", default-features = false, path = "../pallets/rtoken/balances" }
-rtoken-rate = { version = "0.4.4", default-features = false, path = "../pallets/rtoken/rate" }
-rfis = { version = "0.4.4", default-features = false, path = "../pallets/rtoken/rfis" }
-bridge-common = { version = "0.4.4", default-features = false, path = "../pallets/bridge/common", package = "bridge-common" }
-bridge-swap = { version = "0.4.4", default-features = false, path = "../pallets/bridge/swap", package = "bridge-swap" }
-rtoken-relayers = { version = "0.4.4", default-features = false, path = "../pallets/rtoken/relayers" }
-rtoken-votes = { version = "0.4.4", default-features = false, path = "../pallets/rtoken/votes" }
-rtoken-ledger = { version = "0.4.4", default-features = false, path = "../pallets/rtoken/ledger" }
-rtoken-series = { version = "0.4.4", default-features = false, path = "../pallets/rtoken/series" }
-xclaim = { version = "0.4.4", default-features = false, path = "../pallets/claims/xclaim" }
+xtoken-balances = { version = "0.4.5", default-features = false, path = "../pallets/xtoken/balances" }
+rtoken-balances = { version = "0.4.5", default-features = false, path = "../pallets/rtoken/balances" }
+rtoken-rate = { version = "0.4.5", default-features = false, path = "../pallets/rtoken/rate" }
+rfis = { version = "0.4.5", default-features = false, path = "../pallets/rtoken/rfis" }
+bridge-relayers = { version = "0.4.5", default-features = false, path = "../pallets/bridge/relayers" }
+bridge-common = { version = "0.4.5", default-features = false, path = "../pallets/bridge/common", package = "bridge-common" }
+bridge-swap = { version = "0.4.5", default-features = false, path = "../pallets/bridge/swap", package = "bridge-swap" }
+rtoken-relayers = { version = "0.4.5", default-features = false, path = "../pallets/rtoken/relayers" }
+rtoken-votes = { version = "0.4.5", default-features = false, path = "../pallets/rtoken/votes" }
+rtoken-ledger = { version = "0.4.5", default-features = false, path = "../pallets/rtoken/ledger" }
+rtoken-series = { version = "0.4.5", default-features = false, path = "../pallets/rtoken/series" }
+xclaim = { version = "0.4.5", default-features = false, path = "../pallets/claims/xclaim" }
 
 
 [build-dependencies]
@@ -153,6 +154,7 @@ std = [
 	"rtoken-balances/std",
 	"rtoken-rate/std",
 	"rfis/std",
+	"bridge-relayers/std",
 	"bridge-common/std",
 	"bridge-swap/std",
 	"rtoken-relayers/std",

@@ -102,7 +102,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 12,
+	spec_version: 13,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -849,6 +849,10 @@ parameter_types! {
 	pub const ProposalLifetime: BlockNumber = 201600;
 }
 
+impl bridge_relayers::Trait for Runtime {
+	type Event = Event;
+}
+
 impl bridge_common::Trait for Runtime {
 	type Event = Event;
 	type AdminOrigin = EnsureRoot<AccountId>;
@@ -936,6 +940,7 @@ construct_runtime!(
 		RBalances: rtoken_balances::{Module, Call, Storage, Event<T>},
 		RTokenRate: rtoken_rate::{Module, Call, Storage, Event},
 		RFis: rfis::{Module, Call, Storage, Event<T>, ValidateUnsigned},
+		BridgeRelayers: bridge_relayers::{Module, Call, Storage, Event<T>},
 		BridgeCommon: bridge_common::{Module, Call, Storage, Event<T>},
 		BridgeSwap: bridge_swap::{Module, Call},
 		RTokenRelayers: rtoken_relayers::{Module, Call, Storage, Event<T>},

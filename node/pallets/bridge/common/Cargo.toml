@@ -1,6 +1,6 @@
 [package]
 name = "bridge-common"
-version = "0.4.4"
+version = "0.4.5"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
 
@@ -20,6 +20,8 @@ node-primitives = { path = "../../../primitives", default-features = false }
 frame-support = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 frame-system = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
+bridge-relayers = { path = "../relayers", default-features = false}
+
 [dev-dependencies]
 sp-io = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 hex = { version = "0.4", default-features = false}
@@ -34,4 +36,5 @@ std = [
   "sp-core/std",
   "frame-support/std",
   "frame-system/std",
+  "bridge-relayers/std",
 ]
