@@ -3900,6 +3900,7 @@ dependencies = [
  "pallet-utility",
  "pallet-vesting",
  "parity-scale-codec",
+ "rclaim",
  "rdexn-payers",
  "rdexn-signatures",
  "rdexn-swap",
@@ -5540,6 +5541,21 @@ dependencies = [
  "crossbeam-utils 0.8.0",
  "lazy_static",
  "num_cpus",
+]
+
+[[package]]
+name = "rclaim"
+version = "0.4.5"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "pallet-staking",
+ "parity-scale-codec",
+ "rtoken-balances",
+ "sp-arithmetic",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
