@@ -177,7 +177,7 @@ decl_module! {
 		#[weight = 50_000_000]
 		pub fn claim_rtoken_reward(origin, symbol: RSymbol, cycle: u32, tx_hash: Vec<u8>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			let mut claim_info = Self::claim_infos((&who, symbol, cycle, tx_hash)).ok_or(Error::<T>::HasNoClaimInfo)?;
+			let mut claim_info = Self::claim_infos((&who, symbol, cycle, tx_hash.clone())).ok_or(Error::<T>::HasNoClaimInfo)?;
 			let act = Self::acts((symbol, cycle)).ok_or(Error::<T>::HasNoAct)?;
 			let fund_addr = Self::fund_address().ok_or(Error::<T>::NoFundAddress)?;
 			let now_block = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
@@ -195,7 +195,7 @@ decl_module! {
 			T::Currency::transfer(&fund_addr, &who, should_claim_amount.saturated_into(), KeepAlive)?;
 			claim_info.total_claimed = claim_info.total_claimed.saturating_add(should_claim_amount);
 			claim_info.latest_claimed_block = now_block;
-
+			<ClaimInfos<T>>::insert((who, symbol, cycle, tx_hash), claim_info);
 			Ok(())
 		}
 
