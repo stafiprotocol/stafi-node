@@ -175,7 +175,7 @@ decl_module! {
 
 		/// Make a claim
 		#[weight = 50_000_000]
-		pub fn claim(origin, symbol: RSymbol, cycle: u32, tx_hash: Vec<u8>) -> DispatchResult {
+		pub fn claim_rtoken_reward(origin, symbol: RSymbol, cycle: u32, tx_hash: Vec<u8>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			let mut claim_info = Self::claim_infos((&who, symbol, cycle, tx_hash)).ok_or(Error::<T>::HasNoClaimInfo)?;
 			let act = Self::acts((symbol, cycle)).ok_or(Error::<T>::HasNoAct)?;
@@ -189,7 +189,7 @@ decl_module! {
 				let du_blocks = now_block.saturating_sub(claim_info.latest_claimed_block) as u128;
 				should_claim_amount = multiply_by_rational(claim_info.total_reward, du_blocks, act.locked_blocks as u128).unwrap_or(u128::MIN) as u128;
 			}
-			ensure!(<T as staking::Trait>::Currency::free_balance(&fund_addr).saturated_into::<u128>()> should_claim_amount,Error::<T>::InsufficientFis);
+			ensure!(<T as staking::Trait>::Currency::free_balance(&fund_addr).saturated_into::<u128>() > should_claim_amount, Error::<T>::InsufficientFis);
 
 			//update state
 			T::Currency::transfer(&fund_addr, &who, should_claim_amount.saturated_into(), KeepAlive)?;
@@ -252,6 +252,7 @@ impl<T: Trait> Module<T> {
 			mints.push(tx_hash);
 			<UserMints<T>>::insert((who, symbol, cycle), mints);
 		}
+		<Acts>::insert((symbol, cycle), act);
 	}
 
 	/// update current act cycle when block finalize
