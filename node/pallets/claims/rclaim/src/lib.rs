@@ -117,7 +117,7 @@ decl_module! {
 		fn deposit_event() = default;
 
 		/// Set reth rewarder.
-		#[weight = 1_000_000]
+		#[weight = 100_000]
 		pub fn set_reth_rewarder(origin, account: T::AccountId) -> DispatchResult {
 			ensure_root(origin)?;
 			<REthRewarder<T>>::put(account);
@@ -224,7 +224,7 @@ decl_module! {
 
 
 		/// Make a rtoken claim
-		#[weight = 50_000_000]
+		#[weight = 10_000_000_000]
 		pub fn claim_rtoken_reward(origin, symbol: RSymbol, cycle: u32, index: u64) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			let mut claim_info = Self::claim_infos((&who, symbol, cycle, index)).ok_or(Error::<T>::HasNoClaimInfo)?;
@@ -250,7 +250,7 @@ decl_module! {
 		}
 
 		/// Make a  reth claim
-		#[weight = 50_000_000]
+		#[weight = 10_000_000_000]
 		pub fn claim_reth_reward(origin, pubkey: Vec<u8>, sigs: Vec<u8>, cycle: u32, index: u64) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			let use_who = who.using_encoded(to_ascii_hex);
@@ -279,7 +279,7 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = 50_000_000]
+		#[weight = 100_000]
 		pub fn update_reth_claim_info(origin, pubkeys: Vec<Vec<u8>>, mint_values: Vec<u128>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_rewarder(&who), Error::<T>::InvalidREthRewarder);
@@ -313,8 +313,11 @@ decl_module! {
 			if act.left_amount == 0 {
 				return Ok(());
 			}
-
+			//update state
 			for k in 0..pubkeys.len() {
+				if act.left_amount == 0 {
+					break;
+				}
 				let mint_value = mint_values[k];
 				let pubkey = &pubkeys[k];
 				let mut should_reward_amount = multiply_by_rational(mint_value, act.reward_rate, RATEBASE)
@@ -322,7 +325,7 @@ decl_module! {
 				if should_reward_amount > act.left_amount {
 					should_reward_amount = act.left_amount;
 				}
-				act.left_amount = act.total_reward.saturating_sub(should_reward_amount);
+				act.left_amount = act.left_amount.saturating_sub(should_reward_amount);
 				let claim_info = ClaimInfo {
 					total_reward: should_reward_amount,
 					total_claimed: 0,
@@ -390,7 +393,7 @@ impl<T: Trait> Module<T> {
 		if should_reward_amount > act.left_amount {
 			should_reward_amount = act.left_amount;
 		}
-		act.left_amount = act.total_reward.saturating_sub(should_reward_amount);
+		act.left_amount = act.left_amount.saturating_sub(should_reward_amount);
 
 		let claim_info = ClaimInfo {
 			total_reward: should_reward_amount,
