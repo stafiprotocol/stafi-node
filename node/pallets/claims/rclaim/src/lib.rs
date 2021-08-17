@@ -151,8 +151,8 @@ decl_module! {
 			ensure!(end > begin, "End block number must be greater than begin block nubmer");
 			ensure!(total_reward > 0, "total amount must be greater than 0");
 			ensure!(total_reward > user_limit, "total amount must be greater than User limit");
-			ensure!(locked_blocks > 0,"locked blocks mut greater than 0");
-			ensure!(reward_rate > 0,"reward rate mut greater than 0");
+			ensure!(locked_blocks > 0, "locked blocks must be greater than 0");
+			ensure!(reward_rate > 0, "reward rate must be greater than 0");
 
 			let current_block_num = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
 			ensure!(end > current_block_num, "End block number must be greater than current block nubmer");
@@ -160,7 +160,7 @@ decl_module! {
 			let cycle = Self::act_latest_cycle(symbol);
 			if cycle > 0 {
 				let last_act = Self::acts((symbol, cycle)).ok_or(Error::<T>::HasNoAct)?;
-				ensure!(begin > last_act.end, "Begin block number must be greater than end block nubmer of the last  act");
+				ensure!(begin > last_act.end, "Begin block number must be greater than end block nubmer of the last act");
 			}
 			let new_cycle = cycle + 1;
 			<ActLatestCycle>::insert(symbol, new_cycle);
@@ -196,8 +196,8 @@ decl_module! {
 			ensure!(end > begin, "End block number must be greater than begin block nubmer");
 			ensure!(total_reward > 0, "total amount must be greater than 0");
 			ensure!(total_reward > user_limit, "total amount must be greater than User limit");
-			ensure!(locked_blocks > 0,"locked blocks mut greater than 0");
-			ensure!(reward_rate > 0,"reward rate mut greater than 0");
+			ensure!(locked_blocks > 0, "locked blocks must be greater than 0");
+			ensure!(reward_rate > 0, "reward rate must be greater than 0");
 
 			let current_block_num = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
 			ensure!(end > current_block_num, "End block number must be greater than current block nubmer");
@@ -205,7 +205,7 @@ decl_module! {
 			let cycle = Self::reth_act_latest_cycle();
 			if cycle > 0 {
 				let last_act = Self::reth_acts(cycle).ok_or(Error::<T>::HasNoAct)?;
-				ensure!(begin > last_act.end, "Begin block number must be greater than end block nubmer of the last  act");
+				ensure!(begin > last_act.end, "Begin block number must be greater than end block nubmer of the last act");
 			}
 			let new_cycle = cycle + 1;
 			<REthActLatestCycle>::put(new_cycle);
@@ -254,7 +254,7 @@ decl_module! {
 			Ok(())
 		}
 
-		/// Make a  reth claim
+		/// Make a reth claim
 		#[weight = 10_000_000_000]
 		pub fn claim_reth_reward(origin, pubkey: Vec<u8>, sigs: Vec<u8>, cycle: u32, index: u64) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -429,7 +429,7 @@ impl<T: Trait> Module<T> {
 		<Acts>::insert((symbol, cycle), act);
 	}
 
-	/// update current act cycle when block finalize
+	/// update current act cycle
 	fn update_act_current_cycle(now: BlockNumber, symbol: RSymbol) {
 		let cycle = Self::act_latest_cycle(symbol);
 		if cycle > 0 {
@@ -458,7 +458,7 @@ impl<T: Trait> Module<T> {
 		}
 	}
 
-	/// update current act cycle when block finalize
+	/// update current act cycle
 	fn update_reth_act_current_cycle(now: BlockNumber) {
 		let cycle = Self::reth_act_latest_cycle();
 		if cycle > 0 {
