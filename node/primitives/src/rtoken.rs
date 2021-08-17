@@ -27,6 +27,8 @@ pub enum RSymbol {
 	RSOL,
 	/// rMatic
 	RMATIC,
+	/// rBNB
+	RBNB,
 }
 
 /// Chain Type
@@ -49,7 +51,7 @@ impl RSymbol {
 			RSymbol::RFIS | RSymbol::RDOT | RSymbol::RKSM => ChainType::Substrate,
 			RSymbol::RATOM => ChainType::Tendermint,
 			RSymbol::RSOL => ChainType::Solana,
-			RSymbol::RMATIC => ChainType::Ethereum,
+			RSymbol::RMATIC | RSymbol::RBNB => ChainType::Ethereum,
 		}
 	}
 }
