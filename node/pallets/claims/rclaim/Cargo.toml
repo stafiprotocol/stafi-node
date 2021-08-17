@@ -17,6 +17,7 @@ node-primitives = { path = "../../../primitives", default-features = false }
 rtoken-balances = { path = "../../rtoken/balances", default-features = false}
 sp-arithmetic = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 pallet-staking = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+general-signature = { path = "../../general/signature", default-features = false}
 [features]
 default = ["std"]
 std = [
@@ -28,5 +29,6 @@ std = [
     "node-primitives/std",
     "rtoken-balances/std",
     "sp-arithmetic/std",
-    "pallet-staking/std"
+    "pallet-staking/std",
+    "general-signature/std"
 ]

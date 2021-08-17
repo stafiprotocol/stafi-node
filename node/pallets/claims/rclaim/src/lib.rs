@@ -24,6 +24,8 @@ use node_primitives::{Balance, BlockNumber, RSymbol};
 use rtoken_balances::traits::Currency as RCurrency;
 use sp_std::prelude::*;
 pub mod models;
+use codec::Encode;
+use general_signature::{ethereum_verify, to_ascii_hex, SigVerifyResult};
 pub use models::*;
 use pallet_staking::{self as staking};
 use sp_arithmetic::helpers_128bit::multiply_by_rational;
@@ -44,7 +46,7 @@ decl_storage! {
 	trait Store for Module<T: Trait> as RClaim {
 		/// claim infos (account, rsymbol, cycle, mint index)
 		pub ClaimInfos get(fn claim_infos): map hasher(blake2_128_concat) (T::AccountId, RSymbol, u32, u64) => Option<ClaimInfo>;
-		pub REthClaimInfos get(fn reth_claim_infos): map hasher(blake2_128_concat) (T::AccountId, u32, u64) => Option<ClaimInfo>;
+		pub REthClaimInfos get(fn reth_claim_infos): map hasher(blake2_128_concat) (Vec<u8>, u32, u64) => Option<ClaimInfo>;
 		/// Proxy accounts for setting fees
 		pub REthRewarder get(fn reth_rewarder): Option<T::AccountId>;
 		/// MintRewardActs
@@ -60,10 +62,10 @@ decl_storage! {
 		pub REthActCurrentCycle get(fn reth_act_current_cycle): u32;
 		/// acts that user mint rtoken
 		pub UserActs get(fn user_acts): map hasher(blake2_128_concat) (T::AccountId, RSymbol) => Option<Vec<u32>>;
-		pub UserREthActs get(fn user_reth_acts): map hasher(blake2_128_concat) T::AccountId => Option<Vec<u32>>;
+		pub UserREthActs get(fn user_reth_acts): map hasher(blake2_128_concat) Vec<u8> => Option<Vec<u32>>;
 		/// user mint count (account, rsymbol, cycle)
 		pub UserMintsCount get(fn user_mints_count): map hasher(blake2_128_concat) (T::AccountId, RSymbol, u32) => u64;
-		pub UserREthMintsCount get(fn user_reth_mints_count): map hasher(blake2_128_concat) (T::AccountId, u32) => u64;
+		pub UserREthMintsCount get(fn user_reth_mints_count): map hasher(blake2_128_concat) (Vec<u8>, u32) => u64;
 	}
 }
 
@@ -98,6 +100,9 @@ decl_error! {
 		InsufficientFis,
 		/// no fund address
 		NoFundAddress,
+		InvalidPubkey,
+		EthSigsFailed,
+		PubkeyAndValueNumberErr,
 	}
 }
 
@@ -110,14 +115,6 @@ decl_module! {
 
 		// Initializing events
 		fn deposit_event() = default;
-
-		fn on_finalize(now: T::BlockNumber) {
-			let current_block = now.try_into().ok().unwrap() as BlockNumber;
-			Self::update_act_current_cycle(current_block, RSymbol::RDOT);
-			Self::update_act_current_cycle(current_block, RSymbol::RFIS);
-			Self::update_act_current_cycle(current_block, RSymbol::RKSM);
-			Self::update_act_current_cycle(current_block, RSymbol::RATOM);
-		}
 
 		/// Set reth rewarder.
 		#[weight = 1_000_000]
@@ -226,7 +223,7 @@ decl_module! {
 		}
 
 
-		/// Make a claim
+		/// Make a rtoken claim
 		#[weight = 50_000_000]
 		pub fn claim_rtoken_reward(origin, symbol: RSymbol, cycle: u32, index: u64) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -234,7 +231,6 @@ decl_module! {
 			let act = Self::acts((symbol, cycle)).ok_or(Error::<T>::HasNoAct)?;
 			let fund_addr = Self::fund_address().ok_or(Error::<T>::NoFundAddress)?;
 			let now_block = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
-
 			let final_block = claim_info.mint_block.saturating_add(act.locked_blocks);
 
 			let mut should_claim_amount = claim_info.total_reward.saturating_sub(claim_info.total_claimed);
@@ -253,10 +249,113 @@ decl_module! {
 			Ok(())
 		}
 
+		/// Make a  reth claim
+		#[weight = 50_000_000]
+		pub fn claim_reth_reward(origin, pubkey: Vec<u8>, sigs: Vec<u8>, cycle: u32, index: u64) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			let use_who = who.using_encoded(to_ascii_hex);
+			ensure!(pubkey.len() == 20, Error::<T>::InvalidPubkey);
+			ensure!(ethereum_verify(&pubkey, &sigs, &use_who) == SigVerifyResult::Pass, Error::<T>::EthSigsFailed);
+
+			let mut claim_info = Self::reth_claim_infos((pubkey.clone(), cycle, index)).ok_or(Error::<T>::HasNoClaimInfo)?;
+			let act = Self::reth_acts(cycle).ok_or(Error::<T>::HasNoAct)?;
+			let fund_addr = Self::fund_address().ok_or(Error::<T>::NoFundAddress)?;
+			let now_block = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
+			let final_block = claim_info.mint_block.saturating_add(act.locked_blocks);
+
+			let mut should_claim_amount = claim_info.total_reward.saturating_sub(claim_info.total_claimed);
+			if now_block < final_block {
+				let du_blocks = now_block.saturating_sub(claim_info.latest_claimed_block) as u128;
+				should_claim_amount = multiply_by_rational(claim_info.total_reward, du_blocks, act.locked_blocks as u128).unwrap_or(u128::MIN) as u128;
+			}
+			ensure!(should_claim_amount > 0, Error::<T>::ValueZero);
+			ensure!(<T as staking::Trait>::Currency::free_balance(&fund_addr).saturated_into::<u128>() > should_claim_amount, Error::<T>::InsufficientFis);
+
+			//update state
+			T::Currency::transfer(&fund_addr, &who, should_claim_amount.saturated_into(), KeepAlive)?;
+			claim_info.total_claimed = claim_info.total_claimed.saturating_add(should_claim_amount);
+			claim_info.latest_claimed_block = now_block;
+			<REthClaimInfos>::insert((pubkey.clone(), cycle, index), claim_info);
+			Ok(())
+		}
+
+		#[weight = 50_000_000]
+		pub fn update_reth_claim_info(origin, pubkeys: Vec<Vec<u8>>, mint_values: Vec<u128>) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			ensure!(Self::is_rewarder(&who), Error::<T>::InvalidREthRewarder);
+			ensure!(pubkeys.len() == mint_values.len() && pubkeys.len() < 200, Error::<T>::PubkeyAndValueNumberErr);
+			for j in 0..pubkeys.len() {
+				ensure!(pubkeys[j].len() == 20, Error::<T>::InvalidPubkey);
+				ensure!(mint_values[j] > 0, Error::<T>::ValueZero);
+			}
+			let mut cycle = Self::reth_act_current_cycle();
+			if cycle == 0 {
+				return Ok(());
+			}
+			let act_op = Self::reth_acts(cycle);
+			if act_op.is_none() {
+				return Ok(());
+			}
+			let mut act = act_op.unwrap();
+			let now_block = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
+			if act.end < now_block {
+				Self::update_reth_act_current_cycle(now_block);
+				cycle = Self::reth_act_current_cycle();
+				let act_op = Self::reth_acts(cycle);
+				if act_op.is_none() {
+					return Ok(());
+				}
+				act = act_op.unwrap();
+			}
+			if act.begin > now_block || act.end < now_block {
+				return Ok(());
+			}
+			if act.left_amount == 0 {
+				return Ok(());
+			}
+
+			for k in 0..pubkeys.len() {
+				let mint_value = mint_values[k];
+				let pubkey = &pubkeys[k];
+				let mut should_reward_amount = multiply_by_rational(mint_value, act.reward_rate, RATEBASE)
+				.unwrap_or(u128::MIN) as u128;
+				if should_reward_amount > act.left_amount {
+					should_reward_amount = act.left_amount;
+				}
+				act.left_amount = act.total_reward.saturating_sub(should_reward_amount);
+				let claim_info = ClaimInfo {
+					total_reward: should_reward_amount,
+					total_claimed: 0,
+					latest_claimed_block: now_block,
+					mint_block: now_block,
+				};
+				let mints_count = Self::user_reth_mints_count((pubkey.clone(), cycle));
+				//update state
+				<REthClaimInfos>::insert((pubkey.clone(), cycle, mints_count), claim_info);
+				let mut acts = Self::user_reth_acts(pubkey.clone()).unwrap_or(vec![]);
+				if !acts.contains(&cycle) {
+					acts.push(cycle);
+					<UserREthActs>::insert(pubkey.clone(), acts);
+				}
+				<UserREthMintsCount>::insert((pubkey.clone(), cycle), mints_count + 1);
+			}
+			<REthActs>::insert(cycle, act);
+			Ok(())
+		}
+
+
 	}
 }
 
 impl<T: Trait> Module<T> {
+	/// Checks if who is a rewarder
+	pub fn is_rewarder(who: &T::AccountId) -> bool {
+		let rewarder_op = Self::reth_rewarder();
+		if rewarder_op.is_none() {
+			return false;
+		}
+		return &rewarder_op.unwrap() == who;
+	}
 	/// update user claim info when user mint rtoken
 	pub fn update_claim_info(who: &T::AccountId, symbol: RSymbol, mint_value: u128) {
 		let mut cycle = Self::act_current_cycle(symbol);

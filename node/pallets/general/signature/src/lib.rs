@@ -134,3 +134,14 @@ fn ethereum_signable_message(what: &[u8]) -> Vec<u8> {
     v.extend_from_slice(what);
     v
 }
+
+/// Converts the given binary data into ASCII-encoded hex. It will be twice the length.
+pub fn to_ascii_hex(data: &[u8]) -> Vec<u8> {
+	let mut r = Vec::with_capacity(data.len() * 2);
+	let mut push_nibble = |n| r.push(if n < 10 { b'0' + n } else { b'a' - 10 + n });
+	for &b in data.iter() {
+		push_nibble(b / 16);
+		push_nibble(b % 16);
+	}
+	r
+}

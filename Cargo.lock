@@ -5549,6 +5549,7 @@ version = "0.4.5"
 dependencies = [
  "frame-support",
  "frame-system",
+ "general-signature",
  "node-primitives",
  "pallet-staking",
  "parity-scale-codec",
