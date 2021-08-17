@@ -3900,6 +3900,7 @@ dependencies = [
  "pallet-utility",
  "pallet-vesting",
  "parity-scale-codec",
+ "rclaim",
  "rdexn-payers",
  "rdexn-signatures",
  "rdexn-swap",
@@ -5543,6 +5544,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "rclaim"
+version = "0.4.5"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "general-signature",
+ "node-primitives",
+ "pallet-staking",
+ "parity-scale-codec",
+ "rtoken-balances",
+ "sp-arithmetic",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "rdexn-payers"
 version = "0.4.5"
 dependencies = [
@@ -5840,6 +5857,7 @@ dependencies = [
  "hex-literal",
  "node-primitives",
  "parity-scale-codec",
+ "rclaim",
  "rtoken-balances",
  "rtoken-ledger",
  "rtoken-rate",
