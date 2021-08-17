@@ -19,7 +19,7 @@ use node_primitives::{RSymbol, Balance, ChainType};
 use rtoken_ledger::{self as ledger, Unbonding};
 use rtoken_relayers as relayers;
 use codec::{Encode};
-
+use rclaim;
 #[cfg(test)]
 mod tests;
 
@@ -31,7 +31,7 @@ pub use signature::*;
 
 pub const MAX_UNLOCKING_CHUNKS: usize = 64;
 
-pub trait Trait: system::Trait + rtoken_rate::Trait + rtoken_ledger::Trait + relayers::Trait {
+pub trait Trait: system::Trait + rtoken_rate::Trait + rtoken_ledger::Trait + relayers::Trait + rclaim::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
     /// The currency mechanism.
     type Currency: Currency<Self::AccountId>;
@@ -333,7 +333,7 @@ decl_module! {
             let fees = Self::bond_fees(symbol);
             if fees > 0 {
                 let relay_fees_receiver = op_relay_fees_receiver.unwrap();
-                T::Currency::transfer(&who, &relay_fees_receiver, fees.saturated_into(), KeepAlive)?;
+                <T as Trait>::Currency::transfer(&who, &relay_fees_receiver, fees.saturated_into(), KeepAlive)?;
             }
 
             <BondStates>::insert(symbol, (&blockhash, &txhash), BondState::Dealing);
@@ -370,6 +370,8 @@ decl_module! {
             <BondStates>::insert(symbol, (&record.blockhash, &record.txhash), BondState::Success);
 
             ledger::BondPipelines::insert(symbol, &record.pool, pipe);
+            //update claim info
+            rclaim::Module::<T>::update_claim_info(&record.bonder, symbol, rbalance);
             
             Ok(())
         }
@@ -428,7 +430,7 @@ decl_module! {
 
             let fees = Self::unbond_fees(symbol);
             if fees > 0 {
-                T::Currency::transfer(&who, &relay_fees_receiver, fees.saturated_into(), KeepAlive)?;
+                <T as Trait>::Currency::transfer(&who, &relay_fees_receiver, fees.saturated_into(), KeepAlive)?;
             }
             
             <T as Trait>::RCurrency::transfer(&who, &receiver, symbol, fee)?;

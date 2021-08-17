@@ -5857,6 +5857,7 @@ dependencies = [
  "hex-literal",
  "node-primitives",
  "parity-scale-codec",
+ "rclaim",
  "rtoken-balances",
  "rtoken-ledger",
  "rtoken-rate",
