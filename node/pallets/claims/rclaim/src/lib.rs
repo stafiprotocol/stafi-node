@@ -43,8 +43,8 @@ pub const RATEBASE: u128 = 1_000_000_000_000;
 decl_storage! {
 	trait Store for Module<T: Trait> as RClaim {
 		/// claim infos (account, rsymbol, cycle, mint index)
-		pub ClaimInfos get(fn claim_infos): map hasher(blake2_128_concat) (T::AccountId, RSymbol, u32, u32) => Option<ClaimInfo>;
-		pub REthClaimInfos get(fn reth_claim_infos): map hasher(blake2_128_concat) (T::AccountId, u32, u32) => Option<ClaimInfo>;
+		pub ClaimInfos get(fn claim_infos): map hasher(blake2_128_concat) (T::AccountId, RSymbol, u32, u64) => Option<ClaimInfo>;
+		pub REthClaimInfos get(fn reth_claim_infos): map hasher(blake2_128_concat) (T::AccountId, u32, u64) => Option<ClaimInfo>;
 		/// Proxy accounts for setting fees
 		pub REthRewarder get(fn reth_rewarder): Option<T::AccountId>;
 		/// MintRewardActs
@@ -62,8 +62,8 @@ decl_storage! {
 		pub UserActs get(fn user_acts): map hasher(blake2_128_concat) (T::AccountId, RSymbol) => Option<Vec<u32>>;
 		pub UserREthActs get(fn user_reth_acts): map hasher(blake2_128_concat) T::AccountId => Option<Vec<u32>>;
 		/// user mint count (account, rsymbol, cycle)
-		pub UserMintsCount get(fn user_mints_count): map hasher(blake2_128_concat) (T::AccountId, RSymbol, u32) => u32;
-		pub UserREthMintsCount get(fn user_reth_mints_count): map hasher(blake2_128_concat) (T::AccountId, u32) => u32;
+		pub UserMintsCount get(fn user_mints_count): map hasher(blake2_128_concat) (T::AccountId, RSymbol, u32) => u64;
+		pub UserREthMintsCount get(fn user_reth_mints_count): map hasher(blake2_128_concat) (T::AccountId, u32) => u64;
 	}
 }
 
@@ -228,7 +228,7 @@ decl_module! {
 
 		/// Make a claim
 		#[weight = 50_000_000]
-		pub fn claim_rtoken_reward(origin, symbol: RSymbol, cycle: u32, index: u32) -> DispatchResult {
+		pub fn claim_rtoken_reward(origin, symbol: RSymbol, cycle: u32, index: u64) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			let mut claim_info = Self::claim_infos((&who, symbol, cycle, index)).ok_or(Error::<T>::HasNoClaimInfo)?;
 			let act = Self::acts((symbol, cycle)).ok_or(Error::<T>::HasNoAct)?;
@@ -259,7 +259,7 @@ decl_module! {
 impl<T: Trait> Module<T> {
 	/// update user claim info when user mint rtoken
 	pub fn update_claim_info(who: &T::AccountId, symbol: RSymbol, mint_value: u128) {
-		let cycle = Self::act_current_cycle(symbol);
+		let mut cycle = Self::act_current_cycle(symbol);
 		if cycle == 0 {
 			return;
 		}
@@ -269,6 +269,16 @@ impl<T: Trait> Module<T> {
 		}
 		let mut act = act_op.unwrap();
 		let now_block = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
+		if act.end < now_block {
+			Self::update_act_current_cycle(now_block, symbol);
+			cycle = Self::act_current_cycle(symbol);
+			let act_op = Self::acts((symbol, cycle));
+			if act_op.is_none() {
+				return;
+			}
+			act = act_op.unwrap();
+		}
+
 		if act.begin > now_block || act.end < now_block {
 			return;
 		}
@@ -311,16 +321,16 @@ impl<T: Trait> Module<T> {
 				return;
 			}
 
-			let mut begin = 1;
-			if last_current_cycle > 0 {
-				begin = last_current_cycle;
-			}
+			let begin = last_current_cycle + 1;
 			for i in begin..(cycle + 1) {
 				let act_op = Self::acts((symbol, i));
 				if act_op.is_none() {
 					continue;
 				}
 				let act = act_op.unwrap();
+				if now < act.begin {
+					break;
+				}
 				if act.begin <= now && act.end >= now {
 					if i != last_current_cycle {
 						<ActCurrentCycle>::insert(symbol, i);
@@ -340,16 +350,16 @@ impl<T: Trait> Module<T> {
 				return;
 			}
 
-			let mut begin = 1;
-			if last_current_cycle > 0 {
-				begin = last_current_cycle;
-			}
+			let begin = last_current_cycle + 1;
 			for i in begin..(cycle + 1) {
 				let act_op = Self::reth_acts(i);
 				if act_op.is_none() {
 					continue;
 				}
 				let act = act_op.unwrap();
+				if now < act.begin {
+					break;
+				}
 				if act.begin <= now && act.end >= now {
 					if i != last_current_cycle {
 						<REthActCurrentCycle>::put(i);
