@@ -8,6 +8,7 @@ use sp_core::{
     ed25519::{Public as Ed25519Public, Signature as Ed25519Signature},
     ecdsa::{Public as EcdsaPublic, Signature as EcdsaSignature},
 };
+use sp_io::{hashing::keccak_256, crypto::secp256k1_ecdsa_recover};
 
 use node_primitives::{RSymbol, ChainType, Sr25519AppCrypto, Ed25519AppCrypto, EcdsaAppCrypto};
 use frame_system::offchain::AppCrypto;
@@ -94,4 +95,42 @@ pub fn tendermint_verify(pubkey: &Vec<u8>, _signature: &Vec<u8>, _message: &Vec<
 
 pub fn check_tendermint_pubkey(pubkey: &Vec<u8>) -> bool {
     return pubkey.len() == 33;
+}
+
+pub fn ethereum_verify(pubkey: &Vec<u8>, signature: &Vec<u8>, msg: &[u8]) -> SigVerifyResult {
+    if pubkey.len() != 20 {
+        return SigVerifyResult::InvalidPubkey;
+    }
+
+    let mut sig = [0u8; 65];
+    sig.copy_from_slice(&signature);
+
+    let signer = eth_recover(&sig, &msg).unwrap().to_vec();
+    if &signer == pubkey {
+        return SigVerifyResult::Pass;
+    }
+
+    SigVerifyResult::Fail
+}
+
+
+pub fn eth_recover(sig: &[u8; 65], msg: &[u8]) -> Option<[u8; 20]> {
+    let mut res = [0u8; 20];
+    let use_msg = keccak_256(&ethereum_signable_message(msg));
+    res.copy_from_slice(&keccak_256(&secp256k1_ecdsa_recover(&sig, &use_msg).ok()?[..])[12..]);
+    Some(res)
+}
+
+// Constructs the message that Ethereum RPC's `personal_sign` and `eth_sign` would sign.
+fn ethereum_signable_message(what: &[u8]) -> Vec<u8> {
+    let mut l = what.len();
+    let mut rev = Vec::new();
+    while l > 0 {
+        rev.push(b'0' + (l % 10) as u8);
+        l /= 10;
+    }
+    let mut v = b"\x19Ethereum Signed Message:\n".to_vec();
+    v.extend(rev.into_iter().rev());
+    v.extend_from_slice(what);
+    v
 }
