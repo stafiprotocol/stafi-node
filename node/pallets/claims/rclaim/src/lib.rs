@@ -23,14 +23,15 @@ use frame_system::{self as system, ensure_root, ensure_signed};
 use node_primitives::{Balance, BlockNumber, RSymbol};
 use rtoken_balances::traits::Currency as RCurrency;
 use sp_std::prelude::*;
-pub mod models;
 use codec::Encode;
 use general_signature::{ethereum_verify, to_ascii_hex, SigVerifyResult};
-pub use models::*;
 use pallet_staking::{self as staking};
 use sp_arithmetic::helpers_128bit::multiply_by_rational;
 use sp_runtime::traits::SaturatedConversion;
 use sp_std::convert::TryInto;
+
+pub mod models;
+pub use models::*;
 
 /// Configuration trait.
 pub trait Trait: system::Trait + staking::Trait {
@@ -75,8 +76,10 @@ decl_event!(
 	where
 		AccountId = <T as system::Trait>::AccountId,
 	{
-		/// Someone claimed some fis
-		Claimed(AccountId, RSymbol, u128),
+		/// Someone claimed some fis from mint rtoken
+		RTokenClaimed(AccountId, RSymbol, u128),
+		/// Someone claimed some fis from mint reth
+		REthClaimed(AccountId, u128),
 	}
 );
 
@@ -87,21 +90,19 @@ decl_error! {
 		HasNoClaimInfo,
 		/// hash no act
 		HasNoAct,
-		/// There's not enough in the pot to pay out some unvested amount. Generally implies a logic
-		/// error.
-		PotUnderflow,
 		/// zero value
 		ValueZero,
 		/// invalid reth rewarder
 		InvalidREthRewarder,
-		/// Got an overflow after adding
-		OverFlow,
 		/// Insufficient fis
 		InsufficientFis,
 		/// no fund address
 		NoFundAddress,
+		/// invalid Pubkey
 		InvalidPubkey,
+		/// eth signature failed
 		EthSigsFailed,
+		/// pubkey and mint value numnber not equal
 		PubkeyAndValueNumberErr,
 	}
 }
@@ -150,6 +151,8 @@ decl_module! {
 			ensure!(end > begin, "End block number must be greater than begin block nubmer");
 			ensure!(total_reward > 0, "total amount must be greater than 0");
 			ensure!(total_reward > user_limit, "total amount must be greater than User limit");
+			ensure!(locked_blocks > 0,"locked blocks mut greater than 0");
+			ensure!(reward_rate > 0,"reward rate mut greater than 0");
 
 			let current_block_num = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
 			ensure!(end > current_block_num, "End block number must be greater than current block nubmer");
@@ -245,7 +248,9 @@ decl_module! {
 			T::Currency::transfer(&fund_addr, &who, should_claim_amount.saturated_into(), KeepAlive)?;
 			claim_info.total_claimed = claim_info.total_claimed.saturating_add(should_claim_amount);
 			claim_info.latest_claimed_block = now_block;
-			<ClaimInfos<T>>::insert((who, symbol, cycle, index), claim_info);
+			<ClaimInfos<T>>::insert((who.clone(), symbol, cycle, index), claim_info);
+
+			Self::deposit_event(RawEvent::RTokenClaimed(who.clone(), symbol, should_claim_amount));
 			Ok(())
 		}
 
@@ -276,6 +281,8 @@ decl_module! {
 			claim_info.total_claimed = claim_info.total_claimed.saturating_add(should_claim_amount);
 			claim_info.latest_claimed_block = now_block;
 			<REthClaimInfos>::insert((pubkey.clone(), cycle, index), claim_info);
+
+			Self::deposit_event(RawEvent::REthClaimed(who.clone(), should_claim_amount));
 			Ok(())
 		}
 
@@ -284,10 +291,7 @@ decl_module! {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_rewarder(&who), Error::<T>::InvalidREthRewarder);
 			ensure!(pubkeys.len() == mint_values.len() && pubkeys.len() < 200, Error::<T>::PubkeyAndValueNumberErr);
-			for j in 0..pubkeys.len() {
-				ensure!(pubkeys[j].len() == 20, Error::<T>::InvalidPubkey);
-				ensure!(mint_values[j] > 0, Error::<T>::ValueZero);
-			}
+			
 			let mut cycle = Self::reth_act_current_cycle();
 			if cycle == 0 {
 				return Ok(());
@@ -313,6 +317,10 @@ decl_module! {
 			if act.left_amount == 0 {
 				return Ok(());
 			}
+			for j in 0..pubkeys.len() {
+				ensure!(pubkeys[j].len() == 20, Error::<T>::InvalidPubkey);
+				ensure!(mint_values[j] > 0, Error::<T>::ValueZero);
+			}
 			//update state
 			for k in 0..pubkeys.len() {
 				if act.left_amount == 0 {
@@ -324,6 +332,9 @@ decl_module! {
 				.unwrap_or(u128::MIN) as u128;
 				if should_reward_amount > act.left_amount {
 					should_reward_amount = act.left_amount;
+				}
+				if act.user_limit > 0 && should_reward_amount > act.user_limit {
+					should_reward_amount = act.user_limit;
 				}
 				act.left_amount = act.left_amount.saturating_sub(should_reward_amount);
 				let claim_info = ClaimInfo {
@@ -393,6 +404,10 @@ impl<T: Trait> Module<T> {
 		if should_reward_amount > act.left_amount {
 			should_reward_amount = act.left_amount;
 		}
+		if act.user_limit > 0 && should_reward_amount > act.user_limit {
+			should_reward_amount = act.user_limit;
+		}
+
 		act.left_amount = act.left_amount.saturating_sub(should_reward_amount);
 
 		let claim_info = ClaimInfo {
