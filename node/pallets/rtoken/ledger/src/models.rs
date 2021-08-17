@@ -93,4 +93,16 @@ pub enum PoolBondState {
     TransferReported,
 }
 
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub enum BondAction {
+    /// bond only
+    BondOnly,
+    /// unbond only
+    UnbondOnly,
+    /// both bond and unbond
+    BothBondUnbond,
+    /// either bond and unbond
+    EitherBondUnbond,
+}
+
 

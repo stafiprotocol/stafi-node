@@ -19,8 +19,7 @@ pub fn verify_signature(symbol: RSymbol, pubkey: &Vec<u8>, signature: &Vec<u8>, 
         ChainType::Tendermint => tendermint_verify(&pubkey, &signature, &message),
         ChainType::Solana => ed25519_verify(&pubkey, &signature, &message),
         ChainType::Ethereum => {
-            let msg = &keccak_256(&message[..]);
-            ethereum_verify(&pubkey, &signature, msg)
+            ethereum_verify(&pubkey, &signature, &message)
         },
     }
 }
@@ -104,6 +103,23 @@ pub fn tendermint_verify(pubkey: &Vec<u8>, _signature: &Vec<u8>, _message: &Vec<
 
 pub fn check_tendermint_pubkey(pubkey: &Vec<u8>) -> bool {
     return pubkey.len() == 33;
+}
+
+pub fn ed25519_verify(pubkey: &Vec<u8>, signature: &Vec<u8>, message: &Vec<u8>) -> SigVerifyResult {
+    let ed_public = <Ed25519Public as TryFrom<_>>::try_from(&pubkey[..]);
+
+    if ed_public.is_err() {
+        return SigVerifyResult::InvalidPubkey;
+    }
+
+    let public = ed_public.unwrap();
+    let sig = Ed25519Signature::from_slice(&signature);
+    let result = <Ed25519AppCrypto as AppCrypto<_,_>>::verify(&message, public.into(), sig.into());
+    if result {
+        return SigVerifyResult::Pass;
+    }
+
+    SigVerifyResult::Fail
 }
 
 pub fn ethereum_verify(pubkey: &Vec<u8>, signature: &Vec<u8>, msg: &[u8]) -> SigVerifyResult {

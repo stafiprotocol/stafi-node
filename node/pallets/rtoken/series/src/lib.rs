@@ -318,7 +318,11 @@ decl_module! {
             let op_relay_fees_receiver = Self::relay_fees_receiver();
             ensure!(op_relay_fees_receiver.is_some(), Error::<T>::NoRelayFeesReceiver);
 
-            match verify_signature(symbol, &pubkey, &signature, &who.encode()) {
+            let mut sig_msg = who.encode();
+            if symbol.chain_type() == ChainType::Ethereum {
+                sig_msg = who.using_encoded(to_ascii_hex);
+            }
+            match verify_signature(symbol, &pubkey, &signature, &sig_msg) {
                 SigVerifyResult::InvalidPubkey => Err(Error::<T>::InvalidPubkey)?,
                 SigVerifyResult::Fail => Err(Error::<T>::InvalidSignature)?,
                 _ => (),
