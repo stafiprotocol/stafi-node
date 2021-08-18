@@ -13,6 +13,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use codec::Encode;
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage,
 	dispatch::DispatchResult,
@@ -20,15 +21,14 @@ use frame_support::{
 	traits::{Currency, ExistenceRequirement::KeepAlive},
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::{Balance, BlockNumber, RSymbol};
-use rtoken_balances::traits::Currency as RCurrency;
-use sp_std::prelude::*;
-use codec::Encode;
 use general_signature::{ethereum_verify, to_ascii_hex, SigVerifyResult};
+use node_primitives::{Balance, BlockNumber, RSymbol};
 use pallet_staking::{self as staking};
+use rtoken_balances::traits::Currency as RCurrency;
 use sp_arithmetic::helpers_128bit::multiply_by_rational;
 use sp_runtime::traits::SaturatedConversion;
 use sp_std::convert::TryInto;
+use sp_std::prelude::*;
 
 pub mod models;
 pub use models::*;
@@ -291,17 +291,21 @@ decl_module! {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_rewarder(&who), Error::<T>::InvalidREthRewarder);
 			ensure!(pubkeys.len() == mint_values.len() && pubkeys.len() < 200, Error::<T>::PubkeyAndValueNumberErr);
-			
+
+			let now_block = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
 			let mut cycle = Self::reth_act_current_cycle();
 			if cycle == 0 {
-				return Ok(());
+				Self::update_reth_act_current_cycle(now_block);
+				cycle = Self::reth_act_current_cycle();
+				if cycle == 0 {
+					return Ok(());
+				}
 			}
 			let act_op = Self::reth_acts(cycle);
 			if act_op.is_none() {
 				return Ok(());
 			}
 			let mut act = act_op.unwrap();
-			let now_block = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
 			if act.end < now_block {
 				Self::update_reth_act_current_cycle(now_block);
 				cycle = Self::reth_act_current_cycle();
@@ -373,15 +377,19 @@ impl<T: Trait> Module<T> {
 	/// update user claim info when user mint rtoken
 	pub fn update_claim_info(who: &T::AccountId, symbol: RSymbol, mint_value: u128) {
 		let mut cycle = Self::act_current_cycle(symbol);
+		let now_block = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
 		if cycle == 0 {
-			return;
+			Self::update_act_current_cycle(now_block, symbol);
+			cycle = Self::act_current_cycle(symbol);
+			if cycle == 0 {
+				return;
+			}
 		}
 		let act_op = Self::acts((symbol, cycle));
 		if act_op.is_none() {
 			return;
 		}
 		let mut act = act_op.unwrap();
-		let now_block = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
 		if act.end < now_block {
 			Self::update_act_current_cycle(now_block, symbol);
 			cycle = Self::act_current_cycle(symbol);
