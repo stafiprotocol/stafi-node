@@ -26,6 +26,7 @@ pallet-session = { branch = "master", default-features = false, git = 'https://g
 node-primitives = { path = "../../../primitives", default-features = false }
 rtoken-balances = { path = "../balances", default-features = false}
 rtoken-rate = { path = "../rate", default-features = false}
+rclaim = { path = "../../claims/rclaim", default-features = false}
 
 [features]
 default = ["std"]
@@ -43,4 +44,5 @@ std = [
   "pallet-session/std",
   "rtoken-balances/std",
   "rtoken-rate/std",
+  "rclaim/std",
 ]

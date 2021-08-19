@@ -5737,6 +5737,7 @@ dependencies = [
  "pallet-session",
  "pallet-staking",
  "parity-scale-codec",
+ "rclaim",
  "rtoken-balances",
  "rtoken-rate",
  "serde",

@@ -29,6 +29,7 @@ use pallet_staking::{
 use pallet_session as session;
 use rtoken_balances::{traits::{Currency as RCurrency}};
 use node_primitives::{RSymbol};
+use rclaim;
 
 const SYMBOL: RSymbol = RSymbol::RFIS;
 const MAX_ONBOARD_VALIDATORS: usize = 300;
@@ -49,7 +50,7 @@ macro_rules! log {
 
 pub type BalanceOf<T> = staking::BalanceOf<T>;
 
-pub trait Trait: system::Trait + staking::Trait + SendTransactionTypes<Call<Self>> + session::Trait + rtoken_rate::Trait {
+pub trait Trait: system::Trait + staking::Trait + SendTransactionTypes<Call<Self>> + session::Trait + rtoken_rate::Trait + rclaim::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
     /// currency of rtoken
@@ -228,13 +229,13 @@ decl_module! {
                 let fee = (Self::commission() * (after - before)).saturated_into::<u128>();
                 let rfis = rtoken_rate::Module::<T>::token_to_rtoken(SYMBOL, fee);
                 let receiver = op_receiver.unwrap();
-                if let Err(e) = T::RCurrency::mint(&receiver, SYMBOL, rfis) {
+                if let Err(e) = <T as Trait>::RCurrency::mint(&receiver, SYMBOL, rfis) {
                     debug::error!("rfis commission err: {:?}", e);
                 }
             }
 
             let balance = after.saturated_into::<u128>();
-            let rbalance = T::RCurrency::total_issuance(SYMBOL);
+            let rbalance = <T as Trait>::RCurrency::total_issuance(SYMBOL);
             let rate =  rtoken_rate::Module::<T>::set_rate(SYMBOL, balance, rbalance);
             rtoken_rate::EraRate::insert(SYMBOL, era, rate);
         }
@@ -633,7 +634,9 @@ decl_module! {
             let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(SYMBOL, v);
             
             T::Currency::transfer(&who, &controller, value, AllowDeath)?;
-            T::RCurrency::mint(&who, SYMBOL, rbalance)?;
+            <T as Trait>::RCurrency::mint(&who, SYMBOL, rbalance)?;
+            //update claim info
+            rclaim::Module::<T>::update_claim_info(&who, SYMBOL, rbalance);
             
             Self::bond_extra(&controller, &mut ledger, value);
 
@@ -656,7 +659,7 @@ decl_module! {
             let active_era_info = staking::ActiveEra::get().ok_or(Error::<T>::NoCurrentEra)?;
             ensure!(rtoken_rate::EraRate::get(SYMBOL, active_era_info.index).is_some(), Error::<T>::EraRateNotUpdated);
 
-            let free = T::RCurrency::free_balance(&who, SYMBOL);
+            let free = <T as Trait>::RCurrency::free_balance(&who, SYMBOL);
             free.checked_sub(value).ok_or(Error::<T>::InsufficientBalance)?;
 
             let max_chunks = usize::from(T::BondingDuration::get() as u16).saturating_add(2);
@@ -683,8 +686,8 @@ decl_module! {
             }
 
             let receiver = op_receiver.unwrap();
-            T::RCurrency::transfer(&who, &receiver, SYMBOL, fee)?;
-            T::RCurrency::burn(&who, SYMBOL, left_value)?;
+            <T as Trait>::RCurrency::transfer(&who, &receiver, SYMBOL, fee)?;
+            <T as Trait>::RCurrency::burn(&who, SYMBOL, left_value)?;
             staking::Module::<T>::update_ledger(&controller, &ledger);
             <Unbonding<T>>::insert(&who, &controller, unbonding);
             Self::deposit_event(RawEvent::LiquidityUnBond(who, controller, value, left_value, balance));
