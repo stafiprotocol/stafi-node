@@ -902,7 +902,7 @@ impl xclaim::Trait for Runtime {
 
 impl rclaim::Trait for Runtime {
 	type Event = Event;
-	type RCurrency = RBalances;
+	type Currency = Balances;
 }
 
 

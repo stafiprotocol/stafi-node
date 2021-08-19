@@ -23,8 +23,6 @@ use frame_support::{
 use frame_system::{self as system, ensure_root, ensure_signed};
 use general_signature::{ethereum_verify, to_ascii_hex, SigVerifyResult};
 use node_primitives::{Balance, BlockNumber, RSymbol};
-use pallet_staking::{self as staking};
-use rtoken_balances::traits::Currency as RCurrency;
 use sp_arithmetic::helpers_128bit::multiply_by_rational;
 use sp_runtime::traits::SaturatedConversion;
 use sp_std::convert::TryInto;
@@ -34,11 +32,11 @@ pub mod models;
 pub use models::*;
 
 /// Configuration trait.
-pub trait Trait: system::Trait + staking::Trait {
+pub trait Trait: system::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
-	/// Currency mechanism of xtoken
-	type RCurrency: RCurrency<Self::AccountId>;
+	/// The currency mechanism.
+    type Currency: Currency<Self::AccountId>;
 }
 
 pub const RATEBASE: u128 = 1_000_000_000_000;
@@ -176,7 +174,49 @@ decl_module! {
 				locked_blocks: locked_blocks,
 			};
 			<Acts>::insert((symbol, new_cycle), act);
+			Ok(())
+		}
 
+		#[weight = 100_000]
+		pub fn update_rtoken_reward_act(
+			origin,
+			cycle: u32,
+			begin: BlockNumber,
+			end: BlockNumber,
+			symbol: RSymbol,
+			total_reward: Balance,
+			user_limit: Balance,
+			locked_blocks: u32,
+			reward_rate: u128,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			ensure!(begin > 0, "Begin block number must be greater than 0");
+			ensure!(end > begin, "End block number must be greater than begin block nubmer");
+			ensure!(total_reward > 0, "total amount must be greater than 0");
+			ensure!(total_reward > user_limit, "total amount must be greater than User limit");
+			ensure!(locked_blocks > 0, "locked blocks must be greater than 0");
+			ensure!(reward_rate > 0, "reward rate must be greater than 0");
+			let mut act = Self::acts((symbol, cycle)).ok_or(Error::<T>::HasNoAct)?;
+
+			let current_block_num = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
+			ensure!(end > current_block_num, "End block number must be greater than current block nubmer");
+
+			if total_reward > act.total_reward {
+				act.left_amount = act.left_amount.saturating_add(total_reward.saturating_sub(act.total_reward));
+			} else {
+				act.left_amount = act.left_amount.saturating_sub(act.total_reward.saturating_sub(total_reward));
+			}
+
+			act.begin = begin;
+			act.end = end;
+			act.cycle = cycle;
+			act.reward_rate = reward_rate;
+			act.total_reward = total_reward;
+			act.user_limit = user_limit;
+			act.locked_blocks = locked_blocks;
+
+			<Acts>::insert((symbol, cycle), act);
 			Ok(())
 		}
 
@@ -225,6 +265,48 @@ decl_module! {
 			Ok(())
 		}
 
+		#[weight = 100_000]
+		pub fn update_reth_reward_act(
+			origin,
+			cycle: u32,
+			begin: BlockNumber,
+			end: BlockNumber,
+			total_reward: Balance,
+			user_limit: Balance,
+			locked_blocks: u32,
+			reward_rate: u128,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			ensure!(begin > 0, "Begin block number must be greater than 0");
+			ensure!(end > begin, "End block number must be greater than begin block nubmer");
+			ensure!(total_reward > 0, "total amount must be greater than 0");
+			ensure!(total_reward > user_limit, "total amount must be greater than User limit");
+			ensure!(locked_blocks > 0, "locked blocks must be greater than 0");
+			ensure!(reward_rate > 0, "reward rate must be greater than 0");
+			let mut act = Self::reth_acts(cycle).ok_or(Error::<T>::HasNoAct)?;
+
+			let current_block_num = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
+			ensure!(end > current_block_num, "End block number must be greater than current block nubmer");
+
+			if total_reward > act.total_reward {
+				act.left_amount = act.left_amount.saturating_add(total_reward.saturating_sub(act.total_reward));
+			} else {
+				act.left_amount = act.left_amount.saturating_sub(act.total_reward.saturating_sub(total_reward));
+			}
+
+			act.begin = begin;
+			act.end = end;
+			act.cycle = cycle;
+			act.reward_rate = reward_rate;
+			act.total_reward = total_reward;
+			act.user_limit = user_limit;
+			act.locked_blocks = locked_blocks;
+
+			<REthActs>::insert(cycle, act);
+			Ok(())
+		}
+
 
 		/// Make a rtoken claim
 		#[weight = 10_000_000_000]
@@ -242,7 +324,6 @@ decl_module! {
 				should_claim_amount = multiply_by_rational(claim_info.total_reward, du_blocks, act.locked_blocks as u128).unwrap_or(u128::MIN) as u128;
 			}
 			ensure!(should_claim_amount > 0, Error::<T>::ValueZero);
-			ensure!(<T as staking::Trait>::Currency::free_balance(&fund_addr).saturated_into::<u128>() > should_claim_amount, Error::<T>::InsufficientFis);
 
 			//update state
 			T::Currency::transfer(&fund_addr, &who, should_claim_amount.saturated_into(), KeepAlive)?;
@@ -274,7 +355,6 @@ decl_module! {
 				should_claim_amount = multiply_by_rational(claim_info.total_reward, du_blocks, act.locked_blocks as u128).unwrap_or(u128::MIN) as u128;
 			}
 			ensure!(should_claim_amount > 0, Error::<T>::ValueZero);
-			ensure!(<T as staking::Trait>::Currency::free_balance(&fund_addr).saturated_into::<u128>() > should_claim_amount, Error::<T>::InsufficientFis);
 
 			//update state
 			T::Currency::transfer(&fund_addr, &who, should_claim_amount.saturated_into(), KeepAlive)?;
