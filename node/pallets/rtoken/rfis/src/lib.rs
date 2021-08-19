@@ -633,7 +633,7 @@ decl_module! {
             let v = value.saturated_into::<u128>();
             let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(SYMBOL, v);
             
-            T::Currency::transfer(&who, &controller, value, AllowDeath)?;
+            <T as staking::Trait>::Currency::transfer(&who, &controller, value, AllowDeath)?;
             <T as Trait>::RCurrency::mint(&who, SYMBOL, rbalance)?;
             //update claim info
             rclaim::Module::<T>::update_claim_info(&who, SYMBOL, rbalance);
@@ -714,7 +714,7 @@ decl_module! {
                     false
                 }).collect();
             ensure!(!total.is_zero(), Error::<T>::NoChunkToWithdraw);
-            T::Currency::transfer(&controller, &who, total, KeepAlive)?;
+            <T as staking::Trait>::Currency::transfer(&controller, &who, total, KeepAlive)?;
             if new_unbonding.is_empty() {
                 <Unbonding<T>>::remove(&who, &controller);
             } else {
