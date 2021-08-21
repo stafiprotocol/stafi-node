@@ -422,6 +422,7 @@ decl_module! {
 				}
 				act.left_amount = act.left_amount.saturating_sub(should_reward_amount);
 				let claim_info = ClaimInfo {
+					mint_amount: mint_value,
 					total_reward: should_reward_amount,
 					total_claimed: 0,
 					latest_claimed_block: now_block,
@@ -499,6 +500,7 @@ impl<T: Trait> Module<T> {
 		act.left_amount = act.left_amount.saturating_sub(should_reward_amount);
 
 		let claim_info = ClaimInfo {
+			mint_amount: mint_value,
 			total_reward: should_reward_amount,
 			total_claimed: 0,
 			latest_claimed_block: now_block,

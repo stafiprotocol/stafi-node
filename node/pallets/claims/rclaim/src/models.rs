@@ -5,6 +5,8 @@ use sp_std::prelude::*;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct ClaimInfo {
+    /// token amount
+    pub mint_amount: Balance,
     /// total reward
     pub total_reward: Balance,
     /// total claimed
