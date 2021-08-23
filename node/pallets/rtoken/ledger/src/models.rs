@@ -58,7 +58,8 @@ impl<A> BondSnapshot<A> {
 
     pub fn withdraw_reported(&self) -> bool {
         self.bond_state == PoolBondState::WithdrawReported ||
-        (self.symbol.chain_type() == ChainType::Tendermint && self.active_reported())
+        (self.symbol.chain_type() == ChainType::Tendermint && self.active_reported()) ||
+        (self.symbol == RSymbol::RBNB && self.active_reported())
     }
 
     pub fn update_state(&mut self, new_state: PoolBondState) {
