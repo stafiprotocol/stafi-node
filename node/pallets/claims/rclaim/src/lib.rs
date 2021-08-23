@@ -36,7 +36,7 @@ pub trait Trait: system::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 	/// The currency mechanism.
-    type Currency: Currency<Self::AccountId>;
+	type Currency: Currency<Self::AccountId>;
 }
 
 pub const RATEBASE: u128 = 1_000_000_000_000;
@@ -173,6 +173,7 @@ decl_module! {
 				user_limit: user_limit,
 				locked_blocks: locked_blocks,
 				total_rtoken_amount: 0,
+				total_native_token_amount: 0,
 			};
 			<Acts>::insert((symbol, new_cycle), act);
 			Ok(())
@@ -261,6 +262,7 @@ decl_module! {
 				user_limit: user_limit,
 				locked_blocks: locked_blocks,
 				total_rtoken_amount: 0,
+				total_native_token_amount: 0,
 			};
 			<REthActs>::insert(new_cycle, act);
 
@@ -426,6 +428,7 @@ decl_module! {
 				}
 				act.left_amount = act.left_amount.saturating_sub(should_reward_amount);
 				act.total_rtoken_amount = act.total_rtoken_amount.saturating_add(mint_value);
+				act.total_native_token_amount = act.total_native_token_amount.saturating_add(native_token_value);
 
 				let claim_info = ClaimInfo {
 					mint_amount: mint_value,
@@ -463,7 +466,12 @@ impl<T: Trait> Module<T> {
 		return &rewarder_op.unwrap() == who;
 	}
 	/// update user claim info when user mint rtoken
-	pub fn update_claim_info(who: &T::AccountId, symbol: RSymbol, mint_value: u128, native_token_value: u128) {
+	pub fn update_claim_info(
+		who: &T::AccountId,
+		symbol: RSymbol,
+		mint_value: u128,
+		native_token_value: u128,
+	) {
 		let mut cycle = Self::act_current_cycle(symbol);
 		let now_block = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
 		if cycle == 0 {
@@ -495,8 +503,12 @@ impl<T: Trait> Module<T> {
 			return;
 		}
 
-		let mut should_reward_amount = multiply_by_rational(native_token_value, act.reward_rate, RATEBASE)
-			.unwrap_or(u128::MIN) as u128;
+		let mut should_reward_amount = multiply_by_rational(
+			native_token_value,
+			act.reward_rate,
+			RATEBASE,
+		)
+		.unwrap_or(u128::MIN) as u128;
 		if should_reward_amount > act.left_amount {
 			should_reward_amount = act.left_amount;
 		}
@@ -506,6 +518,9 @@ impl<T: Trait> Module<T> {
 
 		act.left_amount = act.left_amount.saturating_sub(should_reward_amount);
 		act.total_rtoken_amount = act.total_rtoken_amount.saturating_add(mint_value);
+		act.total_native_token_amount = act
+			.total_native_token_amount
+			.saturating_add(native_token_value);
 
 		let claim_info = ClaimInfo {
 			mint_amount: mint_value,

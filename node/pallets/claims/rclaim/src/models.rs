@@ -39,4 +39,6 @@ pub struct MintRewardAct<BlockNumber, Balance> {
     pub locked_blocks: u32,
     /// total rtoken amount in this act
     pub total_rtoken_amount: u128,
+    /// total native token amount in this act
+    pub total_native_token_amount: u128,
 }
