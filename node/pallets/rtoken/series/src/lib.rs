@@ -375,7 +375,7 @@ decl_module! {
 
             ledger::BondPipelines::insert(symbol, &record.pool, pipe);
             //update claim info
-            rclaim::Module::<T>::update_claim_info(&record.bonder, symbol, rbalance);
+            rclaim::Module::<T>::update_claim_info(&record.bonder, symbol, rbalance, record.amount);
             
             Ok(())
         }
