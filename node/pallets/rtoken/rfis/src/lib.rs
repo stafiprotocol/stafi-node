@@ -636,7 +636,7 @@ decl_module! {
             <T as staking::Trait>::Currency::transfer(&who, &controller, value, AllowDeath)?;
             <T as Trait>::RCurrency::mint(&who, SYMBOL, rbalance)?;
             //update claim info
-            rclaim::Module::<T>::update_claim_info(&who, SYMBOL, rbalance);
+            rclaim::Module::<T>::update_claim_info(&who, SYMBOL, rbalance, v);
             
             Self::bond_extra(&controller, &mut ledger, value);
 

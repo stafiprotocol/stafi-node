@@ -172,6 +172,7 @@ decl_module! {
 				left_amount: total_reward,
 				user_limit: user_limit,
 				locked_blocks: locked_blocks,
+				total_rtoken_amount: 0,
 			};
 			<Acts>::insert((symbol, new_cycle), act);
 			Ok(())
@@ -259,6 +260,7 @@ decl_module! {
 				left_amount: total_reward,
 				user_limit: user_limit,
 				locked_blocks: locked_blocks,
+				total_rtoken_amount: 0,
 			};
 			<REthActs>::insert(new_cycle, act);
 
@@ -367,10 +369,10 @@ decl_module! {
 		}
 
 		#[weight = 100_000]
-		pub fn update_reth_claim_info(origin, pubkeys: Vec<Vec<u8>>, mint_values: Vec<u128>) -> DispatchResult {
+		pub fn update_reth_claim_info(origin, pubkeys: Vec<Vec<u8>>, mint_values: Vec<u128>, native_token_values: Vec<u128>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_rewarder(&who), Error::<T>::InvalidREthRewarder);
-			ensure!(pubkeys.len() == mint_values.len() && pubkeys.len() < 200, Error::<T>::PubkeyAndValueNumberErr);
+			ensure!(pubkeys.len() == mint_values.len() && pubkeys.len() == native_token_values.len() && pubkeys.len() < 200, Error::<T>::PubkeyAndValueNumberErr);
 
 			let now_block = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
 			let mut cycle = Self::reth_act_current_cycle();
@@ -404,6 +406,7 @@ decl_module! {
 			for j in 0..pubkeys.len() {
 				ensure!(pubkeys[j].len() == 20, Error::<T>::InvalidPubkey);
 				ensure!(mint_values[j] > 0, Error::<T>::ValueZero);
+				ensure!(native_token_values[j] > 0, Error::<T>::ValueZero);
 			}
 			//update state
 			for k in 0..pubkeys.len() {
@@ -411,8 +414,9 @@ decl_module! {
 					break;
 				}
 				let mint_value = mint_values[k];
+				let native_token_value = native_token_values[k];
 				let pubkey = &pubkeys[k];
-				let mut should_reward_amount = multiply_by_rational(mint_value, act.reward_rate, RATEBASE)
+				let mut should_reward_amount = multiply_by_rational(native_token_value, act.reward_rate, RATEBASE)
 				.unwrap_or(u128::MIN) as u128;
 				if should_reward_amount > act.left_amount {
 					should_reward_amount = act.left_amount;
@@ -421,8 +425,11 @@ decl_module! {
 					should_reward_amount = act.user_limit;
 				}
 				act.left_amount = act.left_amount.saturating_sub(should_reward_amount);
+				act.total_rtoken_amount = act.total_rtoken_amount.saturating_add(mint_value);
+
 				let claim_info = ClaimInfo {
 					mint_amount: mint_value,
+					native_token_amount: native_token_value,
 					total_reward: should_reward_amount,
 					total_claimed: 0,
 					latest_claimed_block: now_block,
@@ -456,7 +463,7 @@ impl<T: Trait> Module<T> {
 		return &rewarder_op.unwrap() == who;
 	}
 	/// update user claim info when user mint rtoken
-	pub fn update_claim_info(who: &T::AccountId, symbol: RSymbol, mint_value: u128) {
+	pub fn update_claim_info(who: &T::AccountId, symbol: RSymbol, mint_value: u128, native_token_value: u128) {
 		let mut cycle = Self::act_current_cycle(symbol);
 		let now_block = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
 		if cycle == 0 {
@@ -488,7 +495,7 @@ impl<T: Trait> Module<T> {
 			return;
 		}
 
-		let mut should_reward_amount = multiply_by_rational(mint_value, act.reward_rate, RATEBASE)
+		let mut should_reward_amount = multiply_by_rational(native_token_value, act.reward_rate, RATEBASE)
 			.unwrap_or(u128::MIN) as u128;
 		if should_reward_amount > act.left_amount {
 			should_reward_amount = act.left_amount;
@@ -498,9 +505,11 @@ impl<T: Trait> Module<T> {
 		}
 
 		act.left_amount = act.left_amount.saturating_sub(should_reward_amount);
+		act.total_rtoken_amount = act.total_rtoken_amount.saturating_add(mint_value);
 
 		let claim_info = ClaimInfo {
 			mint_amount: mint_value,
+			native_token_amount: native_token_value,
 			total_reward: should_reward_amount,
 			total_claimed: 0,
 			latest_claimed_block: now_block,
