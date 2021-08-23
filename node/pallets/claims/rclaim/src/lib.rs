@@ -115,6 +115,33 @@ decl_module! {
 		// Initializing events
 		fn deposit_event() = default;
 
+		/// clear all state.
+		#[weight = 100_000]
+		pub fn remove_act(origin) -> DispatchResult {
+			ensure_root(origin)?;
+			for symbol in [RSymbol::RDOT, RSymbol::RFIS, RSymbol::RKSM, RSymbol::RATOM, RSymbol::RSOL, RSymbol::RMATIC, RSymbol::RBNB].iter() {
+				let latest_cycle = Self::act_latest_cycle(symbol);
+				if latest_cycle > 0 {
+					for i in 1..latest_cycle+1 {
+						<Acts>::remove((symbol, i));
+					}
+				}
+				<ActLatestCycle>::remove(symbol);
+				<ActCurrentCycle>::remove(symbol);
+			}
+			
+			let reth_latest_cycle = Self::reth_act_latest_cycle();
+			if reth_latest_cycle > 0 {
+				for i in 1..reth_latest_cycle+1 {
+					<REthActs>::remove(i);
+				}
+				<REthActLatestCycle>::put(0);
+				<REthActCurrentCycle>::put(0);
+			}
+
+			Ok(())
+		}
+
 		/// Set reth rewarder.
 		#[weight = 100_000]
 		pub fn set_reth_rewarder(origin, account: T::AccountId) -> DispatchResult {
