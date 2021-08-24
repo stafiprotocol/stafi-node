@@ -1,6 +1,6 @@
 [package]
 name = "node-cli"
-version = "0.4.5"
+version = "0.4.6"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 description = "Generic Stafi node implementation in Rust."
 build = "build.rs"
@@ -87,19 +87,19 @@ pallet-staking = { branch = "master", git = 'https://github.com/stafiprotocol/st
 pallet-grandpa = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
 # node-specific dependencies
-node-runtime = { version = "0.4.5", path = "../runtime" }
-node-rpc = { version = "0.4.5", path = "../rpc" }
-node-primitives = { version = "0.4.5", path = "../primitives" }
-node-executor = { version = "0.4.5", path = "../executor" }
+node-runtime = { version = "0.4.6", path = "../runtime" }
+node-rpc = { version = "0.4.6", path = "../rpc" }
+node-primitives = { version = "0.4.6", path = "../primitives" }
+node-executor = { version = "0.4.6", path = "../executor" }
 
 # CLI-specific dependencies
 sc-cli = { branch = "master", optional = true, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 frame-benchmarking-cli = { branch = "master", optional = true, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-node-inspect = { version = "0.4.5", optional = true, path = "../inspect" }
+node-inspect = { version = "0.4.6", optional = true, path = "../inspect" }
 
 
 [target.'cfg(target_arch="x86_64")'.dependencies]
-node-executor = { version = "0.4.5", path = "../executor", features = [ "wasmtime" ] }
+node-executor = { version = "0.4.6", path = "../executor", features = [ "wasmtime" ] }
 sc-cli = { branch = "master", optional = true, git = 'https://github.com/stafiprotocol/stafi-blockchain.git', features = [ "wasmtime" ] }
 sc-service = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git', features = [ "wasmtime" ] }
 sp-trie = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git', features = ["memory-tracker"] }
@@ -120,7 +120,7 @@ platforms = "0.2.1"
 
 [build-dependencies]
 structopt = { version = "0.3.8", optional = true }
-node-inspect = { version = "0.4.5", optional = true, path = "../inspect" }
+node-inspect = { version = "0.4.6", optional = true, path = "../inspect" }
 frame-benchmarking-cli = { branch = "master", optional = true, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 substrate-build-script-utils = { branch = "master", optional = true, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 substrate-frame-cli = { branch = "master", optional = true, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
