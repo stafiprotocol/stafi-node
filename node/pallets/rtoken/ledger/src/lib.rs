@@ -303,7 +303,7 @@ decl_module! {
             <CurrentEraSnapShots<T>>::insert(symbol, empty);
             Ok(())
         }
-        
+
         /// just for test
         #[weight = 1_000_000]
         pub fn reset_chain_era(origin, symbol: RSymbol, new_era: u32) -> DispatchResult {
@@ -391,6 +391,11 @@ decl_module! {
                     pipe.unbond = pipe.unbond.saturating_sub(snap.unbond);
                 }
                 BondAction::EitherBondUnbond => (),
+                BondAction::InterDeduct => {
+                    let deduct = if snap.bond >= snap.unbond { snap.unbond } else { snap.bond };
+                    pipe.bond = pipe.bond.saturating_sub(deduct);
+                    pipe.unbond = pipe.unbond.saturating_sub(deduct);
+                }
             }
 
             <BondPipelines>::insert(symbol, &snap.pool, pipe);
@@ -419,6 +424,11 @@ decl_module! {
                     pipe.unbond = pipe.unbond.saturating_sub(snap.unbond);
                 }
                 BondAction::EitherBondUnbond => (),
+                BondAction::InterDeduct => {
+                    let deduct = if snap.bond >= snap.unbond { snap.unbond } else { snap.bond };
+                    pipe.bond = pipe.bond.saturating_sub(deduct);
+                    pipe.unbond = pipe.unbond.saturating_sub(deduct);
+                }
             }
 
             let receiver = Self::receiver().ok_or(Error::<T>::NoReceiver)?;
