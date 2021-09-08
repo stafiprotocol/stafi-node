@@ -17,7 +17,10 @@ pub fn verify_signature(symbol: RSymbol, pubkey: &Vec<u8>, signature: &Vec<u8>, 
     match symbol.chain_type() {
         ChainType::Substrate => substrate_verify(&pubkey, &signature, &message),
         ChainType::Tendermint => tendermint_verify(&pubkey, &signature, &message),
-        ChainType::Solana => ed25519_verify(&pubkey, &signature, &message),
+        ChainType::Solana => {
+            let use_message = to_ascii_hex(message);
+            ed25519_verify(&pubkey, &signature, &use_message)
+        },
         ChainType::Ethereum => {
             ethereum_verify(&pubkey, &signature, &message)
         },
