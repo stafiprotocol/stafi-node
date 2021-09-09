@@ -17,14 +17,14 @@ use frame_support::{
     decl_error, decl_module, dispatch::DispatchResult, ensure,
     traits::{
         Currency, EnsureOrigin, Get,
-        ExistenceRequirement::{AllowDeath, KeepAlive},
+        ExistenceRequirement::{KeepAlive},
     },
 };
 use frame_system::{self as system, ensure_signed};
 use sp_runtime::{traits::{Zero, Saturating}};
 use sp_core::U256;
 use sp_arithmetic::traits::SaturatedConversion;
-use node_primitives::{ChainId, ETH_CHAIN_ID, RSymbol, XSymbol};
+use node_primitives::{ChainId, RSymbol, XSymbol};
 use rtoken_balances::{traits::{Currency as RCurrency}};
 use xtoken_balances::{traits::{Currency as XCurrency}};
 
@@ -77,28 +77,14 @@ decl_module! {
         pub fn transfer_native(origin, amount: BalanceOf<T>, recipient: Vec<u8>, dest_id: ChainId) -> DispatchResult {
             let source = ensure_signed(origin)?;
 
-            ensure!(!<bridge::Module<T>>::check_is_paused(), Error::<T>::ServicePaused);
+            let (fee, receiver, bridger) = <bridge::Module<T>>::swapable(&recipient, dest_id)?;
+            let fee: BalanceOf<T> = fee.saturated_into();
 
-            ensure!(<bridge::Module<T>>::chain_whitelisted(dest_id), Error::<T>::InvalidChainId);
+            let total_amount = amount.saturating_add(fee);
+            T::Currency::transfer(&source, &bridger, total_amount, KeepAlive)?;
 
-            if dest_id == ETH_CHAIN_ID {
-                Self::check_eth_recipient(recipient.clone())?;
-            }
-
-            let chain_fees = <bridge::Module<T>>::get_chain_fees(dest_id)
-                .ok_or_else(|| Error::<T>::InvalidChainFee)?;
-            let fees: BalanceOf<T> = chain_fees.saturated_into();
-
-            let fees_recipient_account = <bridge::Module<T>>::get_fees_recipient_account()
-                .ok_or_else(|| Error::<T>::InvalidFeesRecipientAccount)?;
-
-            let total_amount = amount.saturating_add(fees);
-
-            let bridge_id = <bridge::Module<T>>::account_id();
-            T::Currency::transfer(&source, &bridge_id, total_amount.into(), AllowDeath)?;
-
-            if fees > Zero::zero() {
-                T::Currency::transfer(&bridge_id, &fees_recipient_account, fees.into(), KeepAlive)?;
+            if fee > Zero::zero() {
+                T::Currency::transfer(&bridger, &receiver, fee, KeepAlive)?;
             }
 
             let resource_id = T::NativeTokenId::get();
@@ -113,39 +99,22 @@ decl_module! {
 
             Ok(())
         }
-        
+
         /// Transfers some amount of the rtoken to some recipient on a (whitelisted) destination chain.
         #[weight = 195_000_000]
         pub fn transfer_rtoken(origin, symbol: RSymbol, amount: u128, recipient: Vec<u8>, dest_id: ChainId) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
-            ensure!(!<bridge::Module<T>>::check_is_paused(), Error::<T>::ServicePaused);
-            ensure!(<bridge::Module<T>>::chain_whitelisted(dest_id), Error::<T>::InvalidChainId);
-
-            if dest_id == ETH_CHAIN_ID {
-                Self::check_eth_recipient(recipient.clone())?;
-            }
-
-            let chain_fees = <bridge::Module<T>>::get_chain_fees(dest_id)
-                .ok_or_else(|| Error::<T>::InvalidChainFee)?;
-            let fees: BalanceOf<T> = chain_fees.saturated_into();
-
-            let fees_recipient_account = <bridge::Module<T>>::get_fees_recipient_account()
-                .ok_or_else(|| Error::<T>::InvalidFeesRecipientAccount)?;
-
-            let op_resource = <bridge::Module<T>>::rsymbol_resource(&symbol);
-            ensure!(op_resource.is_some(), Error::<T>::RsymbolNotMapped);
-            let resource = op_resource.unwrap();
-
+            let (fee, receiver, bridger) = <bridge::Module<T>>::swapable(&recipient, dest_id)?;
+            let resource = <bridge::Module<T>>::rsymbol_resource(&symbol).ok_or(Error::<T>::RsymbolNotMapped)?;
             let new_rbalance = T::RCurrency::free_balance(&who, symbol).checked_sub(amount)
                 .ok_or(Error::<T>::InsufficientRbalance)?;
             T::RCurrency::ensure_can_withdraw(&who, symbol, amount, new_rbalance)?;
 
-            if fees > Zero::zero() {
-                T::Currency::transfer(&who, &fees_recipient_account, fees.into(), KeepAlive)?;
+            if fee > 0 {
+                T::Currency::transfer(&who, &receiver, fee.saturated_into(), KeepAlive)?;
             }
-            let bridge_id = <bridge::Module<T>>::account_id();
-            T::RCurrency::transfer(&who, &bridge_id, symbol, amount)?;
+            T::RCurrency::transfer(&who, &bridger, symbol, amount)?;
 
             <bridge::Module<T>>::transfer_fungible(who, dest_id, resource, recipient, U256::from(amount))
         }
@@ -166,30 +135,14 @@ decl_module! {
         pub fn transfer_xtoken(origin, symbol: XSymbol, amount: u128, recipient: Vec<u8>, dest_id: ChainId) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
-            ensure!(!<bridge::Module<T>>::check_is_paused(), Error::<T>::ServicePaused);
-            ensure!(<bridge::Module<T>>::chain_whitelisted(dest_id), Error::<T>::InvalidChainId);
-
-            if dest_id == ETH_CHAIN_ID {
-                Self::check_eth_recipient(recipient.clone())?;
-            }
-
-            let chain_fees = <bridge::Module<T>>::get_chain_fees(dest_id)
-                .ok_or_else(|| Error::<T>::InvalidChainFee)?;
-            let fees: BalanceOf<T> = chain_fees.saturated_into();
-
-            let fees_recipient_account = <bridge::Module<T>>::get_fees_recipient_account()
-                .ok_or_else(|| Error::<T>::InvalidFeesRecipientAccount)?;
-
-            let op_resource = <bridge::Module<T>>::xsymbol_resource(&symbol);
-            ensure!(op_resource.is_some(), Error::<T>::XsymbolNotMapped);
-            let resource = op_resource.unwrap();
-
+            let (fee, receiver, _) = <bridge::Module<T>>::swapable(&recipient, dest_id)?;
+            let resource = <bridge::Module<T>>::xsymbol_resource(&symbol).ok_or(Error::<T>::XsymbolNotMapped)?;
             let new_rbalance = T::XCurrency::free_balance(&who, symbol).checked_sub(amount)
                 .ok_or(Error::<T>::InsufficientXbalance)?;
             T::XCurrency::ensure_can_withdraw(&who, symbol, amount, new_rbalance)?;
 
-            if fees > Zero::zero() {
-                T::Currency::transfer(&who, &fees_recipient_account, fees.into(), KeepAlive)?;
+            if fee > 0 {
+                T::Currency::transfer(&who, &receiver, fee.saturated_into(), KeepAlive)?;
             }
             T::XCurrency::burn(&who, symbol, amount)?;
 

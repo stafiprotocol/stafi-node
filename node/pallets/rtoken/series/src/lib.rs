@@ -5,21 +5,23 @@ use sp_std::prelude::*;
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchResult}, ensure,
-    traits::{Currency, EnsureOrigin, ExistenceRequirement::{KeepAlive}}
+    traits::{Currency, Get, EnsureOrigin, ExistenceRequirement::{KeepAlive}}
 };
 
 use frame_system::{self as system, ensure_signed, ensure_root};
 use sp_runtime::{
     Perbill,
-    traits::Hash,
+    traits::{Hash, Zero},
     SaturatedConversion
 };
 use rtoken_balances::{traits::{Currency as RCurrency}};
-use node_primitives::{RSymbol, Balance, ChainType};
+use node_primitives::{RSymbol, Balance, ChainType, ChainId};
 use rtoken_ledger::{self as ledger, Unbonding};
 use rtoken_relayers as relayers;
 use codec::{Encode};
 use rclaim;
+use bridge_common as bridge;
+use sp_core::U256;
 #[cfg(test)]
 mod tests;
 
@@ -31,7 +33,7 @@ pub use signature::*;
 
 pub const MAX_UNLOCKING_CHUNKS: usize = 64;
 
-pub trait Trait: system::Trait + rtoken_rate::Trait + rtoken_ledger::Trait + relayers::Trait + rclaim::Trait {
+pub trait Trait: system::Trait + rtoken_rate::Trait + rtoken_ledger::Trait + relayers::Trait + rclaim::Trait + bridge::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
     /// The currency mechanism.
     type Currency: Currency<Self::AccountId>;
@@ -66,6 +68,8 @@ decl_event! {
         NominationUpdated(RSymbol, Vec<u8>, Vec<Vec<u8>>, u32, AccountId),
         /// Validator Updated for a pool
         ValidatorUpdated(RSymbol, Vec<u8>, Vec<u8>, Vec<u8>, u32),
+        /// swap refunded
+        SwapRefunded(RSymbol, Hash),
     }
 }
 
@@ -121,6 +125,10 @@ decl_error! {
         SignatureRepeated,
         /// nominations already initialized
         NominationsInitialized,
+        /// expire not set
+        ExpireNotSet,
+        /// swap not exist
+        SwapNotExist,
     }
 }
 
@@ -135,6 +143,8 @@ decl_storage! {
         pub AccountBondRecords get(fn account_bond_records): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) (T::AccountId, u64) => Option<T::Hash>;
         /// bond success histories. symbol, (blockhash, txhash) => bool
         pub BondStates get(fn bond_states): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) (Vec<u8>, Vec<u8>) => Option<BondState>;
+        pub BondSwapRefundExpire get(fn bond_swap_refund_expire): map hasher(blake2_128_concat) RSymbol => Option<T::BlockNumber>;
+        pub BondSwaps get(fn bond_swaps): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) T::Hash => Option<BondSwap<T::AccountId, T::BlockNumber>>;
 
         /// Recipient account for relay fees
         pub RelayFeesReceiver get(fn relay_fees_receiver): Option<T::AccountId>;
@@ -292,7 +302,7 @@ decl_module! {
         pub fn update_validator(origin, symbol: RSymbol, pool: Vec<u8>, old_validator: Vec<u8>, new_validator: Vec<u8>, era: u32) -> DispatchResult {
             ensure_root(origin)?;
             ensure!(ledger::BondedPools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotBonded);
-            
+
             let mut validators = Self::nominated(symbol, &pool).unwrap_or(vec![]);
             let op_validator_index = validators.iter().position(|validator| validator == &old_validator);
             if op_validator_index.is_some() {
@@ -311,33 +321,63 @@ decl_module! {
         #[weight = 10_000_000_000]
         pub fn liquidity_bond(origin, pubkey: Vec<u8>, signature: Vec<u8>, pool: Vec<u8>, blockhash: Vec<u8>, txhash: Vec<u8>, amount: u128, symbol: RSymbol) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            ensure!(Self::bond_switch(), Error::<T>::BondSwitchClosed);
-            ensure!(amount > 0, Error::<T>::LiquidityBondZero);
-            ensure!(Self::is_txhash_available(symbol, &blockhash, &txhash), Error::<T>::TxhashUnavailable);
-            ensure!(ledger::BondedPools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotBonded);
-            let op_relay_fees_receiver = Self::relay_fees_receiver();
-            ensure!(op_relay_fees_receiver.is_some(), Error::<T>::NoRelayFeesReceiver);
+            Self::bondable(&who, &pubkey, &signature, &pool, &blockhash, &txhash, amount, symbol)?;
 
-            let mut sig_msg = who.encode();
-            if symbol.chain_type() == ChainType::Ethereum {
-                sig_msg = who.using_encoded(to_ascii_hex);
-            }
-            match verify_signature(symbol, &pubkey, &signature, &sig_msg) {
-                SigVerifyResult::InvalidPubkey => Err(Error::<T>::InvalidPubkey)?,
-                SigVerifyResult::Fail => Err(Error::<T>::InvalidSignature)?,
-                _ => (),
-            }
-
+            let receiver = Self::relay_fees_receiver().ok_or(Error::<T>::NoRelayFeesReceiver)?;
             let record = BondRecord::new(who.clone(), symbol, pubkey.clone(), pool.clone(), blockhash.clone(), txhash.clone(), amount);
             let bond_id = <T::Hashing as Hash>::hash_of(&record);
             ensure!(Self::bond_records(symbol, &bond_id).is_none(), Error::<T>::BondRepeated);
             let old_count = Self::account_bond_count(symbol, &who);
             let new_count = old_count.checked_add(1).ok_or(Error::<T>::OverFlow)?;
 
-            let fees = Self::bond_fees(symbol);
-            if fees > 0 {
-                let relay_fees_receiver = op_relay_fees_receiver.unwrap();
-                <T as Trait>::Currency::transfer(&who, &relay_fees_receiver, fees.saturated_into(), KeepAlive)?;
+            let bond_fee = Self::bond_fees(symbol);
+            if bond_fee > 0 {
+                <T as Trait>::Currency::transfer(&who, &receiver, bond_fee.saturated_into(), KeepAlive)?;
+            }
+
+            <BondStates>::insert(symbol, (&blockhash, &txhash), BondState::Dealing);
+            <AccountBondCount<T>>::insert(symbol, &who, new_count);
+            <AccountBondRecords<T>>::insert(symbol, (&who, old_count), &bond_id);
+            <BondRecords<T>>::insert(symbol, &bond_id, &record);
+
+            Self::deposit_event(RawEvent::LiquidityBond(who, symbol, bond_id));
+            Ok(())
+        }
+
+        /// new liquidity bond token to get rtoken
+        #[weight = 30_000_000_000]
+        pub fn liquidity_bond_and_swap(origin, pubkey: Vec<u8>, signature: Vec<u8>,
+            pool: Vec<u8>, blockhash: Vec<u8>, txhash: Vec<u8>, amount: u128,
+            symbol: RSymbol, recipient: Vec<u8>, dest_id: ChainId) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            Self::bondable(&who, &pubkey, &signature, &pool, &blockhash, &txhash, amount, symbol)?;
+
+            let bond_receiver = Self::relay_fees_receiver().ok_or(Error::<T>::NoRelayFeesReceiver)?;
+            let record = BondRecord::new(who.clone(), symbol, pubkey.clone(), pool.clone(), blockhash.clone(), txhash.clone(), amount);
+            let bond_id = <T::Hashing as Hash>::hash_of(&record);
+            ensure!(Self::bond_records(symbol, &bond_id).is_none(), Error::<T>::BondRepeated);
+            let old_count = Self::account_bond_count(symbol, &who);
+            let new_count = old_count.checked_add(1).ok_or(Error::<T>::OverFlow)?;
+            let bond_fee = Self::bond_fees(symbol);
+
+            if dest_id != T::ChainIdentity::get() {
+                let (swap_fee, swap_receiver, bridger) = <bridge::Module<T>>::swapable(&recipient, dest_id)?;
+                <bridge::Module<T>>::rsymbol_resource(&symbol).ok_or(bridge::Error::<T>::RsymbolNotMapped)?;
+
+                if swap_fee > 0 && bond_fee > 0 {
+                    let total_fee = swap_fee.saturating_add(bond_fee);
+                    <T as Trait>::Currency::transfer(&who, &bridger, total_fee.saturated_into(), KeepAlive)?;
+                    <T as Trait>::Currency::transfer(&bridger, &bond_receiver, bond_fee.saturated_into(), KeepAlive)?;
+                } else if swap_fee > 0 {
+                    <T as Trait>::Currency::transfer(&who, &bridger, swap_fee.saturated_into(), KeepAlive)?;
+                } else if bond_fee > 0 {
+                    <T as Trait>::Currency::transfer(&who, &bond_receiver, bond_fee.saturated_into(), KeepAlive)?;
+                }
+
+                let bond_swap = BondSwap {bonder: who.clone(), swap_fee, swap_receiver, bridger, recipient, dest_id, expire: Zero::zero(), bond_state: BondState::Dealing, refunded: false};
+                <BondSwaps<T>>::insert(symbol, &bond_id, bond_swap);
+            } else if bond_fee > 0 {
+                <T as Trait>::Currency::transfer(&who, &bond_receiver, bond_fee.saturated_into(), KeepAlive)?;
             }
 
             <BondStates>::insert(symbol, (&blockhash, &txhash), BondState::Dealing);
@@ -357,8 +397,21 @@ decl_module! {
             ensure!(op_record.is_some(), Error::<T>::BondNotFound);
             let record = op_record.unwrap();
             ensure!(Self::is_txhash_executable(symbol, &record.blockhash, &record.txhash), Error::<T>::TxhashUnexecutable);
+            let op_swap = Self::bond_swaps(symbol, &bond_id);
 
             if reason != BondReason::Pass {
+                if let Some(mut swap) = op_swap {
+                    if !swap.refunded {
+                        let expire = Self::bond_swap_refund_expire(symbol).ok_or(Error::<T>::ExpireNotSet)?;
+                        let expire = expire + system::Module::<T>::block_number();
+
+                        swap.expire = expire;
+                        swap.bond_state = BondState::Fail;
+
+                        <BondSwaps<T>>::insert(symbol, &bond_id, swap);
+                    }
+                }
+
                 <BondReasons<T>>::insert(symbol, &bond_id, reason);
                 <BondStates>::insert(symbol, (&record.blockhash, &record.txhash), BondState::Fail);
                 return Ok(())
@@ -368,15 +421,27 @@ decl_module! {
             pipe.bond = pipe.bond.checked_add(record.amount).ok_or(Error::<T>::OverFlow)?;
             pipe.active = pipe.active.checked_add(record.amount).ok_or(Error::<T>::OverFlow)?;
 
-            let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(record.symbol, record.amount);
-            <T as Trait>::RCurrency::mint(&record.bonder, symbol, rbalance)?;
+            let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(symbol, record.amount);
+            if let Some(mut swap) = op_swap {
+                let resource = <bridge::Module<T>>::rsymbol_resource(&symbol).ok_or(bridge::Error::<T>::RsymbolNotMapped)?;
+                ensure!(<bridge::Module<T>>::chain_whitelisted(swap.dest_id), bridge::Error::<T>::ChainNotWhitelisted);
+                <T as Trait>::Currency::transfer(&swap.bridger, &swap.swap_receiver, swap.swap_fee.saturated_into(), KeepAlive)?;
+                <T as Trait>::RCurrency::mint(&swap.bridger, symbol, rbalance)?;
+                swap.bond_state = BondState::Success;
+
+                <bridge::Module<T>>::transfer_fungible(swap.bonder.clone(), swap.dest_id.clone(), resource, swap.recipient.clone(), U256::from(rbalance))?;
+                <BondSwaps<T>>::insert(symbol, &bond_id, swap);
+            } else {
+                <T as Trait>::RCurrency::mint(&record.bonder, symbol, rbalance)?;
+            }
+
             <BondReasons<T>>::insert(symbol, &bond_id, reason);
             <BondStates>::insert(symbol, (&record.blockhash, &record.txhash), BondState::Success);
 
             ledger::BondPipelines::insert(symbol, &record.pool, pipe);
             //update claim info
             rclaim::Module::<T>::update_claim_info(&record.bonder, symbol, rbalance, record.amount);
-            
+
             Ok(())
         }
 
@@ -394,7 +459,7 @@ decl_module! {
             let current_era = rtoken_ledger::ChainEras::get(symbol).ok_or(Error::<T>::NoCurrentEra)?;
             let bonding_duration = rtoken_ledger::ChainBondingDuration::get(symbol).ok_or(Error::<T>::BondingDurationNotSet)?;
             let unlock_era = current_era + bonding_duration;
-            
+
             let op_receiver = ledger::Module::<T>::receiver();
             ensure!(op_receiver.is_some(), ledger::Error::<T>::NoReceiver);
             let receiver = op_receiver.unwrap();
@@ -436,7 +501,7 @@ decl_module! {
             if fees > 0 {
                 <T as Trait>::Currency::transfer(&who, &relay_fees_receiver, fees.saturated_into(), KeepAlive)?;
             }
-            
+
             <T as Trait>::RCurrency::transfer(&who, &receiver, symbol, fee)?;
             <T as Trait>::RCurrency::burn(&who, symbol, left_value)?;
             ledger::BondPipelines::insert(symbol, &pool, pipe);
@@ -476,6 +541,23 @@ decl_module! {
             Self::deposit_event(RawEvent::SubmitSignatures(who.clone(), symbol, era, pool, tx_type, proposal_id, signature));
             Ok(())
         }
+
+        /// refund swap fee if bond state fail
+        #[weight = 10_000_000]
+        pub fn refund_swap(origin, symbol: RSymbol, bond_id: T::Hash) -> DispatchResult {
+            ensure_signed(origin)?;
+
+            let mut swap = Self::bond_swaps(symbol, &bond_id).ok_or(Error::<T>::SwapNotExist)?;
+            let now = system::Module::<T>::block_number();
+            ensure!(swap.refundable(now), "not refundable");
+
+            <T as Trait>::Currency::transfer(&swap.bridger, &swap.bonder, swap.swap_fee.saturated_into(), KeepAlive)?;
+            swap.refunded = true;
+            <BondSwaps<T>>::insert(symbol, &bond_id, swap);
+
+            Self::deposit_event(RawEvent::SwapRefunded(symbol, bond_id));
+            Ok(())
+        }
     }
 }
 
@@ -500,5 +582,24 @@ impl<T: Trait> Module<T> {
 
     fn protocol_unbond_fee(value: u128) -> u128 {
         Self::unbond_commission() * value
+    }
+
+    fn bondable(who: &T::AccountId, pubkey: &Vec<u8>, signature: &Vec<u8>, pool: &Vec<u8>, blockhash: &Vec<u8>, txhash: &Vec<u8>, amount: u128, symbol: RSymbol) -> DispatchResult {
+        ensure!(Self::bond_switch(), Error::<T>::BondSwitchClosed);
+        ensure!(amount > 0, Error::<T>::LiquidityBondZero);
+        ensure!(Self::is_txhash_available(symbol, &blockhash, &txhash), Error::<T>::TxhashUnavailable);
+        ensure!(ledger::BondedPools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotBonded);
+
+        let mut sig_msg = who.encode();
+        if symbol.chain_type() == ChainType::Ethereum {
+            sig_msg = who.using_encoded(to_ascii_hex);
+        }
+        match verify_signature(symbol, &pubkey, &signature, &sig_msg) {
+            SigVerifyResult::InvalidPubkey => Err(Error::<T>::InvalidPubkey)?,
+            SigVerifyResult::Fail => Err(Error::<T>::InvalidSignature)?,
+            _ => (),
+        }
+
+        Ok(())
     }
 }
