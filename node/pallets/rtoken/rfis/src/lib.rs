@@ -6,7 +6,7 @@ use frame_support::{
     debug, decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchResult},
     ensure,
-    traits::{Currency, Get, ExistenceRequirement::{AllowDeath, KeepAlive}},
+    traits::{Currency, Get, ExistenceRequirement::{KeepAlive}},
 };
 use frame_system::{
     self as system, ensure_signed, ensure_root, ensure_none,
@@ -28,8 +28,10 @@ use pallet_staking::{
 };
 use pallet_session as session;
 use rtoken_balances::{traits::{Currency as RCurrency}};
-use node_primitives::{RSymbol};
+use node_primitives::{RSymbol, ChainId};
 use rclaim;
+use bridge_common as bridge;
+use sp_core::U256;
 
 const SYMBOL: RSymbol = RSymbol::RFIS;
 const MAX_ONBOARD_VALIDATORS: usize = 300;
@@ -50,7 +52,8 @@ macro_rules! log {
 
 pub type BalanceOf<T> = staking::BalanceOf<T>;
 
-pub trait Trait: system::Trait + staking::Trait + SendTransactionTypes<Call<Self>> + session::Trait + rtoken_rate::Trait + rclaim::Trait {
+pub trait Trait: system::Trait + staking::Trait + SendTransactionTypes<Call<Self>> +
+    session::Trait + rtoken_rate::Trait + rclaim::Trait + bridge::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
     /// currency of rtoken
@@ -64,7 +67,7 @@ decl_event! {
     pub enum Event<T> where
         Balance = BalanceOf<T>,
         <T as frame_system::Trait>::AccountId
-    {   
+    {
         /// NewPool
         NewPool(Vec<u8>, AccountId),
         /// Commission has been updated.
@@ -252,7 +255,7 @@ decl_module! {
             let location = pools.binary_search(&pool).err().ok_or(Error::<T>::ModuleIDRepeated)?;
             pools.insert(location, pool.clone());
             <Pools<T>>::put(pools);
-            
+
             Self::deposit_event(RawEvent::NewPool(module_id, pool));
             Ok(())
         }
@@ -382,7 +385,7 @@ decl_module! {
         #[weight = 10_000]
         pub fn add_pool_unlock(origin, pool: <T::Lookup as StaticLookup>::Source, chunk: UnlockChunk<BalanceOf<T>>) -> DispatchResult {
             ensure_root(origin)?;
-            
+
             let controller = T::Lookup::lookup(pool)?;
             ensure!(Self::is_in_pools(&controller), Error::<T>::PoolNotFound);
             let mut ledger = staking::Ledger::<T>::get(&controller).ok_or(staking::Error::<T>::NotController)?;
@@ -608,13 +611,13 @@ decl_module! {
             let location = onboards.binary_search(&stash).ok().ok_or(Error::<T>::NotOnboard)?;
             onboards.remove(location);
             <OnboardValidators<T>>::put(onboards);
-            
+
             Self::deposit_event(RawEvent::ValidatorOffboard(controller, stash.clone()));
             Ok(())
         }
 
         /// liquidity bond fis to get rfis
-        #[weight = 100_000_000]
+        #[weight = 10_000_000_000]
         pub fn liquidity_bond(origin, pool: <T::Lookup as StaticLookup>::Source, value: BalanceOf<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(Self::nominate_switch(), Error::<T>::NominateSwitchClosed);
@@ -632,12 +635,59 @@ decl_module! {
 
             let v = value.saturated_into::<u128>();
             let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(SYMBOL, v);
-            
-            <T as staking::Trait>::Currency::transfer(&who, &controller, value, AllowDeath)?;
+
+            <T as staking::Trait>::Currency::transfer(&who, &controller, value, KeepAlive)?;
             <T as Trait>::RCurrency::mint(&who, SYMBOL, rbalance)?;
             //update claim info
             rclaim::Module::<T>::update_claim_info(&who, SYMBOL, rbalance, v);
-            
+
+            Self::bond_extra(&controller, &mut ledger, value);
+
+            Self::deposit_event(RawEvent::LiquidityBond(who, controller, value, rbalance));
+
+            Ok(())
+        }
+
+        /// liquidity bond fis to get rfis
+        #[weight = 10_000_000_000]
+        pub fn liquidity_bond_and_swap(origin, pool: <T::Lookup as StaticLookup>::Source, value: BalanceOf<T>, recipient: Vec<u8>, dest_id: ChainId) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(Self::nominate_switch(), Error::<T>::NominateSwitchClosed);
+            ensure!(!value.is_zero(), Error::<T>::LiquidityBondZero);
+            ensure!(staking::EraElectionStatus::<T>::get().is_closed(), staking::Error::<T>::CallNotAllowed);
+            let controller = T::Lookup::lookup(pool)?;
+            ensure!(Self::is_in_pools(&controller), Error::<T>::PoolNotFound);
+            let mut ledger = staking::Ledger::<T>::get(&controller).ok_or(Error::<T>::PoolUnbond)?;
+            let active_era_info = staking::ActiveEra::get().ok_or(Error::<T>::NoCurrentEra)?;
+            ensure!(rtoken_rate::EraRate::get(SYMBOL, active_era_info.index).is_some(), Error::<T>::EraRateNotUpdated);
+
+            let limit = Self::pool_balance_limit();
+            let bonded = Self::bonded_of(&controller).checked_add(&value).ok_or(Error::<T>::Overflow)?;
+            ensure!(limit.is_zero() || bonded <= limit, Error::<T>::PoolLimitReached);
+
+            let v = value.saturated_into::<u128>();
+            let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(SYMBOL, v);
+
+            if dest_id != T::ChainIdentity::get() {
+                let (swap_fee, swap_receiver, bridger) = <bridge::Module<T>>::swapable(&recipient, dest_id)?;
+                let resource = <bridge::Module<T>>::rsymbol_resource(SYMBOL).ok_or(bridge::Error::<T>::RsymbolNotMapped)?;
+                ensure!(<bridge::Module<T>>::chain_whitelisted(dest_id), bridge::Error::<T>::ChainNotWhitelisted);
+
+                let swap_fee: BalanceOf<T> = swap_fee.saturated_into();
+                let total = value.saturating_add(swap_fee);
+                <T as staking::Trait>::Currency::transfer(&who, &controller, total, KeepAlive)?;
+                <T as staking::Trait>::Currency::transfer(&controller, &swap_receiver, swap_fee, KeepAlive)?;
+                <T as Trait>::RCurrency::mint(&bridger, SYMBOL, rbalance)?;
+
+                <bridge::Module<T>>::transfer_fungible(who.clone(), dest_id, resource, recipient, U256::from(rbalance))?;
+            } else {
+                <T as staking::Trait>::Currency::transfer(&who, &controller, value, KeepAlive)?;
+                <T as Trait>::RCurrency::mint(&who, SYMBOL, rbalance)?;
+            }
+
+            //update claim info
+            rclaim::Module::<T>::update_claim_info(&who, SYMBOL, rbalance, v);
+
             Self::bond_extra(&controller, &mut ledger, value);
 
             Self::deposit_event(RawEvent::LiquidityBond(who, controller, value, rbalance));
@@ -646,7 +696,7 @@ decl_module! {
         }
 
         /// liquitidy unbond to redeem fis with rfis
-        #[weight = 100_000_000]
+        #[weight = 10_000_000_000]
         pub fn liquidity_unbond(origin, pool: <T::Lookup as StaticLookup>::Source, value: u128) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(!value.is_zero(), Error::<T>::LiquidityUnbondZero);
@@ -678,7 +728,7 @@ decl_module! {
             } else {
                 ledger.unlocking.push(UnlockChunk { value: balance, era });
             }
-            
+
             if let Some(chunk) = unbonding.iter_mut().find(|chunk| chunk.era == era) {
                 chunk.value += balance;
             } else {
@@ -787,7 +837,7 @@ impl<T: Trait> Module<T> {
     fn is_validator(era: EraIndex, t: &T::AccountId) -> bool {
         staking::ErasRewardPoints::<T>::get(&era).individual.contains_key(&t)
     }
-    
+
     fn unbond_fee(value: u128) -> u128 {
         Self::unbond_commission() * value
     }

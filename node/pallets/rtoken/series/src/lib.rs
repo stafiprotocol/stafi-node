@@ -317,6 +317,15 @@ decl_module! {
             Ok(())
         }
 
+        /// set
+        #[weight = 1_000_000]
+        pub fn swap_refund_expire(origin, symbol: RSymbol, number: T::BlockNumber) -> DispatchResult {
+            ensure_root(origin)?;
+            <BondSwapRefundExpire<T>>::insert(symbol, number);
+
+            Ok(())
+        }
+
         /// liquidity bond token to get rtoken
         #[weight = 10_000_000_000]
         pub fn liquidity_bond(origin, pubkey: Vec<u8>, signature: Vec<u8>, pool: Vec<u8>, blockhash: Vec<u8>, txhash: Vec<u8>, amount: u128, symbol: RSymbol) -> DispatchResult {
