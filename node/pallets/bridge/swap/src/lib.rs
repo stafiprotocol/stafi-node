@@ -53,11 +53,6 @@ pub trait Trait: system::Trait + bridge::Trait {
 
 decl_error! {
     pub enum Error for Module<T: Trait> {
-        ServicePaused,
-        InvalidChainId,
-        InvalidEthereumAddress,
-        InvalidChainFee,
-        InvalidFeesRecipientAccount,
         InsufficientRbalance,
         InsufficientXbalance,
         RsymbolNotMapped,
@@ -162,11 +157,3 @@ decl_module! {
     }
 }
 
-
-impl<T: Trait> Module<T> {
-    pub fn check_eth_recipient(recipient: Vec<u8>) -> DispatchResult {
-        ensure!(recipient.len() == 20, Error::<T>::InvalidEthereumAddress);
-
-        Ok(())
-    }
-}

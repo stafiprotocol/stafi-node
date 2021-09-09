@@ -26,7 +26,7 @@ use sp_runtime::{
     RuntimeDebug, ModuleId, DispatchError,
     traits::{AccountIdConversion, StaticLookup, Dispatchable}
 };
-use node_primitives::{ChainId, ETH_CHAIN_ID, Balance, RSymbol, XSymbol};
+use node_primitives::{ChainId, ETH_CHAIN_ID, BSC_CHAIN_ID, Balance, RSymbol, XSymbol};
 use bridge_relayers as brelayers;
 
 #[cfg(test)]
@@ -514,7 +514,7 @@ impl<T: Trait> Module<T> {
         let fee = Self::get_chain_fees(dest_id).ok_or(Error::<T>::InvalidChainFee)?;
         let receiver = Self::get_fees_recipient_account().ok_or(Error::<T>::InvalidFeesRecipientAccount)?;
 
-        if dest_id == ETH_CHAIN_ID {
+        if dest_id == ETH_CHAIN_ID || dest_id == BSC_CHAIN_ID {
             Self::check_eth_recipient(recipient)?;
         }
 

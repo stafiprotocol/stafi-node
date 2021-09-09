@@ -14,3 +14,6 @@ pub type ChainId = u8;
 
 /// ETH Chain
 pub const ETH_CHAIN_ID: ChainId = 2;
+
+/// BSC Chain
+pub const BSC_CHAIN_ID: ChainId = 3;

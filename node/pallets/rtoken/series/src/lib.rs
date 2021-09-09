@@ -69,7 +69,7 @@ decl_event! {
         /// Validator Updated for a pool
         ValidatorUpdated(RSymbol, Vec<u8>, Vec<u8>, Vec<u8>, u32),
         /// swap refunded
-        SwapRefunded(RSymbol, Hash),
+        SwapFeeRefunded(RSymbol, Hash),
     }
 }
 
@@ -543,8 +543,8 @@ decl_module! {
         }
 
         /// refund swap fee if bond state fail
-        #[weight = 10_000_000]
-        pub fn refund_swap(origin, symbol: RSymbol, bond_id: T::Hash) -> DispatchResult {
+        #[weight = 5_000_000_000]
+        pub fn refund_swap_fee(origin, symbol: RSymbol, bond_id: T::Hash) -> DispatchResult {
             ensure_signed(origin)?;
 
             let mut swap = Self::bond_swaps(symbol, &bond_id).ok_or(Error::<T>::SwapNotExist)?;
@@ -555,7 +555,7 @@ decl_module! {
             swap.refunded = true;
             <BondSwaps<T>>::insert(symbol, &bond_id, swap);
 
-            Self::deposit_event(RawEvent::SwapRefunded(symbol, bond_id));
+            Self::deposit_event(RawEvent::SwapFeeRefunded(symbol, bond_id));
             Ok(())
         }
     }
