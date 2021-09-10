@@ -304,7 +304,15 @@ decl_module! {
             Ok(())
         }
 
-        /// just for test
+        #[weight = 1_000_000]
+        pub fn set_least_bond(origin, symbol: RSymbol, least: u128) -> DispatchResult {
+            ensure_root(origin)?;
+
+            <LeastBond>::insert(symbol, least);
+            Ok(())
+        }
+
+        /// Attention: just for test!!!
         #[weight = 1_000_000]
         pub fn reset_chain_era(origin, symbol: RSymbol, new_era: u32) -> DispatchResult {
             ensure_root(origin)?;
@@ -312,11 +320,18 @@ decl_module! {
             Ok(())
         }
 
+        /// Attention: just for test!!!
         #[weight = 1_000_000]
-        pub fn set_least_bond(origin, symbol: RSymbol, least: u128) -> DispatchResult {
+        pub fn reset_bond_pipelines(origin, symbol: RSymbol, pool: Vec<u8>, active: u128, bond: u128, unbond: u128) -> DispatchResult {
             ensure_root(origin)?;
 
-            <LeastBond>::insert(symbol, least);
+            let mut pipe = Self::bond_pipelines(symbol, &pool).unwrap_or_default();
+            pipe.active = active;
+            pipe.bond = bond;
+            pipe.unbond = unbond;
+
+            <BondPipelines>::insert(symbol, &pool, pipe);
+
             Ok(())
         }
 
