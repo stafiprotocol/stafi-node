@@ -26,6 +26,7 @@ rtoken-rate = { path = "../rate", default-features = false}
 rtoken-ledger = { path = "../ledger", default-features = false}
 rtoken-relayers = { path = "../relayers", default-features = false}
 rclaim = { path = "../../claims/rclaim", default-features = false}
+bridge-common = { path = "../../bridge/common", default-features = false}
 
 [dev-dependencies]
 hex = "0.4"
@@ -47,4 +48,5 @@ std = [
   "rtoken-ledger/std",
   "rtoken-relayers/std",
   "rclaim/std",
+  "bridge-common/std",
 ]
