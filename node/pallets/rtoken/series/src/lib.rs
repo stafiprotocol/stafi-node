@@ -433,7 +433,6 @@ decl_module! {
             let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(symbol, record.amount);
             if let Some(mut swap) = op_swap {
                 let resource = <bridge::Module<T>>::rsymbol_resource(&symbol).ok_or(bridge::Error::<T>::RsymbolNotMapped)?;
-                ensure!(<bridge::Module<T>>::chain_whitelisted(swap.dest_id), bridge::Error::<T>::ChainNotWhitelisted);
                 <T as Trait>::Currency::transfer(&swap.bridger, &swap.swap_receiver, swap.swap_fee.saturated_into(), KeepAlive)?;
                 <T as Trait>::RCurrency::mint(&swap.bridger, symbol, rbalance)?;
                 swap.bond_state = BondState::Success;

@@ -671,7 +671,6 @@ decl_module! {
             if dest_id != T::ChainIdentity::get() {
                 let (swap_fee, swap_receiver, bridger) = <bridge::Module<T>>::swapable(&recipient, dest_id)?;
                 let resource = <bridge::Module<T>>::rsymbol_resource(SYMBOL).ok_or(bridge::Error::<T>::RsymbolNotMapped)?;
-                ensure!(<bridge::Module<T>>::chain_whitelisted(dest_id), bridge::Error::<T>::ChainNotWhitelisted);
 
                 let swap_fee: BalanceOf<T> = swap_fee.saturated_into();
                 let total = value.saturating_add(swap_fee);
