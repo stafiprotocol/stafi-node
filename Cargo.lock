@@ -578,7 +578,7 @@ dependencies = [
 
 [[package]]
 name = "bridge-common"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "bridge-relayers",
  "frame-support",
@@ -595,7 +595,7 @@ dependencies = [
 
 [[package]]
 name = "bridge-relayers"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -610,7 +610,7 @@ dependencies = [
 
 [[package]]
 name = "bridge-swap"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "bridge-common",
  "frame-support",
@@ -2011,7 +2011,7 @@ checksum = "8f5f3913fa0bfe7ee1fd8248b6b9f42a5af4b9d65ec2dd2c3c26132b950ecfc2"
 
 [[package]]
 name = "general-signature"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3680,7 +3680,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "assert_cmd",
  "frame-benchmarking-cli",
@@ -3752,7 +3752,7 @@ dependencies = [
 
 [[package]]
 name = "node-executor"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "criterion",
  "frame-benchmarking",
@@ -3784,7 +3784,7 @@ dependencies = [
 
 [[package]]
 name = "node-inspect"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "derive_more",
  "log",
@@ -3800,7 +3800,7 @@ dependencies = [
 
 [[package]]
 name = "node-primitives"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -3813,7 +3813,7 @@ dependencies = [
 
 [[package]]
 name = "node-rpc"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "jsonrpc-core",
  "node-primitives",
@@ -3840,7 +3840,7 @@ dependencies = [
 
 [[package]]
 name = "node-rpc-client"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "futures 0.1.30",
  "hyper 0.12.35",
@@ -3853,7 +3853,7 @@ dependencies = [
 
 [[package]]
 name = "node-runtime"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "bridge-common",
  "bridge-relayers",
@@ -3934,7 +3934,7 @@ dependencies = [
 
 [[package]]
 name = "node-testing"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "criterion",
  "frame-support",
@@ -5544,7 +5544,7 @@ dependencies = [
 
 [[package]]
 name = "rclaim"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5558,7 +5558,7 @@ dependencies = [
 
 [[package]]
 name = "rdexn-payers"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5573,7 +5573,7 @@ dependencies = [
 
 [[package]]
 name = "rdexn-signatures"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5592,7 +5592,7 @@ dependencies = [
 
 [[package]]
 name = "rdexn-swap"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5725,7 +5725,7 @@ checksum = "e005d658ad26eacc2b6c506dfde519f4e277e328d0eb3379ca61647d70a8f531"
 
 [[package]]
 name = "rfis"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "bridge-common",
  "frame-support",
@@ -5782,7 +5782,7 @@ dependencies = [
 
 [[package]]
 name = "rtoken-balances"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5796,7 +5796,7 @@ dependencies = [
 
 [[package]]
 name = "rtoken-ledger"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5816,7 +5816,7 @@ dependencies = [
 
 [[package]]
 name = "rtoken-rate"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5833,7 +5833,7 @@ dependencies = [
 
 [[package]]
 name = "rtoken-relayers"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5848,7 +5848,7 @@ dependencies = [
 
 [[package]]
 name = "rtoken-series"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "bridge-common",
  "frame-support",
@@ -5871,7 +5871,7 @@ dependencies = [
 
 [[package]]
 name = "rtoken-votes"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -9448,7 +9448,7 @@ dependencies = [
 
 [[package]]
 name = "xclaim"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -9461,7 +9461,7 @@ dependencies = [
 
 [[package]]
 name = "xtoken-balances"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "frame-support",
  "frame-system",

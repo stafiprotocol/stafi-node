@@ -1,6 +1,6 @@
 [package]
 name = "rdexn-signatures"
-version = "0.4.6"
+version = "0.4.7"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
 
