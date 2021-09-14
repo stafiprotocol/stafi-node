@@ -2019,7 +2019,6 @@ dependencies = [
  "hex-literal",
  "node-primitives",
  "parity-scale-codec",
- "serde",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -5728,6 +5727,7 @@ checksum = "e005d658ad26eacc2b6c506dfde519f4e277e328d0eb3379ca61647d70a8f531"
 name = "rfis"
 version = "0.4.6"
 dependencies = [
+ "bridge-common",
  "frame-support",
  "frame-system",
  "node-primitives",
@@ -5850,6 +5850,7 @@ dependencies = [
 name = "rtoken-series"
 version = "0.4.6"
 dependencies = [
+ "bridge-common",
  "frame-support",
  "frame-system",
  "hex",

@@ -90,13 +90,8 @@ rdexn-payers = { version = "0.4.6", default-features = false, path = "../pallets
 rdexn-signatures = { version = "0.4.6", default-features = false, path = "../pallets/rdexn/signatures" }
 rdexn-swap = { version = "0.4.6", default-features = false, path = "../pallets/rdexn/swap" }
 
-
 [build-dependencies]
-# wasm-builder-runner = { version = "1.0.6", package = "substrate-wasm-builder-runner", path = "../../utils/wasm-builder-runner" }
 wasm-builder-runner = { branch = "master", package = "substrate-wasm-builder-runner", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-
-# [dev-dependencies]
-# sp-io = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
 [features]
 default = ["std"]

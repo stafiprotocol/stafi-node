@@ -1,7 +1,7 @@
 use sp_std::prelude::*;
 use codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;
-use node_primitives::{RSymbol};
+use node_primitives::{RSymbol, ChainId, Balance};
 
 /// Rtoken Identifier
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug)]
@@ -77,4 +77,23 @@ pub struct UserUnlockChunk {
     pub unlock_era: u32,
     pub value: u128,
     pub recipient: Vec<u8>
+}
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct BondSwap<AccountId, BlockNumber> {
+    pub bonder: AccountId,
+    pub swap_fee: Balance,
+    pub swap_receiver: AccountId,
+    pub bridger: AccountId,
+    pub recipient: Vec<u8>,
+    pub dest_id: ChainId,
+    pub expire: BlockNumber,
+    pub bond_state: BondState,
+    pub refunded: bool,
+}
+
+impl<A, B: PartialOrd> BondSwap<A, B> {
+    pub fn refundable(&self, now: B) -> bool {
+        !self.refunded && self.bond_state == BondState::Fail && self.expire > now
+    }
 }

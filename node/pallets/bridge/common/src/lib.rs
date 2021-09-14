@@ -23,10 +23,10 @@ use frame_support::{
 use frame_system::{self as system, ensure_signed, ensure_root};
 use sp_core::U256;
 use sp_runtime::{
-    RuntimeDebug, ModuleId,
+    RuntimeDebug, ModuleId, DispatchError,
     traits::{AccountIdConversion, StaticLookup, Dispatchable}
 };
-use node_primitives::{ChainId, Balance, RSymbol, XSymbol};
+use node_primitives::{ChainId, ETH_CHAIN_ID, BSC_CHAIN_ID, Balance, RSymbol, XSymbol};
 use bridge_relayers as brelayers;
 
 #[cfg(test)]
@@ -192,6 +192,16 @@ decl_error! {
         ProposalAlreadyCompleted,
         /// Lifetime of proposal has been exceeded
         ProposalExpired,
+        /// service paused
+        ServicePaused,
+        /// invalid chain fee
+        InvalidChainFee,
+        /// invalid ethereum Address
+        InvalidEthereumAddress,
+        /// invalid fee recipient account
+        InvalidFeesRecipientAccount,
+        /// rsymbol not mapped
+        RsymbolNotMapped,
     }
 }
 
@@ -497,6 +507,26 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
+    pub fn swapable(recipient: &Vec<u8>, dest_id: ChainId) -> Result<(Balance, T::AccountId, T::AccountId), DispatchError> {
+        ensure!(!Self::check_is_paused(), Error::<T>::ServicePaused);
+        ensure!(Self::chain_whitelisted(dest_id), Error::<T>::InvalidChainId);
+
+        let fee = Self::get_chain_fees(dest_id).ok_or(Error::<T>::InvalidChainFee)?;
+        let receiver = Self::get_fees_recipient_account().ok_or(Error::<T>::InvalidFeesRecipientAccount)?;
+
+        if dest_id == ETH_CHAIN_ID || dest_id == BSC_CHAIN_ID {
+            Self::check_eth_recipient(recipient)?;
+        }
+
+        Ok((fee, receiver, Self::account_id()))
+    }
+
+    pub fn check_eth_recipient(recipient: &Vec<u8>) -> DispatchResult {
+        ensure!(recipient.len() == 20, Error::<T>::InvalidEthereumAddress);
+
+        Ok(())
+    }
+
     pub fn ensure_admin(o: T::Origin) -> DispatchResult {
         T::AdminOrigin::try_origin(o)
             .map(|_| ())

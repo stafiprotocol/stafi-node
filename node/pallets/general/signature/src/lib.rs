@@ -17,7 +17,10 @@ pub fn verify_signature(symbol: RSymbol, pubkey: &Vec<u8>, signature: &Vec<u8>, 
     match symbol.chain_type() {
         ChainType::Substrate => substrate_verify(&pubkey, &signature, &message),
         ChainType::Tendermint => tendermint_verify(&pubkey, &signature, &message),
-        ChainType::Solana => ed25519_verify(&pubkey, &signature, &message),
+        ChainType::Solana => {
+            let use_message = to_ascii_hex(message);
+            ed25519_verify(&pubkey, &signature, &use_message)
+        },
         ChainType::Ethereum => {
             ethereum_verify(&pubkey, &signature, &message)
         },
@@ -137,7 +140,6 @@ pub fn ethereum_verify(pubkey: &Vec<u8>, signature: &Vec<u8>, msg: &[u8]) -> Sig
 
     SigVerifyResult::Fail
 }
-
 
 pub fn eth_recover(sig: &[u8; 65], msg: &[u8]) -> Option<[u8; 20]> {
     let mut res = [0u8; 20];

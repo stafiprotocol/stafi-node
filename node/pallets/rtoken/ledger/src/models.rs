@@ -104,6 +104,8 @@ pub enum BondAction {
     BothBondUnbond,
     /// either bond and unbond
     EitherBondUnbond,
+    /// inter deduct
+    InterDeduct,
 }
 
 
