@@ -102,7 +102,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version
-	spec_version: 45,
+	spec_version: 46,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -957,13 +957,13 @@ construct_runtime!(
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 		Proxy: pallet_proxy::{Module, Call, Storage, Event<T>},
 		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
-		BridgeRelayers: bridge_relayers::{Module, Call, Storage, Event<T>},
-		BridgeCommon: bridge_common::{Module, Call, Storage, Event<T>},
-		BridgeSwap: bridge_swap::{Module, Call},
 		XBalances: xtoken_balances::{Module, Call, Storage, Event<T>},
 		RBalances: rtoken_balances::{Module, Call, Storage, Event<T>},
 		RTokenRate: rtoken_rate::{Module, Call, Storage, Event},
 		RFis: rfis::{Module, Call, Storage, Event<T>, ValidateUnsigned},
+		BridgeRelayers: bridge_relayers::{Module, Call, Storage, Event<T>},
+		BridgeCommon: bridge_common::{Module, Call, Storage, Event<T>},
+		BridgeSwap: bridge_swap::{Module, Call},
 		RTokenRelayers: rtoken_relayers::{Module, Call, Storage, Event<T>},
 		RTokenVotes: rtoken_votes::{Module, Call, Storage, Event<T>},
 		RTokenLedger: rtoken_ledger::{Module, Call, Storage, Event<T>},

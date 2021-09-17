@@ -13,7 +13,13 @@ use frame_system::offchain::AppCrypto;
 
 pub fn verify_signature(symbol: RSymbol, pubkey: &Vec<u8>, signature: &Vec<u8>, message: &Vec<u8>) -> SigVerifyResult {
     match symbol.chain_type() {
-        ChainType::Substrate => substrate_verify(&pubkey, &signature, &message),
+        ChainType::Substrate => {
+            let mut pre = b"<Bytes>".to_vec();
+            let mut end = b"</Bytes>".to_vec();
+            pre.append(&mut message.clone());
+            pre.append(&mut end);
+            substrate_verify(&pubkey, &signature, &pre)
+        },
         ChainType::Tendermint => tendermint_verify(&pubkey, &signature, &message),
         ChainType::Solana => {
             let use_message = to_ascii_hex(message);

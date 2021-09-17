@@ -1,0 +1,12 @@
+[package]
+name = "substrate-wasm-builder-runner"
+version = "1.0.6"
+authors = ["Stafi Technologies <technical@stafi.io>"]
+description = "Runner for substrate-wasm-builder"
+edition = "2018"
+readme = "README.md"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
