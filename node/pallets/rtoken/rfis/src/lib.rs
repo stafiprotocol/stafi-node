@@ -36,6 +36,7 @@ use sp_core::U256;
 const SYMBOL: RSymbol = RSymbol::RFIS;
 const MAX_ONBOARD_VALIDATORS: usize = 300;
 const DEFAULT_LONGEVITY: u64 = 600;
+const MAX_PAIDOUTS: usize = 8;
 
 pub(crate) const LOG_TARGET: &'static str = "rfis";
 
@@ -445,12 +446,16 @@ decl_module! {
                 if vals.is_empty() {
                     continue;
                 }
-                for val in vals {
-                    let call = Call::submit_paidouts(last_era, p.clone(), val.clone()).into();
-                    if let Err(e) = SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call) {
-                        debug::info!("failed to submit paidouts: {:?}", e);
-                    }
+
+                if vals.len() > MAX_PAIDOUTS {
+                    vals = vals[..MAX_PAIDOUTS].to_vec();
                 }
+
+                let call = Call::submit_batch_paidouts(last_era, p.clone(), vals.clone()).into();
+                if let Err(e) = SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call) {
+                    debug::info!("failed to submit batch paidouts: {:?}", e);
+                }
+
                 return;
             }
 
@@ -546,6 +551,23 @@ decl_module! {
             <PoolPaidouts<T>>::insert(era, (&validator, &pool), result);
 
             Self::deposit_event(RawEvent::ValidatorPaidout(era, pool, validator, result));
+            Ok(())
+        }
+
+        /// batch pay out
+        #[weight = 10_000]
+        pub fn submit_batch_paidouts(origin, era: EraIndex, pool: T::AccountId, validators: Vec<T::AccountId>) -> DispatchResult {
+            ensure_none(origin)?;
+            ensure!(validators.len() <= MAX_PAIDOUTS, "too many vals to paidout");
+
+            for val in validators {
+                if Self::pool_paidouts(era, (&val, &pool)).is_none() {
+                    let result = staking::Module::<T>::do_payout_stakers(val.clone(), era).is_ok();
+                    <PoolPaidouts<T>>::insert(era, (&val, &pool), result);
+                    Self::deposit_event(RawEvent::ValidatorPaidout(era, pool.clone(), val, result));
+                }
+            }
+
             Ok(())
         }
 
@@ -895,6 +917,26 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 				.longevity(DEFAULT_LONGEVITY)
 				.propagate(true)
 				.build()
+            },
+            Call::submit_batch_paidouts(era, pool, validators) => {
+                if !Self::is_in_pools(pool) {
+                    log!(debug, "rejecting submit_batch_paidouts as the pool is not in pools");
+                    return InvalidTransaction::Call.into();
+                }
+
+                for val in validators {
+                    if !Self::is_validator(*era, &val) {
+                        log!(debug, "rejecting submit_batch_paidouts as target is not an elected validator");
+                        return InvalidTransaction::Call.into();
+                    }
+                }
+
+                ValidTransaction::with_tag_prefix("RfisOffchain_Batch_Paidouts")
+                    .priority(<T as Trait>::UnsignedPriority::get())
+                    .and_provides(era)
+                    .longevity(DEFAULT_LONGEVITY)
+                    .propagate(true)
+                    .build()
             },
             Call::submit_total_bonded_after(era, _) => {
                 if Self::total_bonded_after_payout(era).is_some() {
