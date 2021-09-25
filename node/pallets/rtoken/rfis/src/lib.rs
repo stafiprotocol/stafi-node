@@ -833,16 +833,16 @@ impl<T: Trait> Module<T> {
     fn nominatable_validators(last_era: EraIndex, current_era: EraIndex) -> Vec<T::AccountId> {
         let mut onboards = Self::onboard_validators();
         let max_commission = Self::max_validator_commission();
-        let nomee = Self::nominated_validators(current_era);
+        let nomee = Self::nominated_validators(&current_era);
         onboards = onboards.into_iter()
-            .filter(|v| staking::Validators::<T>::contains_key(&v) && staking::Validators::<T>::get(&v).commission <= max_commission && !nomee.contains(&v))
+            .filter(|v| staking::Validators::<T>::contains_key(&v) && staking::ErasValidatorPrefs::<T>::get(&current_era, &v).commission <= max_commission && !nomee.contains(&v))
             .collect();
 
-        onboards.sort_by(|a, b| Self::validator_stake(last_era, &b).cmp(&Self::validator_stake(last_era, &a)));
+        onboards.sort_by(|a, b| Self::validator_stake(&last_era, &b).cmp(&Self::validator_stake(&last_era, &a)));
         onboards
     }
 
-    fn validator_stake(era: EraIndex, v: &T::AccountId) -> BalanceOf<T> {
+    fn validator_stake(era: &EraIndex, v: &T::AccountId) -> BalanceOf<T> {
         staking::ErasStakers::<T>::get(&era, &v).total
     }
 
