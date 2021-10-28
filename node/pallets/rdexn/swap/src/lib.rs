@@ -140,8 +140,9 @@ decl_module! {
             ensure!(trans_block_trans_info.len() < Self::swap_limit_per_block() as usize, Error::<T>::OverSwapLimitPerBlock);
             
             // check min out amount and reserve amount
-            let swap_use_rtoken_amount = multiply_by_rational(rtoken_amount, swap_rate.rate, RATEBASE.into()).unwrap_or(u128::MIN) as u128;
-            let out_amount = RTokenRate::Module::<T>::rtoken_to_token(symbol, swap_use_rtoken_amount);
+            let temp_out_amount = RTokenRate::Module::<T>::rtoken_to_token(symbol, rtoken_amount);
+            let out_amount = multiply_by_rational(temp_out_amount, swap_rate.rate, RATEBASE.into()).unwrap_or(u128::MIN) as u128;
+
             ensure!(out_amount >= min_out_amount, Error::<T>::LessThanMinOutAmount);
             ensure!(out_amount < out_reserve, Error::<T>::NativeTokenReserveNotEnough);
 
