@@ -349,10 +349,15 @@ decl_module! {
 			let now_block = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
 			let final_block = claim_info.mint_block.saturating_add(act.locked_blocks);
 
-			let mut should_claim_amount = claim_info.total_reward.saturating_sub(claim_info.total_claimed);
+			let left_claim_amount = claim_info.total_reward.saturating_sub(claim_info.total_claimed);
+			ensure!(left_claim_amount > 0, Error::<T>::ValueZero);
+			let should_claim_amount: u128;
 			if now_block < final_block {
-				let du_blocks = now_block.saturating_sub(claim_info.latest_claimed_block) as u128;
-				should_claim_amount = multiply_by_rational(claim_info.total_reward, du_blocks, act.locked_blocks as u128).unwrap_or(u128::MIN) as u128;
+			   let du_blocks = now_block.saturating_sub(claim_info.latest_claimed_block) as u128;
+			   let locked_du_blocks = final_block.saturating_sub(claim_info.latest_claimed_block) as u128;
+			   should_claim_amount = multiply_by_rational(left_claim_amount, du_blocks, locked_du_blocks).unwrap_or(u128::MIN) as u128;
+			} else {
+			   should_claim_amount = left_claim_amount;
 			}
 			ensure!(should_claim_amount > 0, Error::<T>::ValueZero);
 
@@ -380,10 +385,15 @@ decl_module! {
 			let now_block = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
 			let final_block = claim_info.mint_block.saturating_add(act.locked_blocks);
 
-			let mut should_claim_amount = claim_info.total_reward.saturating_sub(claim_info.total_claimed);
+			let left_claim_amount = claim_info.total_reward.saturating_sub(claim_info.total_claimed);
+			ensure!(left_claim_amount > 0, Error::<T>::ValueZero);
+			let should_claim_amount: u128;
 			if now_block < final_block {
-				let du_blocks = now_block.saturating_sub(claim_info.latest_claimed_block) as u128;
-				should_claim_amount = multiply_by_rational(claim_info.total_reward, du_blocks, act.locked_blocks as u128).unwrap_or(u128::MIN) as u128;
+			   let du_blocks = now_block.saturating_sub(claim_info.latest_claimed_block) as u128;
+			   let locked_du_blocks = final_block.saturating_sub(claim_info.latest_claimed_block) as u128;
+			   should_claim_amount = multiply_by_rational(left_claim_amount, du_blocks, locked_du_blocks).unwrap_or(u128::MIN) as u128;
+			} else {
+			   should_claim_amount = left_claim_amount;
 			}
 			ensure!(should_claim_amount > 0, Error::<T>::ValueZero);
 
