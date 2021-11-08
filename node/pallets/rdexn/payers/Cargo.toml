@@ -1,6 +1,6 @@
 [package]
 name = "rdexn-payers"
-version = "0.4.8"
+version = "0.4.9"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
 
