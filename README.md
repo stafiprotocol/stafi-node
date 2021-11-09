@@ -100,7 +100,7 @@ More flags
   --rpc-port 9933 \
   --validator \
   --name 'your custom name' \
-  -execution=NativeElseWasm
+  --execution=NativeElseWasm
 ```
 
 Flags in detail:
