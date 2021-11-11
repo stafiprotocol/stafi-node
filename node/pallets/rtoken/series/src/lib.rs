@@ -489,14 +489,17 @@ decl_module! {
             pipe.active = pipe.active.checked_sub(balance).ok_or(Error::<T>::Insufficient)?;
 
             let user_unlocking = Self::account_unbonds(&who, symbol).unwrap_or(vec![]);
-            let mut ac_unbonds: Vec<UserUnlockChunk> = user_unlocking.into_iter()
-                .filter(|chunk| if chunk.unlock_era >= current_era {
-                    true
-                } else {
-                    false
-                })
-                .collect();
-            ensure!(ac_unbonds.len() <= MAX_UNLOCKING_CHUNKS, Error::<T>::NoMoreUnbondingChunks);
+            let mut ac_unbonds: Vec<UserUnlockChunk> = user_unlocking.clone();
+            if ac_unbonds.len() >= MAX_UNLOCKING_CHUNKS {
+                ac_unbonds = user_unlocking.into_iter()
+                    .filter(|chunk| if chunk.unlock_era >= current_era {
+                        true
+                    } else {
+                        false
+                    })
+                    .collect();
+            }
+            ensure!(ac_unbonds.len() < MAX_UNLOCKING_CHUNKS, Error::<T>::NoMoreUnbondingChunks);
 
             let mut pool_unbonds = ledger::PoolUnbonds::<T>::get(symbol, (&pool, unlock_era)).unwrap_or(vec![]);
             let limit = ledger::EraUnbondLimit::get(symbol);
