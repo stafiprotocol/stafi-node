@@ -921,6 +921,12 @@ impl rdexn_swap::Trait for Runtime {
 	type RCurrency = RBalances;
 }
 
+impl rswap_swap::Trait for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type RCurrency = RBalances;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -973,6 +979,7 @@ construct_runtime!(
 		RDexnPayers: rdexn_payers::{Module, Call, Storage, Event<T>},
 		RDexnSignatures: rdexn_signatures::{Module, Call, Storage, Event<T>},
 		RDexnSwap: rdexn_swap::{Module, Call, Storage, Event<T>},
+		RSwapSwap: rswap_swap::{Module, Call, Storage, Event<T>},
 	}
 );
 

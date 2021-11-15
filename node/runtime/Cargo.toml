@@ -89,6 +89,7 @@ rclaim = { version = "0.4.9", default-features = false, path = "../pallets/claim
 rdexn-payers = { version = "0.4.9", default-features = false, path = "../pallets/rdexn/payers" }
 rdexn-signatures = { version = "0.4.9", default-features = false, path = "../pallets/rdexn/signatures" }
 rdexn-swap = { version = "0.4.9", default-features = false, path = "../pallets/rdexn/swap" }
+rswap-swap = { version = "0.4.9", default-features = false, path = "../pallets/rswap/swap" }
 
 [build-dependencies]
 wasm-builder-runner = { branch = "master", package = "substrate-wasm-builder-runner", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
@@ -164,6 +165,7 @@ std = [
 	"rdexn-payers/std",
 	"rdexn-signatures/std",
 	"rdexn-swap/std",
+	"rswap-swap/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",
