@@ -41,7 +41,9 @@ decl_event! {
 decl_error! {
     pub enum Error for Module<T: Trait> {
         AmountZero,
+        AmountAllZero,
         PoolAlreadyExist,
+        PoolNotExist,
         RTokenAmountNotEnough,
     }
 }
@@ -105,6 +107,42 @@ decl_module! {
         #[weight = 10_000_000_000]
         pub fn add_liquidity(origin, symbol: RSymbol, rtoken_amount: u128, fis_amount: u128) -> DispatchResult {
             let who = ensure_signed(origin)?;
+            let mut pool = Self::swap_pools(symbol).ok_or(Error::<T>::PoolNotExist)?;
+            let now_block = system::Module::<T>::block_number().saturated_into::<u64>();
+
+            ensure!(fis_amount > u128::MIN || rtoken_amount > u128::MIN, Error::<T>::AmountAllZero);
+            ensure!(T::RCurrency::free_balance(&who, symbol) >= rtoken_amount, Error::<T>::RTokenAmountNotEnough);
+
+            let (pool_unit, lp_unit) = Self::cal_pool_unit(pool.total_unit, pool.fis_balance, pool.rtoken_balance, fis_amount, rtoken_amount);
+
+            // transfer token to moudle account
+            if fis_amount > 0 {
+                T::Currency::transfer(&who, &Self::account_id(), fis_amount.saturated_into(), KeepAlive)?;
+            }
+            if rtoken_amount > 0 {
+                T::RCurrency::transfer(&who, &Self::account_id(), symbol, rtoken_amount)?;
+            }
+
+            pool.total_unit = pool_unit;
+            pool.fis_balance =  pool.fis_balance.saturating_add(fis_amount);
+            pool.rtoken_balance = pool.rtoken_balance.saturating_add(rtoken_amount);
+            <SwapPools>::insert(symbol, pool);
+
+            let mut lp = Self::swap_liquidity_providers((who.clone(), symbol)).unwrap_or(
+                SwapLiquidityProvider{
+                account: who.clone(),
+                rtoken: symbol,
+                unit: 0,
+                last_add_height: 0,
+                last_remove_height: 0,
+                fis_add_value: 0,
+                rtoken_add_value: 0,});
+            lp.unit = lp_unit;
+            lp.last_add_height = now_block;
+            lp.fis_add_value = lp.fis_add_value.saturating_add(fis_amount);
+            lp.rtoken_add_value = lp.rtoken_add_value.saturating_add(rtoken_amount);
+            <SwapLiquidityProviders<T>>::insert((who, symbol), lp);
+
             Ok(())
         }
 
