@@ -12,7 +12,10 @@ use frame_system::{self as system, ensure_root, ensure_signed};
 use node_primitives::{Balance, RSymbol};
 use rtoken_balances::traits::Currency as RCurrency;
 use sp_arithmetic::helpers_128bit::multiply_by_rational;
-use sp_runtime::traits::SaturatedConversion;
+use sp_runtime::{
+    traits::{AccountIdConversion, SaturatedConversion},
+    ModuleId,
+};
 pub trait Trait: system::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
     /// currency of rtoken
@@ -23,6 +26,9 @@ pub trait Trait: system::Trait {
 
 pub mod models;
 pub use models::*;
+
+const MODULE_ID: ModuleId = ModuleId(*b"rtk/swap");
+
 decl_event! {
     pub enum Event<T> where
         AccountId = <T as system::Trait>::AccountId
@@ -34,6 +40,9 @@ decl_event! {
 
 decl_error! {
     pub enum Error for Module<T: Trait> {
+        AmountZero,
+        PoolAlreadyExist,
+        RTokenAmountNotEnough,
     }
 }
 
@@ -49,14 +58,7 @@ decl_module! {
         fn deposit_event() = default;
         /// swap rtoken for fis
         #[weight = 10_000_000_000]
-        pub fn swap_rtoken_for_fis(origin, symbol: RSymbol, rtoken_amount: u128, min_out_amount: u128) -> DispatchResult {
-            let who = ensure_signed(origin)?;
-            Ok(())
-        }
-
-        /// swap fis for rtoken
-        #[weight = 10_000_000_000]
-        pub fn swap_fis_for_rtoken(origin, symbol: RSymbol, fis_amount: u128, min_out_amount: u128) -> DispatchResult {
+        pub fn swap(origin, symbol: RSymbol, in_amount: u128, min_out_amount: u128, in_is_fis: bool) -> DispatchResult {
             let who = ensure_signed(origin)?;
             Ok(())
         }
@@ -65,6 +67,37 @@ decl_module! {
         #[weight = 10_000_000_000]
         pub fn create_pool(origin, symbol: RSymbol, rtoken_amount: u128, fis_amount: u128) -> DispatchResult {
             let who = ensure_signed(origin)?;
+            let now_block = system::Module::<T>::block_number().saturated_into::<u64>();
+
+            ensure!(Self::swap_pools(symbol).is_none(), Error::<T>::PoolAlreadyExist);
+            ensure!(fis_amount > u128::MIN && rtoken_amount > u128::MIN, Error::<T>::AmountZero);
+            ensure!(T::RCurrency::free_balance(&who, symbol) >= rtoken_amount, Error::<T>::RTokenAmountNotEnough);
+
+            let (pool_unit, lp_unit) = Self::cal_pool_unit(0, 0, 0, fis_amount, rtoken_amount);
+
+            // transfer token to moudle account
+            T::Currency::transfer(&who, &Self::account_id(), fis_amount.saturated_into(), KeepAlive)?;
+            T::RCurrency::transfer(&who, &Self::account_id(), symbol, rtoken_amount)?;
+
+            let pool = SwapPool {
+                rtoken: symbol,
+                fis_balance: fis_amount,
+                rtoken_balance: rtoken_amount,
+                total_unit: pool_unit,
+            };
+            <SwapPools>::insert(symbol, pool);
+
+            let lp = SwapLiquidityProvider {
+                account: who.clone(),
+                rtoken: symbol,
+                unit: lp_unit,
+                last_add_height: now_block,
+                last_remove_height: 0,
+                fis_add_value: fis_amount,
+                rtoken_add_value: rtoken_amount,
+            };
+            <SwapLiquidityProviders<T>>::insert((who, symbol), lp);
+
             Ok(())
         }
 
@@ -84,4 +117,26 @@ decl_module! {
     }
 }
 
-impl<T: Trait> Module<T> {}
+impl<T: Trait> Module<T> {
+    /// Provides an AccountId for the pallet.
+    pub fn account_id() -> T::AccountId {
+        MODULE_ID.into_account()
+    }
+
+    // F = fis Balance (before)
+    // R = rToken Balance (before)
+    // f = fis asset added;
+    // r = rToken added
+    // P = existing Pool Units
+    // slipAdjustment = (1 - ABS((F r - f R)/((f + F) (r + R))))
+    // units = ((P (r F + R f))/(2 R F))*slidAdjustment
+    pub fn cal_pool_unit(
+        old_pool_unit: u128,
+        fis_balance: u128,
+        rtoken_balance: u128,
+        fis_amount: u128,
+        rtoken_amount: u128,
+    ) -> (u128, u128) {
+        (1, 1)
+    }
+}
