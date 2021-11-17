@@ -11,22 +11,22 @@ targets = ["x86_64-unknown-linux-gnu"]
 jsonrpc-core = "15.0.0"
 node-primitives = { version = "0.4.9", path = "../primitives" }
 node-runtime = { version = "0.4.9", path = "../runtime" }
-pallet-transaction-payment-rpc = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sc-client-api = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sc-consensus-babe = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sc-consensus-babe-rpc = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git'}
-sc-consensus-epochs = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sc-finality-grandpa = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sc-finality-grandpa-rpc = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sc-keystore = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sc-rpc-api = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sc-rpc = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-api = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-block-builder = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-blockchain = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-consensus = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-consensus-babe = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-runtime = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-transaction-pool = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-substrate-frame-rpc-system = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-transaction-payment-rpc = { branch = "m1-compilation", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-client-api = { branch = "m1-compilation", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-consensus-babe = { branch = "m1-compilation", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-consensus-babe-rpc = { branch = "m1-compilation", git = 'https://github.com/stafiprotocol/stafi-blockchain.git'}
+sc-consensus-epochs = { branch = "m1-compilation", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-finality-grandpa = { branch = "m1-compilation", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-finality-grandpa-rpc = { branch = "m1-compilation", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-keystore = { branch = "m1-compilation", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-rpc-api = { branch = "m1-compilation", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sc-rpc = { branch = "m1-compilation", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-api = { branch = "m1-compilation", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-block-builder = { branch = "m1-compilation", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-blockchain = { branch = "m1-compilation", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-consensus = { branch = "m1-compilation", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-consensus-babe = { branch = "m1-compilation", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-runtime = { branch = "m1-compilation", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-transaction-pool = { branch = "m1-compilation", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+substrate-frame-rpc-system = { branch = "m1-compilation", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 

@@ -9,13 +9,13 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "1.3.4", default-features = false, features = ["derive"] }
-frame-system = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-application-crypto = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-core = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-runtime = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+frame-system = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-application-crypto = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-core = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-runtime = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
 [dev-dependencies]
-sp-serializer = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-serializer = { branch = "m1-compilation", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 pretty_assertions = "0.6.1"
 
 [features]

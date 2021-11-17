@@ -399,7 +399,7 @@ decl_module! {
             Ok(())
         }
 
-        fn offchain_worker(block: T::BlockNumber) {
+        fn offchain_worker(_block: T::BlockNumber) {
             if !sp_io::offchain::is_validator() {
                 return;
             }

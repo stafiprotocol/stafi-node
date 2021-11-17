@@ -13,7 +13,7 @@ rust-crypto = { branch = "master", git = "https://github.com/stafiprotocol/rust-
 bitcoin_hashes = { version = "^0.7", default-features = false }
 byteorder = { version = "^1.3", default-features = false }
 libsecp256k1 = { version = "0.3.5", default-features = false }
-sp-std = { branch = "master", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
+sp-std = { branch = "m1-compilation", git = "https://github.com/stafiprotocol/stafi-blockchain", default-features = false }
 
 [dev-dependencies]
 hex-literal = "^0.2"

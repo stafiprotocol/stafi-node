@@ -83,7 +83,7 @@ decl_module! {
             }
 
             let resource_id = T::NativeTokenId::get();
-            <bridge::Module<T>>::transfer_fungible(source, dest_id, resource_id, recipient, U256::from(amount.saturated_into()))
+            <bridge::Module<T>>::transfer_fungible(source, dest_id, resource_id, recipient, U256::from(amount.saturated_into::<u128>()))
         }
 
         /// Allows the bridge to swap native token back
