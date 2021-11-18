@@ -11,16 +11,16 @@ codec = { package = "parity-scale-codec", version = "1.3.4", default-features = 
 serde = { version = "1.0.102", optional = true }
 
 # primitives
-sp-std = { branch = "master", default-features = false, git = "https://github.com/stafiprotocol/stafi-blockchain.git" }
-sp-runtime = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-core = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-arithmetic = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-std = { branch = "m1-compilation", default-features = false, git = "https://github.com/stafiprotocol/stafi-blockchain.git" }
+sp-runtime = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-core = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-arithmetic = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
 # frame dependencies
-frame-support = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-frame-system = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-balances = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-staking = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+frame-support = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+frame-system = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-balances = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-staking = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
 node-primitives = { path = "../../../primitives", default-features = false }
 

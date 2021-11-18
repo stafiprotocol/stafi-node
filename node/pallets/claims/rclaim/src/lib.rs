@@ -25,7 +25,6 @@ use general_signature::{ethereum_verify, to_ascii_hex, SigVerifyResult};
 use node_primitives::{Balance, BlockNumber, RSymbol};
 use sp_arithmetic::helpers_128bit::multiply_by_rational;
 use sp_runtime::traits::SaturatedConversion;
-use sp_std::convert::TryInto;
 use sp_std::prelude::*;
 
 pub mod models;
@@ -179,7 +178,7 @@ decl_module! {
 			ensure!(locked_blocks > 0, "locked blocks must be greater than 0");
 			ensure!(reward_rate > 0, "reward rate must be greater than 0");
 
-			let current_block_num = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
+			let current_block_num = system::Module::<T>::block_number().saturated_into::<u32>();
 			ensure!(end > current_block_num, "End block number must be greater than current block nubmer");
 
 			let cycle = Self::act_latest_cycle(symbol);
@@ -228,7 +227,7 @@ decl_module! {
 			ensure!(reward_rate > 0, "reward rate must be greater than 0");
 			let mut act = Self::acts((symbol, cycle)).ok_or(Error::<T>::HasNoAct)?;
 
-			let current_block_num = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
+			let current_block_num = system::Module::<T>::block_number().saturated_into::<u32>();
 			ensure!(end > current_block_num, "End block number must be greater than current block nubmer");
 
 			if total_reward > act.total_reward {
@@ -268,7 +267,7 @@ decl_module! {
 			ensure!(locked_blocks > 0, "locked blocks must be greater than 0");
 			ensure!(reward_rate > 0, "reward rate must be greater than 0");
 
-			let current_block_num = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
+			let current_block_num = system::Module::<T>::block_number().saturated_into::<u32>();
 			ensure!(end > current_block_num, "End block number must be greater than current block nubmer");
 
 			let cycle = Self::reth_act_latest_cycle();
@@ -317,7 +316,7 @@ decl_module! {
 			ensure!(reward_rate > 0, "reward rate must be greater than 0");
 			let mut act = Self::reth_acts(cycle).ok_or(Error::<T>::HasNoAct)?;
 
-			let current_block_num = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
+			let current_block_num = system::Module::<T>::block_number().saturated_into::<u32>();
 			ensure!(end > current_block_num, "End block number must be greater than current block nubmer");
 
 			if total_reward > act.total_reward {
@@ -346,7 +345,7 @@ decl_module! {
 			let mut claim_info = Self::claim_infos((&who, symbol, cycle, index)).ok_or(Error::<T>::HasNoClaimInfo)?;
 			let act = Self::acts((symbol, cycle)).ok_or(Error::<T>::HasNoAct)?;
 			let fund_addr = Self::fund_address().ok_or(Error::<T>::NoFundAddress)?;
-			let now_block = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
+			let now_block = system::Module::<T>::block_number().saturated_into::<u32>();
 			let final_block = claim_info.mint_block.saturating_add(act.locked_blocks);
 
 			let left_claim_amount = claim_info.total_reward.saturating_sub(claim_info.total_claimed);
@@ -382,7 +381,7 @@ decl_module! {
 			let mut claim_info = Self::reth_claim_infos((pubkey.clone(), cycle, index)).ok_or(Error::<T>::HasNoClaimInfo)?;
 			let act = Self::reth_acts(cycle).ok_or(Error::<T>::HasNoAct)?;
 			let fund_addr = Self::fund_address().ok_or(Error::<T>::NoFundAddress)?;
-			let now_block = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
+			let now_block = system::Module::<T>::block_number().saturated_into::<u32>();
 			let final_block = claim_info.mint_block.saturating_add(act.locked_blocks);
 
 			let left_claim_amount = claim_info.total_reward.saturating_sub(claim_info.total_claimed);
@@ -413,7 +412,7 @@ decl_module! {
 			ensure!(Self::is_rewarder(&who), Error::<T>::InvalidREthRewarder);
 			ensure!(pubkeys.len() == mint_values.len() && pubkeys.len() == native_token_values.len() && pubkeys.len() < 200, Error::<T>::PubkeyAndValueNumberErr);
 
-			let now_block = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
+			let now_block = system::Module::<T>::block_number().saturated_into::<u32>();
 			let mut cycle = Self::reth_act_current_cycle();
 			if cycle == 0 {
 				Self::update_reth_act_current_cycle(now_block);
@@ -510,7 +509,7 @@ impl<T: Trait> Module<T> {
 		native_token_value: u128,
 	) {
 		let mut cycle = Self::act_current_cycle(symbol);
-		let now_block = <system::Module<T>>::block_number().try_into().ok().unwrap() as BlockNumber;
+		let now_block = system::Module::<T>::block_number().saturated_into::<u32>();
 		if cycle == 0 {
 			Self::update_act_current_cycle(now_block, symbol);
 			cycle = Self::act_current_cycle(symbol);
