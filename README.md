@@ -37,17 +37,9 @@ Build StaFi:
 ```bash
 cargo build --release
 ```
-It may take 30m - 1h, which depends on your machine.
+It may take 10m - 1.5h, which depends on your machine.
 
 > You may encounter CMAKE_PROJECT_VERSION error. Please scroll to the bottom and follow the instructions to fix it.
-
-If you encounter other compilation problems, please try
-
-```bash
-rustup install nightly-2020-10-06
-rustup target add wasm32-unknown-unknown --toolchain nightly-2020-10-06
-cargo +nightly-2020-10-06 build --release
-```
 
 ### Running
 
