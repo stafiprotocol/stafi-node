@@ -1,15 +1,11 @@
 # stafi-node
 
-[Stafi](https://stafi.io) is:
+[StaFi](https://stafi.io) is:
 - The First Decentralized Protocol Unlocking Liquidity of Staked Assets
 
-The protocol of Stafi is created by Substrate and adopts Nominated Proof-of-Stake (NPoS), which completes Staking by setting up Staking Contracts in the upper layer to communicate with public chains. The Staking process is immune to Stafi’s contracts, for the latter act as the account book during Staking. Tokens staked through contracts will be written in the contracts and finally be locked-up on the original chain.
+The protocol of StaFi is created by Substrate and adopts Nominated Proof-of-Stake (NPoS), which completes Staking by setting up Staking Contracts in the upper layer to communicate with public chains. The Staking process is immune to StaFi’s contracts, for the latter act as the account book during Staking. Tokens staked through contracts will be written in the contracts and finally be locked-up on the original chain.
 
 For more specific guides, see the [documentation](https://docs.stafi.io).
-
-## Note
-
-Now we are mainly testing the functions of block generation, transfer, staking, etc. We will open more codes later when we are ready.
 
 ## Running from Source
 
@@ -20,7 +16,12 @@ Welcome to participate in us. Download the source:
 ```bash
 git clone https://github.com/stafiprotocol/stafi-node.git
 cd stafi-node
-git checkout v0.4.8
+
+### Mainnet
+git checkout v0.4.9
+
+### Testnet
+git checkout seiya
 ```
 
 Install system dependencies(recommend ubuntu or macos):
@@ -31,7 +32,7 @@ Install system dependencies(recommend ubuntu or macos):
 
 > You can add `export PATH="$HOME/.cargo/bin:$PATH"` in the ~/.bashrc and restart the terminal or run source ~/.cargo/env to update the environment.
 
-Build Stafi:
+Build StaFi:
 
 ```bash
 cargo build --release
@@ -40,9 +41,17 @@ It may take 30m - 1h, which depends on your machine.
 
 > You may encounter CMAKE_PROJECT_VERSION error. Please scroll to the bottom and follow the instructions to fix it.
 
+If you encounter other compilation problems, please try
+
+```bash
+rustup install nightly-2020-10-06
+rustup target add wasm32-unknown-unknown --toolchain nightly-2020-10-06
+cargo +nightly-2020-10-06 build --release
+```
+
 ### Running
 
-#### Stafi Mainnet
+#### StaFi Mainnet
 
 If you want to be a validator.
 
@@ -60,7 +69,7 @@ You can see your node on [telemetry] (set a custom name with `--name "my custom 
 
 [telemetry]: https://telemetry.polkadot.io/#list/Stafi
 
-#### Stafi Testnet
+#### StaFi Testnet
 
 If you want to be a validator.
 
@@ -78,7 +87,7 @@ You can see your node on [telemetry] (set a custom name with `--name "my custom 
 
 [telemetry]: https://telemetry.polkadot.io/#list/Stafi%20Testnet%20Seiya
 
-> Note: By default, Validator nodes are in archive mode. If you've already synced the chain not in archive mode, you must first remove the database with stafi purge-chain and then ensure that you run Stafi with the --pruning=archive option. The --pruning=archive flag is implied by the --validator and --sentry flags, so it is only required explicitly if you start your node without one of these two options. 
+> Note: By default, Validator nodes are in archive mode. If you've already synced the chain not in archive mode, you must first remove the database with staFi purge-chain and then ensure that you run StaFi with the --pruning=archive option. The --pruning=archive flag is implied by the --validator and --sentry flags, so it is only required explicitly if you start your node without one of these two options. 
 
 More flags
 
@@ -91,7 +100,7 @@ More flags
   --rpc-port 9933 \
   --validator \
   --name 'your custom name' \
-  -execution=NativeElseWasm
+  --execution=NativeElseWasm
 ```
 
 Flags in detail:
@@ -132,15 +141,15 @@ If you need to start from the beginning. You should clean your db.
 ```
 
 ## Faucet for Seiya
-You need to have some FIS tokens to participate in Seiya.
+Seiya is the public testnet of StaFi. You need to have some FIS tokens to participate in Seiya.
 
 ### Get Faucet
 
-- Join Stafi Protocol Group: [Click Here](https://t.me/stafi_protocol)
-- Join Stafi Faucet Group: [Click Here](https://t.me/StafiFaucet)
+- Join StaFi Protocol Group: [Click Here](https://t.me/stafi_protocol)
+- Join StaFi Faucet Group: [Click Here](https://t.me/StafiFaucet)
 - On the Faucet group, reply /faucet + Account
      + Example: /faucet 35Eb25MdWe3aBuehR3Abx9caw7S68za39aYijvnWB5V3uv3S
-- If your account meets the requirements for issuance, 500 tokens will be automatically distributed to your account, you can view your balance via [Stafi-apps](https://apps.stafi.io).
+- If your account meets the requirements for issuance, 500 tokens will be automatically distributed to your account, you can view your balance via [StaFi-apps](https://apps.stafi.io).
 
 ### Faucet distribution rules
 
@@ -167,11 +176,11 @@ It is now time to set up our validator. We will do the following:
 - **Bond the FIS tokens of the Stash account**. These FIS tokens will be put at stake for the security of the network and can be slashed.
 - **Select the Controller**. This is the account that will decide when to start or stop validating.
 
-First, open [Stafi-apps](https://apps.stafi.io), go to the **Staking** section. Click on "Account Actions", and then the "+ Stash" button.
+First, open [StaFi-apps](https://apps.stafi.io), go to the **Staking** section. Click on "Account Actions", and then the "+ Stash" button.
 
 - **Stash account** - Select your Stash account. In this example, we will bond 10 FIS tokens - make sure that your Stash account contains at least this much. You can, of course, stake more than this.
 - **Controller account** - Select the Controller account created earlier. This account will also need a small amount of FIS tokens in order to start and stop validating.
-- **Value bonded** - How much FIS tokens from the Stash account you want to bond/stake. Note that you do not need to bond all of the tokens in that account. Also note that you can always bond more tokens later. However, withdrawing any bonded amount requires the duration of the unbonding period. On Stafi testnet, the unbonding period is 7 hours. On Stafi mainnet, the planned unbonding period is 14 days.
+- **Value bonded** - How much FIS tokens from the Stash account you want to bond/stake. Note that you do not need to bond all of the tokens in that account. Also note that you can always bond more tokens later. However, withdrawing any bonded amount requires the duration of the unbonding period. On StaFi testnet, the unbonding period is 7 hours. On StaFi mainnet, the planned unbonding period is 14 days.
 - **Payment destination** - The account where the rewards from validating are sent.
 
 Once everything is filled in properly, click Bond and sign the transaction with your Stash account.
@@ -203,9 +212,9 @@ Submit this extrinsic and you are now ready to start validating.
 
 ### Validate
 
-To verify that your node is live and synchronized, head to Telemetry and find your node. Note that this will show all nodes on the Stafi network, which is why it is important to select a unique name!
+To verify that your node is live and synchronized, head to Telemetry and find your node. Note that this will show all nodes on the StaFi network, which is why it is important to select a unique name!
 
-If everything looks good, go ahead and click on "Validate" in Stafi-apps.
+If everything looks good, go ahead and click on "Validate" in StaFi-apps.
 
 - **Payment preferences** - You can specify the percentage of the rewards that will get paid to you. The remaining will be split among your nominators.
 
@@ -215,7 +224,7 @@ If you go to the "Staking" tab, you will see a list of active validators current
 
 The validator set is refreshed every era. In the next era, if there is a slot available and your node is selected to join the validator set, your node will become an active validator. Until then, it will remain in the waiting queue. If your validator is not selected to become part of the validator set, it will remain in the waiting queue until it is. There is no need to re-start if you are not selected for the validator set in a particular era. However, it may be necessary to increase the number of FIS tokens staked or seek out nominators for your validator in order to join the validator set.
 
-Congratulations! If you have followed all of these steps, and been selected to be a part of the validator set, you are now running a Stafi validator!
+Congratulations! If you have followed all of these steps, and been selected to be a part of the validator set, you are now running a StaFi validator!
 
 
 ## Compile error
