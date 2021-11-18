@@ -44,8 +44,10 @@ decl_error! {
         AmountAllZero,
         PoolAlreadyExist,
         PoolNotExist,
+        LiquidityProviderNotExist,
         RTokenAmountNotEnough,
         PoolBalanceNotEnough,
+        UnitAmountImproper,
     }
 }
 
@@ -65,7 +67,7 @@ decl_module! {
             let who = ensure_signed(origin)?;
             let mut pool = Self::swap_pools(symbol).ok_or(Error::<T>::PoolNotExist)?;
 
-            ensure!(in_amount > u128::MIN || min_out_amount > u128::MIN, Error::<T>::AmountAllZero);
+            ensure!(in_amount > 0 || min_out_amount > 0, Error::<T>::AmountAllZero);
             let result = Self::cal_swap_result(pool.fis_balance, pool.rtoken_balance, in_amount,in_is_fis);
             if in_is_fis {
                 ensure!(result < pool.rtoken_balance, Error::<T>::PoolBalanceNotEnough);
@@ -100,7 +102,7 @@ decl_module! {
             let now_block = system::Module::<T>::block_number().saturated_into::<u64>();
 
             ensure!(Self::swap_pools(symbol).is_none(), Error::<T>::PoolAlreadyExist);
-            ensure!(fis_amount > u128::MIN && rtoken_amount > u128::MIN, Error::<T>::AmountZero);
+            ensure!(fis_amount > 0 && rtoken_amount > 0, Error::<T>::AmountZero);
             ensure!(T::RCurrency::free_balance(&who, symbol) >= rtoken_amount, Error::<T>::RTokenAmountNotEnough);
 
             let (pool_unit, lp_unit) = Self::cal_pool_unit(0, 0, 0, fis_amount, rtoken_amount);
@@ -138,7 +140,7 @@ decl_module! {
             let mut pool = Self::swap_pools(symbol).ok_or(Error::<T>::PoolNotExist)?;
             let now_block = system::Module::<T>::block_number().saturated_into::<u64>();
 
-            ensure!(fis_amount > u128::MIN || rtoken_amount > u128::MIN, Error::<T>::AmountAllZero);
+            ensure!(fis_amount > 0 || rtoken_amount > 0, Error::<T>::AmountAllZero);
             ensure!(T::RCurrency::free_balance(&who, symbol) >= rtoken_amount, Error::<T>::RTokenAmountNotEnough);
 
             let (pool_unit, lp_unit) = Self::cal_pool_unit(pool.total_unit, pool.fis_balance, pool.rtoken_balance, fis_amount, rtoken_amount);
@@ -176,8 +178,50 @@ decl_module! {
 
         /// remove liduidity
         #[weight = 10_000_000_000]
-        pub fn remove_liquidity(origin, symbol: RSymbol, unit: u128, asymmetry: u128) -> DispatchResult {
+        pub fn remove_liquidity(origin, symbol: RSymbol, rm_unit: u128, swap_unit: u128, in_is_fis: bool) -> DispatchResult {
             let who = ensure_signed(origin)?;
+            let mut pool = Self::swap_pools(symbol).ok_or(Error::<T>::PoolNotExist)?;
+            let mut lp = Self::swap_liquidity_providers((who.clone(), symbol)).ok_or(Error::<T>::LiquidityProviderNotExist)?;
+            let now_block = system::Module::<T>::block_number().saturated_into::<u64>();
+
+            ensure!(rm_unit > 0 && rm_unit <= lp.unit && rm_unit >= swap_unit, Error::<T>::UnitAmountImproper);
+
+            let (mut fis_amount, mut rtoken_amount, swap_in_amount) = Self::cal_remove_result(pool.total_unit, rm_unit, swap_unit,pool.fis_balance, pool.rtoken_balance, in_is_fis);
+
+            pool.total_unit = pool.total_unit.saturating_sub(rm_unit);
+            pool.fis_balance =  pool.fis_balance.saturating_sub(fis_amount);
+            pool.rtoken_balance = pool.rtoken_balance.saturating_sub(rtoken_amount);
+
+            if swap_in_amount > 0 {
+                let swap_result = Self::cal_swap_result(pool.fis_balance, pool.rtoken_balance, swap_in_amount,in_is_fis);
+                if in_is_fis {
+                    pool.fis_balance = pool.fis_balance.saturating_add(swap_in_amount);
+                    pool.rtoken_balance = pool.rtoken_balance.saturating_sub(swap_result);
+
+                    fis_amount = fis_amount.saturating_sub(swap_in_amount);
+                    rtoken_amount = rtoken_amount.saturating_add(swap_result);
+                } else {
+                    pool.rtoken_balance = pool.rtoken_balance.saturating_add(swap_in_amount);
+                    pool.fis_balance = pool.fis_balance.saturating_sub(swap_result);
+                    rtoken_amount = rtoken_amount.saturating_add(swap_in_amount);
+
+                    rtoken_amount = rtoken_amount.saturating_sub(swap_in_amount);
+                    fis_amount = fis_amount.saturating_add(swap_result);
+                }
+            }
+            lp.unit = lp.unit.saturating_sub(rm_unit);
+            lp.last_remove_height = now_block;
+
+            // update state
+            if fis_amount > 0 {
+                T::Currency::transfer(&Self::account_id(), &who, fis_amount.saturated_into(), KeepAlive)?;
+            }
+            if rtoken_amount > 0 {
+                T::RCurrency::transfer(&Self::account_id(), &who,symbol, rtoken_amount)?;
+            }
+            <SwapLiquidityProviders<T>>::insert((who, symbol), lp);
+            <SwapPools>::insert(symbol, pool);
+
             Ok(())
         }
     }
@@ -232,12 +276,11 @@ impl<T: Trait> Module<T> {
 
         let numerator = F.saturating_mul(r).saturating_add(f.saturating_mul(R));
         let raw_unit = multiply_by_rational(P, numerator, R.saturating_mul(F).saturating_mul(2))
-            .unwrap_or(u128::MIN) as u128;
+            .unwrap_or(0) as u128;
         if raw_unit == 0 {
             return (0, 0);
         }
-        let adj =
-            multiply_by_rational(raw_unit, abs, slip_adj_denominator).unwrap_or(u128::MIN) as u128;
+        let adj = multiply_by_rational(raw_unit, abs, slip_adj_denominator).unwrap_or(0) as u128;
         let add_unit = raw_unit.saturating_sub(adj);
         let total_unit = add_unit.saturating_add(add_unit);
         (total_unit, add_unit)
@@ -262,8 +305,39 @@ impl<T: Trait> Module<T> {
         }
         let t = x.saturating_add(X);
         let denominator = t.saturating_mul(t);
-        let y =
-            multiply_by_rational(x, X.saturating_mul(Y), denominator).unwrap_or(u128::MIN) as u128;
-        return y;
+        let y = multiply_by_rational(x, X.saturating_mul(Y), denominator).unwrap_or(0) as u128;
+        y
+    }
+
+    pub fn cal_remove_result(
+        pool_unit: u128,
+        mut rm_unit: u128,
+        mut swap_unit: u128,
+        fis_balance: u128,
+        rtoken_balance: u128,
+        in_is_fis: bool,
+    ) -> (u128, u128, u128) {
+        if pool_unit == 0 || rm_unit == 0 {
+            return (0, 0, 0);
+        }
+        if rm_unit > pool_unit {
+            rm_unit = pool_unit;
+        }
+        if swap_unit > rm_unit {
+            swap_unit = rm_unit;
+        }
+
+        let fis_amount = multiply_by_rational(rm_unit, fis_balance, pool_unit).unwrap_or(0) as u128;
+        let rtoken_amount =
+            multiply_by_rational(rm_unit, rtoken_balance, pool_unit).unwrap_or(0) as u128;
+        let swap_amount: u128;
+        if in_is_fis {
+            swap_amount =
+                multiply_by_rational(rm_unit, fis_balance, pool_unit).unwrap_or(0) as u128;
+        } else {
+            swap_amount =
+                multiply_by_rational(rm_unit, rtoken_balance, pool_unit).unwrap_or(0) as u128;
+        }
+        (fis_amount, rtoken_amount, swap_amount)
     }
 }
