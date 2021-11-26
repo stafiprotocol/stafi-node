@@ -31,7 +31,8 @@ pub use models::*;
 pub mod signature;
 pub use signature::*;
 
-pub const MAX_UNLOCKING_CHUNKS: usize = 64;
+pub const MAX_UNLOCKING_CHUNKS: usize = 32;
+pub const MIN_UNLOCKING_CHUNKS: usize = 16;
 
 pub trait Trait: system::Trait + rtoken_rate::Trait + rtoken_ledger::Trait + relayers::Trait + rclaim::Trait + bridge::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -489,14 +490,25 @@ decl_module! {
             pipe.active = pipe.active.checked_sub(balance).ok_or(Error::<T>::Insufficient)?;
 
             let user_unlocking = Self::account_unbonds(&who, symbol).unwrap_or(vec![]);
-            let mut ac_unbonds: Vec<UserUnlockChunk> = user_unlocking.into_iter()
-                .filter(|chunk| if chunk.unlock_era >= current_era {
-                    true
+            let mut ac_unbonds: Vec<UserUnlockChunk> = user_unlocking.clone();
+            if ac_unbonds.len() >= MAX_UNLOCKING_CHUNKS {
+                let ac_unbonds_filter: Vec<UserUnlockChunk> = user_unlocking.into_iter()
+                    .filter(|chunk| if chunk.unlock_era >= current_era {
+                        true
+                    } else {
+                        false
+                    })
+                    .collect();   
+
+                if ac_unbonds_filter.len() < MIN_UNLOCKING_CHUNKS {
+                    let remove_len = MAX_UNLOCKING_CHUNKS - MIN_UNLOCKING_CHUNKS + 1;
+                    ac_unbonds.drain(0..remove_len);
                 } else {
-                    false
-                })
-                .collect();
-            ensure!(ac_unbonds.len() <= MAX_UNLOCKING_CHUNKS, Error::<T>::NoMoreUnbondingChunks);
+                    ac_unbonds = ac_unbonds_filter;
+                }
+            }
+
+            ensure!(ac_unbonds.len() < MAX_UNLOCKING_CHUNKS, Error::<T>::NoMoreUnbondingChunks);
 
             let mut pool_unbonds = ledger::PoolUnbonds::<T>::get(symbol, (&pool, unlock_era)).unwrap_or(vec![]);
             let limit = ledger::EraUnbondLimit::get(symbol);
