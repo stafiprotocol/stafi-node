@@ -18,61 +18,61 @@ static_assertions = "1.1.0"
 hex-literal = { version = "0.3.1", optional = true }
 
 # primitives
-sp-authority-discovery = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-consensus-babe = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-block-builder = { git = 'https://github.com/stafiprotocol/stafi-blockchain.git', default-features = false, branch = "m1-compilation"}
-sp-inherents = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-authority-discovery = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-consensus-babe = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-block-builder = { git = 'https://github.com/stafiprotocol/stafi-blockchain.git', default-features = false, branch = "master"}
+sp-inherents = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 node-primitives = { default-features = false, path = "../primitives" }
-sp-offchain = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-core = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-std = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-api = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-runtime = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-staking = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-keyring = { branch = "m1-compilation", optional = true, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-session = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-transaction-pool = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-version = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-io = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-offchain = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-core = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-std = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-api = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-runtime = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-staking = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-keyring = { branch = "master", optional = true, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-session = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-transaction-pool = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-version = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-io = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
 # frame dependencies
-frame-executive = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-frame-benchmarking = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git', optional = true }
-frame-support = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-frame-system = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-frame-system-benchmarking = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git', optional = true }
-frame-system-rpc-runtime-api = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-authority-discovery = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-authorship = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-babe = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-balances = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-collective = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-democracy = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-elections-phragmen = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-finality-tracker = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-grandpa = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-im-online = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-indices = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-identity = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-membership = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-multisig = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-offences = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-offences-benchmarking = { branch = "m1-compilation", git = 'https://github.com/stafiprotocol/stafi-blockchain.git', default-features = false, optional = true }
-pallet-proxy = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-randomness-collective-flip = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-recovery = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-session = { branch = "m1-compilation", features = ["historical"], git = 'https://github.com/stafiprotocol/stafi-blockchain.git', default-features = false }
-pallet-session-benchmarking = { branch = "m1-compilation", git = 'https://github.com/stafiprotocol/stafi-blockchain.git', default-features = false, optional = true }
-pallet-staking = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-staking-reward-curve = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-scheduler = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-sudo = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-timestamp = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-treasury = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-utility = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-transaction-payment = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-transaction-payment-rpc-runtime-api = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-vesting = { branch = "m1-compilation", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+frame-executive = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+frame-benchmarking = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git', optional = true }
+frame-support = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+frame-system = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+frame-system-benchmarking = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git', optional = true }
+frame-system-rpc-runtime-api = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-authority-discovery = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-authorship = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-babe = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-balances = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-collective = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-democracy = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-elections-phragmen = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-finality-tracker = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-grandpa = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-im-online = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-indices = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-identity = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-membership = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-multisig = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-offences = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-offences-benchmarking = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git', default-features = false, optional = true }
+pallet-proxy = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-randomness-collective-flip = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-recovery = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-session = { branch = "master", features = ["historical"], git = 'https://github.com/stafiprotocol/stafi-blockchain.git', default-features = false }
+pallet-session-benchmarking = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git', default-features = false, optional = true }
+pallet-staking = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-staking-reward-curve = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-scheduler = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-sudo = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-timestamp = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-treasury = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-utility = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-transaction-payment = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-transaction-payment-rpc-runtime-api = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+pallet-vesting = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 xtoken-balances = { version = "0.4.9", default-features = false, path = "../pallets/xtoken/balances" }
 rtoken-balances = { version = "0.4.9", default-features = false, path = "../pallets/rtoken/balances" }
 rtoken-rate = { version = "0.4.9", default-features = false, path = "../pallets/rtoken/rate" }
@@ -91,7 +91,7 @@ rdexn-signatures = { version = "0.4.9", default-features = false, path = "../pal
 rdexn-swap = { version = "0.4.9", default-features = false, path = "../pallets/rdexn/swap" }
 
 [build-dependencies]
-wasm-builder-runner = { branch = "m1-compilation", package = "substrate-wasm-builder-runner", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+wasm-builder-runner = { branch = "master", package = "substrate-wasm-builder-runner", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
 [features]
 default = ["std"]
