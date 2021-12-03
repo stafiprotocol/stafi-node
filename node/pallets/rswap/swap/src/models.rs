@@ -6,7 +6,7 @@ use sp_std::prelude::*;
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct SwapPool {
     /// rToken symbol
-    pub rtoken: RSymbol,
+    pub symbol: RSymbol,
     /// balance of fis
     pub fis_balance: u128,
     /// balance of rToken
@@ -20,13 +20,13 @@ pub struct SwapLiquidityProvider<AccountId> {
     /// account
     pub account: AccountId,
     /// rToken symbol
-    pub rtoken: RSymbol,
+    pub symbol: RSymbol,
     /// lp unit
     pub unit: u128,
     /// last add block number
-    pub last_add_height: u64,
+    pub last_add_height: u32,
     /// last remove block number
-    pub last_remove_height: u64,
+    pub last_remove_height: u32,
     /// total fis add value
     pub fis_add_value: u128,
     /// total rtoken add value
