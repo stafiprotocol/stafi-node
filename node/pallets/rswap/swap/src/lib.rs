@@ -53,7 +53,9 @@ decl_error! {
 
 decl_storage! {
     trait Store for Module<T: Trait> as RSwapSwap {
+        /// swap pools
         pub SwapPools get(fn swap_pools): map hasher(blake2_128_concat) RSymbol => Option<SwapPool>;
+        /// liquidity providers
         pub SwapLiquidityProviders get(fn swap_liquidity_providers): map hasher(blake2_128_concat) (T::AccountId, RSymbol) => Option<SwapLiquidityProvider<T::AccountId>>;
     }
 }
@@ -248,7 +250,7 @@ impl<T: Trait> Module<T> {
     // r = rToken added
     // P = existing Pool Units
     // slipAdjustment = (1 - ABS((F r - f R)/((f + F) (r + R))))
-    // units = ((P (r F + R f))/(2 R F))*slidAdjustment
+    // units = ((P (r F + R f))/(2 R F))*slipAdjustment
     pub fn cal_pool_unit(
         old_pool_unit: u128,
         fis_balance: u128,
@@ -278,6 +280,7 @@ impl<T: Trait> Module<T> {
         let slip_adj_denominator = f
             .saturating_add(f_capital)
             .saturating_mul(r.saturating_add(r_capital));
+
         let abs: U512;
         if f_capital.saturating_mul(r) > f.saturating_mul(r_capital) {
             abs = f_capital
@@ -309,6 +312,7 @@ impl<T: Trait> Module<T> {
             .unwrap_or(U512::zero());
         let add_unit = raw_unit.saturating_sub(adj_unit);
         let total_unit = p_capital.saturating_add(add_unit);
+
         (total_unit.as_u128(), add_unit.as_u128())
     }
 
@@ -336,6 +340,7 @@ impl<T: Trait> Module<T> {
             .saturating_mul(y_capital)
             .checked_div(denominator)
             .unwrap_or(U512::zero());
+
         y.as_u128()
     }
 
@@ -383,6 +388,7 @@ impl<T: Trait> Module<T> {
                 .checked_div(use_pool_unit)
                 .unwrap_or(U512::zero());
         }
+
         (
             fis_amount.as_u128(),
             rtoken_amount.as_u128(),
