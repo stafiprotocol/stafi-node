@@ -9,9 +9,8 @@ use frame_support::{
 use sp_std::prelude::*;
 
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::{Balance, RSymbol};
+use node_primitives::RSymbol;
 use rtoken_balances::traits::Currency as RCurrency;
-use sp_arithmetic::helpers_128bit::multiply_by_rational;
 use sp_runtime::{
     traits::{AccountIdConversion, SaturatedConversion},
     ModuleId,
@@ -26,6 +25,7 @@ pub trait Trait: system::Trait {
 
 pub mod models;
 pub use models::*;
+use sp_core::U512;
 
 const MODULE_ID: ModuleId = ModuleId(*b"rtk/swap");
 
@@ -63,14 +63,14 @@ decl_module! {
         fn deposit_event() = default;
         /// swap rtoken for fis
         #[weight = 10_000_000_000]
-        pub fn swap(origin, symbol: RSymbol, in_amount: u128, min_out_amount: u128, in_is_fis: bool) -> DispatchResult {
+        pub fn swap(origin, symbol: RSymbol, in_amount: u128, min_out_amount: u128, input_is_fis: bool) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let mut pool = Self::swap_pools(symbol).ok_or(Error::<T>::PoolNotExist)?;
 
             ensure!(in_amount > 0 || min_out_amount > 0, Error::<T>::AmountAllZero);
-            let result = Self::cal_swap_result(pool.fis_balance, pool.rtoken_balance, in_amount, in_is_fis);
+            let result = Self::cal_swap_result(pool.fis_balance, pool.rtoken_balance, in_amount, input_is_fis);
 
-            if in_is_fis {
+            if input_is_fis {
                 ensure!(result < pool.rtoken_balance, Error::<T>::PoolBalanceNotEnough);
 
                 //transfer
@@ -185,7 +185,7 @@ decl_module! {
 
         /// remove liduidity
         #[weight = 10_000_000_000]
-        pub fn remove_liquidity(origin, symbol: RSymbol, rm_unit: u128, swap_unit: u128, in_is_fis: bool) -> DispatchResult {
+        pub fn remove_liquidity(origin, symbol: RSymbol, rm_unit: u128, swap_unit: u128, input_is_fis: bool) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let mut pool = Self::swap_pools(symbol).ok_or(Error::<T>::PoolNotExist)?;
             let mut lp = Self::swap_liquidity_providers((who.clone(), symbol)).ok_or(Error::<T>::LiquidityProviderNotExist)?;
@@ -193,15 +193,15 @@ decl_module! {
 
             ensure!(rm_unit > 0 && rm_unit <= lp.unit && rm_unit >= swap_unit, Error::<T>::UnitAmountImproper);
 
-            let (mut fis_amount, mut rtoken_amount, swap_in_amount) = Self::cal_remove_result(pool.total_unit, rm_unit, swap_unit, pool.fis_balance, pool.rtoken_balance, in_is_fis);
+            let (mut fis_amount, mut rtoken_amount, swap_in_amount) = Self::cal_remove_result(pool.total_unit, rm_unit, swap_unit, pool.fis_balance, pool.rtoken_balance, input_is_fis);
 
             //update pool/lp
             pool.total_unit = pool.total_unit.saturating_sub(rm_unit);
             pool.fis_balance =  pool.fis_balance.saturating_sub(fis_amount);
             pool.rtoken_balance = pool.rtoken_balance.saturating_sub(rtoken_amount);
             if swap_in_amount > 0 {
-                let swap_result = Self::cal_swap_result(pool.fis_balance, pool.rtoken_balance, swap_in_amount,in_is_fis);
-                if in_is_fis {
+                let swap_result = Self::cal_swap_result(pool.fis_balance, pool.rtoken_balance, swap_in_amount,input_is_fis);
+                if input_is_fis {
                     pool.fis_balance = pool.fis_balance.saturating_add(swap_in_amount);
                     pool.rtoken_balance = pool.rtoken_balance.saturating_sub(swap_result);
 
@@ -269,30 +269,47 @@ impl<T: Trait> Module<T> {
             return (fis_amount, fis_amount);
         }
 
-        let F = fis_balance;
-        let R = rtoken_balance;
-        let f = fis_amount;
-        let r = rtoken_amount;
-        let P = old_pool_unit;
+        let p_capital = U512::from(old_pool_unit);
+        let f_capital = U512::from(fis_balance);
+        let r_capital = U512::from(rtoken_balance);
+        let f = U512::from(fis_amount);
+        let r = U512::from(rtoken_amount);
 
-        let slip_adj_denominator = f.saturating_add(F).saturating_mul(r.saturating_add(R));
-        let abs: u128;
-        if F.saturating_mul(r) > f.saturating_mul(R) {
-            abs = F.saturating_mul(r).saturating_sub(f.saturating_mul(R));
+        let slip_adj_denominator = f
+            .saturating_add(f_capital)
+            .saturating_mul(r.saturating_add(r_capital));
+        let abs: U512;
+        if f_capital.saturating_mul(r) > f.saturating_mul(r_capital) {
+            abs = f_capital
+                .saturating_mul(r)
+                .saturating_sub(f.saturating_mul(r_capital));
         } else {
-            abs = f.saturating_mul(R).saturating_sub(F.saturating_mul(r));
+            abs = f
+                .saturating_mul(r_capital)
+                .saturating_sub(f_capital.saturating_mul(r));
         }
 
-        let numerator = F.saturating_mul(r).saturating_add(f.saturating_mul(R));
-        let raw_unit = multiply_by_rational(P, numerator, R.saturating_mul(F).saturating_mul(2))
-            .unwrap_or(0) as u128;
-        if raw_unit == 0 {
+        let numerator = f_capital
+            .saturating_mul(r)
+            .saturating_add(f.saturating_mul(r_capital));
+        let raw_unit = p_capital
+            .saturating_mul(numerator)
+            .checked_div(
+                r_capital
+                    .saturating_mul(f_capital)
+                    .saturating_mul(U512::from(2)),
+            )
+            .unwrap_or(U512::zero());
+        if raw_unit.is_zero() {
             return (0, 0);
         }
-        let adj = multiply_by_rational(raw_unit, abs, slip_adj_denominator).unwrap_or(0) as u128;
-        let add_unit = raw_unit.saturating_sub(adj);
-        let total_unit = old_pool_unit.saturating_add(add_unit);
-        (total_unit, add_unit)
+        let adj_unit = raw_unit
+            .saturating_mul(abs)
+            .checked_div(slip_adj_denominator)
+            .unwrap_or(U512::zero());
+        let add_unit = raw_unit.saturating_sub(adj_unit);
+        let total_unit = p_capital.saturating_add(add_unit);
+        (total_unit.as_u128(), add_unit.as_u128())
     }
 
     //y = (x * X * Y) / (x + X)^2
@@ -300,53 +317,76 @@ impl<T: Trait> Module<T> {
         fis_balance: u128,
         rtoken_balance: u128,
         in_amount: u128,
-        in_is_fis: bool,
+        input_is_fis: bool,
     ) -> u128 {
         if fis_balance == 0 || rtoken_balance == 0 || in_amount == 0 {
             return 0;
         }
-        let mut x = in_amount;
-        let mut X = rtoken_balance;
-        let mut Y = fis_balance;
-        if in_is_fis {
-            X = fis_balance;
-            Y = rtoken_balance;
+        let x = U512::from(in_amount);
+        let mut x_capital = U512::from(rtoken_balance);
+        let mut y_capital = U512::from(fis_balance);
+        if input_is_fis {
+            x_capital = U512::from(fis_balance);
+            y_capital = U512::from(rtoken_balance);
         }
-        let t = x.saturating_add(X);
+        let t = x.saturating_add(x_capital);
         let denominator = t.saturating_mul(t);
-        let y = multiply_by_rational(x, X.saturating_mul(Y), denominator).unwrap_or(0) as u128;
-        y
+        let y = x
+            .saturating_mul(x_capital)
+            .saturating_mul(y_capital)
+            .checked_div(denominator)
+            .unwrap_or(U512::zero());
+        y.as_u128()
     }
 
     pub fn cal_remove_result(
         pool_unit: u128,
-        mut rm_unit: u128,
-        mut swap_unit: u128,
+        rm_unit: u128,
+        swap_unit: u128,
         fis_balance: u128,
         rtoken_balance: u128,
-        in_is_fis: bool,
+        input_is_fis: bool,
     ) -> (u128, u128, u128) {
         if pool_unit == 0 || rm_unit == 0 {
             return (0, 0, 0);
         }
+        let use_pool_unit = U512::from(pool_unit);
+        let use_fis_balance = U512::from(fis_balance);
+        let use_rtoken_balance = U512::from(rtoken_balance);
+        let mut use_rm_unit = U512::from(rm_unit);
+        let mut use_swap_unit = U512::from(swap_unit);
         if rm_unit > pool_unit {
-            rm_unit = pool_unit;
+            use_rm_unit = U512::from(pool_unit);
         }
         if swap_unit > rm_unit {
-            swap_unit = rm_unit;
+            use_swap_unit = U512::from(rm_unit);
         }
 
-        let fis_amount = multiply_by_rational(rm_unit, fis_balance, pool_unit).unwrap_or(0) as u128;
-        let rtoken_amount =
-            multiply_by_rational(rm_unit, rtoken_balance, pool_unit).unwrap_or(0) as u128;
-        let swap_amount: u128;
-        if in_is_fis {
-            swap_amount =
-                multiply_by_rational(rm_unit, fis_balance, pool_unit).unwrap_or(0) as u128;
+        let fis_amount = use_rm_unit
+            .saturating_mul(use_fis_balance)
+            .checked_div(use_pool_unit)
+            .unwrap_or(U512::zero());
+        let rtoken_amount = use_rm_unit
+            .saturating_mul(use_rtoken_balance)
+            .checked_div(use_pool_unit)
+            .unwrap_or(U512::zero());
+
+        let swap_amount: U512;
+        if input_is_fis {
+            swap_amount = use_swap_unit
+                .saturating_mul(use_fis_balance)
+                .checked_div(use_pool_unit)
+                .unwrap_or(U512::zero());
         } else {
-            swap_amount =
-                multiply_by_rational(rm_unit, rtoken_balance, pool_unit).unwrap_or(0) as u128;
+            swap_amount = use_swap_unit
+                .saturating_mul(use_rtoken_balance)
+                .checked_div(use_pool_unit)
+                .unwrap_or(U512::zero());
         }
-        (fis_amount, rtoken_amount, swap_amount)
+        (
+            fis_amount.as_u128(),
+            rtoken_amount.as_u128(),
+            swap_amount.as_u128(),
+        )
     }
 }
