@@ -34,7 +34,7 @@ decl_event! {
         /// swap rtoken to native: account, symbol, trans block, fee amount, rtoken amount, out amount, rtoken rate, swap rate
         SwapRTokenToNative(AccountId, Vec<u8>, RSymbol, u64, Balance, u128, u128, u64, u128),
         /// swap rFIS to FIS: account, rtoken amount, out amount, rtoken rate, swap rate
-        SwapRFisToFis(AccountId, u128, u128, u64, u128),
+        SwapRFisToFis(AccountId, AccountId, u128, u128, u64, u128),
         /// report with block: account, symbol, deal block
         ReportTransResultWithBlock(AccountId, RSymbol, u64),
         /// report with index: account, symbol, deal block
@@ -167,7 +167,7 @@ decl_module! {
 
         /// swap rFIS for FIS token
         #[weight = 3_000_000_000]
-        pub fn swap_rfis_for_fis_token(origin, rtoken_amount: u128, min_out_amount: u128, grade: u8) -> DispatchResult {
+        pub fn swap_rfis_for_fis_token(origin, receiver: T::AccountId, rtoken_amount: u128, min_out_amount: u128, grade: u8) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
             let symbol: RSymbol = RSymbol::RFIS;
@@ -192,10 +192,10 @@ decl_module! {
             ensure!(out_amount >= min_out_amount, Error::<T>::LessThanMinOutAmount);
 
             //update balance
-            T::Currency::transfer(&native_pool_addr, &who, out_amount.saturated_into(), KeepAlive)?;
+            T::Currency::transfer(&native_pool_addr, &receiver, out_amount.saturated_into(), KeepAlive)?;
             T::RCurrency::transfer(&who, &fund_addr, symbol, rtoken_amount)?;
 
-            Self::deposit_event(RawEvent::SwapRFisToFis(who.clone(), rtoken_amount, out_amount, rtoken_rate, swap_rate.rate));
+            Self::deposit_event(RawEvent::SwapRFisToFis(who.clone(), receiver, rtoken_amount, out_amount, rtoken_rate, swap_rate.rate));
             Ok(())
         }
 
