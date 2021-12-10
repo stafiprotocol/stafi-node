@@ -31,8 +31,10 @@ decl_event! {
     pub enum Event<T> where
         AccountId = <T as system::Trait>::AccountId
     {
-        /// swap rtoken to native: account, symbol, trans block,fee amount, rtoken amount, out amount, rtoken rate, swap rate
+        /// swap rtoken to native: account, symbol, trans block, fee amount, rtoken amount, out amount, rtoken rate, swap rate
         SwapRTokenToNative(AccountId, Vec<u8>, RSymbol, u64, Balance, u128, u128, u64, u128),
+        /// swap rFIS to FIS: account, rtoken amount, out amount, rtoken rate, swap rate
+        SwapRFisToFis(AccountId, AccountId, u128, u128, u64, u128),
         /// report with block: account, symbol, deal block
         ReportTransResultWithBlock(AccountId, RSymbol, u64),
         /// report with index: account, symbol, deal block
@@ -56,6 +58,8 @@ decl_error! {
         SwapRtokenClosed,
         /// no fund address
         NoFundAddress,
+        /// no native pool address
+        NoNativePoolAddress,
         /// rtoken amount not enough
         RTokenAmountNotEnough,
         /// rtoken rate failed
@@ -86,6 +90,8 @@ decl_storage! {
         pub SwapRTokenSwitch get(fn swap_rtoken_switch): map hasher(blake2_128_concat)  RSymbol => bool = true;
         /// fund address
         pub FundAddress get(fn fund_address): Option<T::AccountId>;
+        /// native fis pool address
+        pub NativePoolAddress get(fn native_pool_address): Option<T::AccountId>;
         /// swap fee of rtokens
         pub SwapFees get(fn swap_fees): map hasher(blake2_128_concat) RSymbol => Balance = 1500000000000;
         /// swap rate that admin can set 
@@ -108,6 +114,7 @@ decl_storage! {
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event() = default;
+
         /// swap rtoken for native token
         #[weight = 10_000_000_000]
         pub fn swap_rtoken_for_native_token(origin, receiver: Vec<u8>, symbol: RSymbol, rtoken_amount: u128, min_out_amount: u128, grade: u8) -> DispatchResult {
@@ -155,6 +162,40 @@ decl_module! {
             <TransInfos<T>>::insert((symbol, trans_block), trans_block_trans_info);
             NativeTokenReserves::insert(symbol, out_reserve.saturating_sub(out_amount));
             Self::deposit_event(RawEvent::SwapRTokenToNative(who.clone(), receiver.clone(), symbol, trans_block, fee_amount, rtoken_amount, out_amount, rtoken_rate, swap_rate.rate));
+            Ok(())
+        }
+
+        /// swap rFIS for FIS token
+        #[weight = 3_000_000_000]
+        pub fn swap_rfis_for_fis_token(origin, receiver: T::AccountId, rtoken_amount: u128, min_out_amount: u128, grade: u8) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+
+            let symbol: RSymbol = RSymbol::RFIS;
+
+            ensure!(Self::swap_total_switch(), Error::<T>::SwapTotalClosed);
+            ensure!(Self::swap_rtoken_switch(symbol), Error::<T>::SwapRtokenClosed);
+            ensure!(rtoken_amount > u128::MIN, Error::<T>::ParamsErr);
+            ensure!(min_out_amount > u128::MIN, Error::<T>::ParamsErr);
+
+            let fund_addr = Self::fund_address().ok_or(Error::<T>::NoFundAddress)?; 
+            let native_pool_addr = Self::native_pool_address().ok_or(Error::<T>::NoNativePoolAddress)?; 
+            let rtoken_rate = RTokenRate::Rate::get(symbol).ok_or(Error::<T>::RTokenRateFailed)?;
+            let swap_rate = Self::swap_rates((symbol, grade)).ok_or(Error::<T>::SwapRateFailed)?;
+            
+            ensure!(rtoken_rate > 0, Error::<T>::RTokenRateFailed);
+            ensure!(swap_rate.rate > 0, Error::<T>::SwapRateFailed);
+            ensure!(T::RCurrency::free_balance(&who, symbol) >= rtoken_amount, Error::<T>::RTokenAmountNotEnough);
+            
+            // check min out amount
+            let temp_out_amount = RTokenRate::Module::<T>::rtoken_to_token(symbol, rtoken_amount);
+            let out_amount = multiply_by_rational(temp_out_amount, swap_rate.rate, RATEBASE.into()).unwrap_or(u128::MIN) as u128;
+            ensure!(out_amount >= min_out_amount, Error::<T>::LessThanMinOutAmount);
+
+            //update balance
+            T::Currency::transfer(&native_pool_addr, &receiver, out_amount.saturated_into(), KeepAlive)?;
+            T::RCurrency::transfer(&who, &fund_addr, symbol, rtoken_amount)?;
+
+            Self::deposit_event(RawEvent::SwapRFisToFis(who.clone(), receiver, rtoken_amount, out_amount, rtoken_rate, swap_rate.rate));
             Ok(())
         }
 
@@ -242,6 +283,14 @@ decl_module! {
         fn set_fund_address(origin, address: T::AccountId) -> DispatchResult {
             ensure_root(origin)?;
             <FundAddress<T>>::put(address);
+            Ok(())
+        }
+
+        /// set native pool address
+        #[weight = 100_000]
+        fn set_native_pool_address(origin, address: T::AccountId) -> DispatchResult {
+            ensure_root(origin)?;
+            <NativePoolAddress<T>>::put(address);
             Ok(())
         }
 

@@ -578,7 +578,7 @@ dependencies = [
 
 [[package]]
 name = "bridge-common"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "bridge-relayers",
  "frame-support",
@@ -595,7 +595,7 @@ dependencies = [
 
 [[package]]
 name = "bridge-relayers"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -610,7 +610,7 @@ dependencies = [
 
 [[package]]
 name = "bridge-swap"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "bridge-common",
  "frame-support",
@@ -2011,7 +2011,7 @@ checksum = "8f5f3913fa0bfe7ee1fd8248b6b9f42a5af4b9d65ec2dd2c3c26132b950ecfc2"
 
 [[package]]
 name = "general-signature"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3680,7 +3680,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "assert_cmd",
  "frame-benchmarking-cli",
@@ -3706,7 +3706,7 @@ dependencies = [
  "pallet-transaction-payment",
  "parity-scale-codec",
  "parking_lot 0.10.2",
- "platforms",
+ "platforms 1.1.0",
  "rand 0.7.3",
  "regex",
  "sc-authority-discovery",
@@ -3752,7 +3752,7 @@ dependencies = [
 
 [[package]]
 name = "node-executor"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "criterion",
  "frame-benchmarking",
@@ -3784,7 +3784,7 @@ dependencies = [
 
 [[package]]
 name = "node-inspect"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "derive_more",
  "log",
@@ -3800,7 +3800,7 @@ dependencies = [
 
 [[package]]
 name = "node-primitives"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -3813,7 +3813,7 @@ dependencies = [
 
 [[package]]
 name = "node-rpc"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "jsonrpc-core",
  "node-primitives",
@@ -3840,7 +3840,7 @@ dependencies = [
 
 [[package]]
 name = "node-rpc-client"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "futures 0.1.30",
  "hyper 0.12.35",
@@ -3853,7 +3853,7 @@ dependencies = [
 
 [[package]]
 name = "node-runtime"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "bridge-common",
  "bridge-relayers",
@@ -3936,7 +3936,7 @@ dependencies = [
 
 [[package]]
 name = "node-testing"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "criterion",
  "frame-support",
@@ -5048,6 +5048,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "feb3b2b1033b8a60b4da6ee470325f887758c95d5320f52f9ce0df055a55940e"
 
 [[package]]
+name = "platforms"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "989d43012e2ca1c4a02507c67282691a0a3207f9dc67cec596b43fe925b3d325"
+
+[[package]]
 name = "plotters"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5546,7 +5552,7 @@ dependencies = [
 
 [[package]]
 name = "rclaim"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5593,7 +5599,7 @@ dependencies = [
 
 [[package]]
 name = "rdexn-payers"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5608,7 +5614,7 @@ dependencies = [
 
 [[package]]
 name = "rdexn-signatures"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5627,7 +5633,7 @@ dependencies = [
 
 [[package]]
 name = "rdexn-swap"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5760,7 +5766,7 @@ checksum = "e005d658ad26eacc2b6c506dfde519f4e277e328d0eb3379ca61647d70a8f531"
 
 [[package]]
 name = "rfis"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "bridge-common",
  "frame-support",
@@ -5817,7 +5823,7 @@ dependencies = [
 
 [[package]]
 name = "rtoken-balances"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5831,7 +5837,7 @@ dependencies = [
 
 [[package]]
 name = "rtoken-ledger"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5851,7 +5857,7 @@ dependencies = [
 
 [[package]]
 name = "rtoken-rate"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5868,7 +5874,7 @@ dependencies = [
 
 [[package]]
 name = "rtoken-relayers"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5883,7 +5889,7 @@ dependencies = [
 
 [[package]]
 name = "rtoken-series"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "bridge-common",
  "frame-support",
@@ -5906,7 +5912,7 @@ dependencies = [
 
 [[package]]
 name = "rtoken-votes"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -8061,7 +8067,7 @@ name = "substrate-build-script-utils"
 version = "2.0.0"
 source = "git+https://github.com/stafiprotocol/stafi-blockchain.git#462bf9689e0d313d4cd2bb102d5cc8449ee262c7"
 dependencies = [
- "platforms",
+ "platforms 0.2.1",
 ]
 
 [[package]]
@@ -9483,7 +9489,7 @@ dependencies = [
 
 [[package]]
 name = "xclaim"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -9496,7 +9502,7 @@ dependencies = [
 
 [[package]]
 name = "xtoken-balances"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "frame-support",
  "frame-system",
