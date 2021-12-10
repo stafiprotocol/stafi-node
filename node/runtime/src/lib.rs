@@ -351,6 +351,10 @@ impl rtoken_balances::Trait for Runtime {
 	type Event = Event;
 }
 
+impl rdex_balances::Trait for Runtime {
+	type Event = Event;
+}
+
 impl rtoken_rate::Trait for Runtime {
 	type Event = Event;
 }
@@ -921,10 +925,11 @@ impl rdexn_swap::Trait for Runtime {
 	type RCurrency = RBalances;
 }
 
-impl rswap_swap::Trait for Runtime {
+impl rdex_swap::Trait for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type RCurrency = RBalances;
+	type LpCurrency = LpBalances;
 }
 
 construct_runtime!(
@@ -979,7 +984,8 @@ construct_runtime!(
 		RDexnPayers: rdexn_payers::{Module, Call, Storage, Event<T>},
 		RDexnSignatures: rdexn_signatures::{Module, Call, Storage, Event<T>},
 		RDexnSwap: rdexn_swap::{Module, Call, Storage, Event<T>},
-		RSwapSwap: rswap_swap::{Module, Call, Storage, Event<T>},
+		RDexSwap: rdex_swap::{Module, Call, Storage, Event<T>},
+		LpBalances: rdex_balances::{Module, Call, Storage, Event<T>},
 	}
 );
 
