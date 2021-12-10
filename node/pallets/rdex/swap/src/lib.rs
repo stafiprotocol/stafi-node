@@ -36,8 +36,14 @@ decl_event! {
     pub enum Event<T> where
         AccountId = <T as system::Trait>::AccountId
     {
-        /// swap rtoken to native: account, symbol, rtoken amount, fis amount, fee
-        SwapRTokenForFis(AccountId, RSymbol, u128, u128, u128),
+        /// Swap: account, symbol, input amount, output amount, input is fis
+        Swap(AccountId, RSymbol, u128, u128, bool),
+        /// CreatePool: account, symbol, fis amount, rToken amount, new total unit, add lp unit,
+        CreatePool(AccountId, RSymbol, u128, u128, u128, u128),
+        /// AddLiquidity: account, symbol, fis amount, rToken amount, new total unit, add lp unit,
+        AddLiquidity(AccountId, RSymbol, u128, u128, u128, u128),
+        /// RemoveLiquidity: account, symbol, rm unit, swap unit, rm fis amount, rm rToken amount, input is fis
+        RemoveLiquidity(AccountId, RSymbol, u128, u128, u128, u128, bool),
     }
 }
 
@@ -65,39 +71,42 @@ decl_storage! {
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event() = default;
+
         /// swap rtoken for fis
         #[weight = 10_000_000_000]
-        pub fn swap(origin, symbol: RSymbol, in_amount: u128, min_out_amount: u128, input_is_fis: bool) -> DispatchResult {
+        pub fn swap(origin, symbol: RSymbol, input_amount: u128, min_out_amount: u128, input_is_fis: bool) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let mut pool = Self::swap_pools(symbol).ok_or(Error::<T>::PoolNotExist)?;
 
-            ensure!(in_amount > 0 || min_out_amount > 0, Error::<T>::AmountAllZero);
-            let result = Self::cal_swap_result(pool.fis_balance, pool.rtoken_balance, in_amount, input_is_fis);
+            ensure!(input_amount > 0 || min_out_amount > 0, Error::<T>::AmountAllZero);
 
+            let result = Self::cal_swap_result(pool.fis_balance, pool.rtoken_balance, input_amount, input_is_fis);
             if input_is_fis {
                 ensure!(result < pool.rtoken_balance, Error::<T>::PoolBalanceNotEnough);
 
-                //transfer
-                T::Currency::transfer(&who, &Self::account_id(), in_amount.saturated_into(), KeepAlive)?;
+                // transfer
+                T::Currency::transfer(&who, &Self::account_id(), input_amount.saturated_into(), KeepAlive)?;
                 T::RCurrency::transfer(&Self::account_id(), &who, symbol, result)?;
 
-                //update pool
-                pool.fis_balance = pool.fis_balance.saturating_add(in_amount);
+                // update pool
+                pool.fis_balance = pool.fis_balance.saturating_add(input_amount);
                 pool.rtoken_balance = pool.rtoken_balance.saturating_sub(result);
             } else {
-                ensure!(T::RCurrency::free_balance(&who, symbol) >= in_amount, Error::<T>::RTokenAmountNotEnough);
+                ensure!(T::RCurrency::free_balance(&who, symbol) >= input_amount, Error::<T>::RTokenAmountNotEnough);
                 ensure!(result < pool.fis_balance, Error::<T>::PoolBalanceNotEnough);
 
-                //transfer
+                // transfer
                 T::Currency::transfer(&Self::account_id(), &who, result.saturated_into(), KeepAlive)?;
-                T::RCurrency::transfer(&who, &Self::account_id(), symbol, in_amount)?;
+                T::RCurrency::transfer(&who, &Self::account_id(), symbol, input_amount)?;
 
-                //update pool
-                pool.rtoken_balance = pool.rtoken_balance.saturating_add(in_amount);
+                // update pool
+                pool.rtoken_balance = pool.rtoken_balance.saturating_add(input_amount);
                 pool.fis_balance = pool.fis_balance.saturating_sub(result);
             }
-            //update pool storage
+
+            // update pool storage
             <SwapPools>::insert(symbol, pool);
+            Self::deposit_event(RawEvent::Swap(who, symbol, input_amount, result, input_is_fis));
             Ok(())
         }
 
@@ -111,8 +120,7 @@ decl_module! {
             ensure!(T::RCurrency::free_balance(&who, symbol) >= rtoken_amount, Error::<T>::RTokenAmountNotEnough);
 
             let (pool_unit, lp_unit) = Self::cal_pool_unit(0, 0, 0, fis_amount, rtoken_amount);
-
-            //create pool/lp
+            // create pool/lp
             let pool = SwapPool {
                 symbol: symbol,
                 fis_balance: fis_amount,
@@ -127,7 +135,7 @@ decl_module! {
             // update pool/lp
             T::LpCurrency::mint(&who, symbol, lp_unit)?;
             <SwapPools>::insert(symbol, pool);
-
+            Self::deposit_event(RawEvent::CreatePool(who, symbol, fis_amount, rtoken_amount, pool_unit, lp_unit));
             Ok(())
         }
 
@@ -140,25 +148,21 @@ decl_module! {
             ensure!(fis_amount > 0 || rtoken_amount > 0, Error::<T>::AmountAllZero);
             ensure!(T::RCurrency::free_balance(&who, symbol) >= rtoken_amount, Error::<T>::RTokenAmountNotEnough);
 
-            let (new_total_pool_unit, new_lp_unit) = Self::cal_pool_unit(pool.total_unit, pool.fis_balance, pool.rtoken_balance, fis_amount, rtoken_amount);
+            let (new_total_pool_unit, add_lp_unit) = Self::cal_pool_unit(pool.total_unit, pool.fis_balance, pool.rtoken_balance, fis_amount, rtoken_amount);
 
             // transfer token to moudle account
-            if fis_amount > 0 {
-                T::Currency::transfer(&who, &Self::account_id(), fis_amount.saturated_into(), KeepAlive)?;
-            }
-            if rtoken_amount > 0 {
-                T::RCurrency::transfer(&who, &Self::account_id(), symbol, rtoken_amount)?;
-            }
+            T::Currency::transfer(&who, &Self::account_id(), fis_amount.saturated_into(), KeepAlive)?;
+            T::RCurrency::transfer(&who, &Self::account_id(), symbol, rtoken_amount)?;
 
-            //update pool
+            // update pool
             pool.total_unit = new_total_pool_unit;
             pool.fis_balance =  pool.fis_balance.saturating_add(fis_amount);
             pool.rtoken_balance = pool.rtoken_balance.saturating_add(rtoken_amount);
 
-            //update pool/lp storage
-            T::LpCurrency::mint(&who, symbol, new_lp_unit)?;
+            // update pool/lp storage
+            T::LpCurrency::mint(&who, symbol, add_lp_unit)?;
             <SwapPools>::insert(symbol, pool);
-
+            Self::deposit_event(RawEvent::AddLiquidity(who, symbol, fis_amount, rtoken_amount, new_total_pool_unit, add_lp_unit));
             Ok(())
         }
 
@@ -171,32 +175,27 @@ decl_module! {
 
             ensure!(rm_unit > 0 && rm_unit <= lp_unit && rm_unit >= swap_unit, Error::<T>::UnitAmountImproper);
 
-            let (mut rm_fis_amount, mut rm_rtoken_amount, swap_in_amount) = Self::cal_remove_result(pool.total_unit, rm_unit, swap_unit, pool.fis_balance, pool.rtoken_balance, input_is_fis);
-
+            let (mut rm_fis_amount, mut rm_rtoken_amount, swap_input_amount) = Self::cal_remove_result(pool.total_unit, rm_unit, swap_unit, pool.fis_balance, pool.rtoken_balance, input_is_fis);
             //update pool/lp
             pool.total_unit = pool.total_unit.saturating_sub(rm_unit);
             pool.fis_balance =  pool.fis_balance.saturating_sub(rm_fis_amount);
             pool.rtoken_balance = pool.rtoken_balance.saturating_sub(rm_rtoken_amount);
-            if swap_in_amount > 0 {
-                let swap_result = Self::cal_swap_result(pool.fis_balance, pool.rtoken_balance, swap_in_amount, input_is_fis);
+            if swap_input_amount > 0 {
+                let swap_result = Self::cal_swap_result(pool.fis_balance, pool.rtoken_balance, swap_input_amount, input_is_fis);
                 if input_is_fis {
-                    pool.fis_balance = pool.fis_balance.saturating_add(swap_in_amount);
+                    pool.fis_balance = pool.fis_balance.saturating_add(swap_input_amount);
                     pool.rtoken_balance = pool.rtoken_balance.saturating_sub(swap_result);
 
-                    rm_fis_amount = rm_fis_amount.saturating_sub(swap_in_amount);
+                    rm_fis_amount = rm_fis_amount.saturating_sub(swap_input_amount);
                     rm_rtoken_amount = rm_rtoken_amount.saturating_add(swap_result);
                 } else {
-                    pool.rtoken_balance = pool.rtoken_balance.saturating_add(swap_in_amount);
+                    pool.rtoken_balance = pool.rtoken_balance.saturating_add(swap_input_amount);
                     pool.fis_balance = pool.fis_balance.saturating_sub(swap_result);
-                    rm_rtoken_amount = rm_rtoken_amount.saturating_add(swap_in_amount);
 
-                    rm_rtoken_amount = rm_rtoken_amount.saturating_sub(swap_in_amount);
+                    rm_rtoken_amount = rm_rtoken_amount.saturating_sub(swap_input_amount);
                     rm_fis_amount = rm_fis_amount.saturating_add(swap_result);
                 }
             }
-
-            // burn unit
-            T::LpCurrency::burn(&who, symbol, rm_unit)?;
 
             // transfer token to user
             if rm_fis_amount > 0 {
@@ -205,10 +204,11 @@ decl_module! {
             if rm_rtoken_amount > 0 {
                 T::RCurrency::transfer(&Self::account_id(), &who, symbol, rm_rtoken_amount)?;
             }
-
+            // burn unit
+            T::LpCurrency::burn(&who, symbol, rm_unit)?;
             // update pool
             <SwapPools>::insert(symbol, pool);
-
+            Self::deposit_event(RawEvent::RemoveLiquidity(who, symbol, rm_unit, swap_unit, rm_fis_amount, rm_rtoken_amount, input_is_fis));
             Ok(())
         }
     }
@@ -292,17 +292,17 @@ impl<T: Trait> Module<T> {
         (total_unit.as_u128(), add_unit.as_u128())
     }
 
-    //y = (x * X * Y) / (x + X)^2
+    // y = (x * X * Y) / (x + X)^2
     pub fn cal_swap_result(
         fis_balance: u128,
         rtoken_balance: u128,
-        in_amount: u128,
+        input_amount: u128,
         input_is_fis: bool,
     ) -> u128 {
-        if fis_balance == 0 || rtoken_balance == 0 || in_amount == 0 {
+        if fis_balance == 0 || rtoken_balance == 0 || input_amount == 0 {
             return 0;
         }
-        let x = U512::from(in_amount);
+        let x = U512::from(input_amount);
         let mut x_capital = U512::from(rtoken_balance);
         let mut y_capital = U512::from(fis_balance);
         if input_is_fis {
