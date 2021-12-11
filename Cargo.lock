@@ -3901,6 +3901,7 @@ dependencies = [
  "parity-scale-codec",
  "rclaim",
  "rdex-balances",
+ "rdex-stake",
  "rdex-swap",
  "rdexn-payers",
  "rdexn-signatures",
@@ -5574,6 +5575,25 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "rdex-stake"
+version = "0.4.10"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "pallet-staking",
+ "parity-scale-codec",
+ "rdex-balances",
+ "rdex-swap",
+ "serde",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
  "sp-runtime",
  "sp-std",
 ]

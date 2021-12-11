@@ -30,7 +30,7 @@ pub mod models;
 pub use models::*;
 use sp_core::U512;
 
-const MODULE_ID: ModuleId = ModuleId(*b"rtk/swap");
+const MODULE_ID: ModuleId = ModuleId(*b"rdx/swap");
 
 decl_event! {
     pub enum Event<T> where
@@ -62,7 +62,7 @@ decl_error! {
 }
 
 decl_storage! {
-    trait Store for Module<T: Trait> as RSwapSwap {
+    trait Store for Module<T: Trait> as RDexSwap {
         /// swap pools
         pub SwapPools get(fn swap_pools): map hasher(blake2_128_concat) RSymbol => Option<SwapPool>;
     }
@@ -111,7 +111,7 @@ decl_module! {
         }
 
         /// create pool
-        #[weight = 10_000_000_000]
+        #[weight = 10_000]
         pub fn create_pool(origin, symbol: RSymbol, rtoken_amount: u128, fis_amount: u128) -> DispatchResult {
             ensure_root(origin.clone())?;
             let who = ensure_signed(origin)?;
