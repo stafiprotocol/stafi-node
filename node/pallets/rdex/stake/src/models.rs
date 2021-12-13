@@ -25,6 +25,8 @@ pub struct StakePool {
     pub last_reward_block: u32,
     /// reward per share
     pub reward_per_share: u128,
+    /// guard impermanent loss
+    pub guard_impermanent_loss: bool,
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
@@ -35,12 +37,12 @@ pub struct StakeUser<AccountId> {
     pub lp_amount: u128,
     /// Reward debt
     pub reward_debt: u128,
-    /// Reward that user has claimed
-    pub claimed_reward: u128,
-    /// The amount minted by user but not yet claimed
-    pub current_reward: u128,
+    /// The amount minted by user but not claimed
+    pub reserved_reward: u128,
     /// total stake fis value
     pub total_fis_value: u128,
     /// total stake rtoken value
     pub total_rtoken_value: u128,
+    /// last deposit height
+    pub deposit_height: u32,
 }
