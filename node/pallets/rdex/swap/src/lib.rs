@@ -54,9 +54,12 @@ decl_error! {
         PoolAlreadyExist,
         PoolNotExist,
         RTokenAmountNotEnough,
-        PoolBalanceNotEnough,
+        PoolFisBalanceNotEnough,
+        PoolRTokenBalanceNotEnough,
         UnitAmountImproper,
         NoGuardPool,
+        SwapAmountTooFew,
+        LessThanMinOutAmount,
     }
 }
 
@@ -76,12 +79,14 @@ decl_module! {
         pub fn swap(origin, symbol: RSymbol, input_amount: u128, min_out_amount: u128, input_is_fis: bool) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let mut pool = Self::swap_pools(symbol).ok_or(Error::<T>::PoolNotExist)?;
-
             ensure!(input_amount > 0 || min_out_amount > 0, Error::<T>::AmountAllZero);
 
             let result = Self::cal_swap_result(pool.fis_balance, pool.rtoken_balance, input_amount, input_is_fis);
+            ensure!(result > 0, Error::<T>::SwapAmountTooFew);
+            ensure!(result >= min_out_amount, Error::<T>::LessThanMinOutAmount);
+
             if input_is_fis {
-                ensure!(result < pool.rtoken_balance, Error::<T>::PoolBalanceNotEnough);
+                ensure!(result < pool.rtoken_balance, Error::<T>::PoolRTokenBalanceNotEnough);
 
                 // transfer
                 T::Currency::transfer(&who, &Self::account_id(), input_amount.saturated_into(), KeepAlive)?;
@@ -92,7 +97,7 @@ decl_module! {
                 pool.rtoken_balance = pool.rtoken_balance.saturating_sub(result);
             } else {
                 ensure!(T::RCurrency::free_balance(&who, symbol) >= input_amount, Error::<T>::RTokenAmountNotEnough);
-                ensure!(result < pool.fis_balance, Error::<T>::PoolBalanceNotEnough);
+                ensure!(result < pool.fis_balance, Error::<T>::PoolFisBalanceNotEnough);
 
                 // transfer
                 T::Currency::transfer(&Self::account_id(), &who, result.saturated_into(), KeepAlive)?;
@@ -106,35 +111,6 @@ decl_module! {
             // update pool storage
             <SwapPools>::insert(symbol, pool);
             Self::deposit_event(RawEvent::Swap(who, symbol, input_amount, result, input_is_fis));
-            Ok(())
-        }
-
-        /// create pool
-        #[weight = 10_000]
-        pub fn create_pool(origin, symbol: RSymbol, rtoken_amount: u128, fis_amount: u128) -> DispatchResult {
-            ensure_root(origin.clone())?;
-            let who = ensure_signed(origin)?;
-            ensure!(Self::swap_pools(symbol).is_none(), Error::<T>::PoolAlreadyExist);
-            ensure!(fis_amount > 0 && rtoken_amount > 0, Error::<T>::AmountZero);
-            ensure!(T::RCurrency::free_balance(&who, symbol) >= rtoken_amount, Error::<T>::RTokenAmountNotEnough);
-
-            let (pool_unit, lp_unit) = Self::cal_pool_unit(0, 0, 0, fis_amount, rtoken_amount);
-            // create pool/lp
-            let pool = SwapPool {
-                symbol: symbol,
-                fis_balance: fis_amount,
-                rtoken_balance: rtoken_amount,
-                total_unit: pool_unit,
-            };
-
-            // transfer token to module account
-            T::Currency::transfer(&who, &Self::account_id(), fis_amount.saturated_into(), KeepAlive)?;
-            T::RCurrency::transfer(&who, &Self::account_id(), symbol, rtoken_amount)?;
-
-            // update pool/lp
-            T::LpCurrency::mint(&who, symbol, lp_unit)?;
-            <SwapPools>::insert(symbol, pool);
-            Self::deposit_event(RawEvent::CreatePool(who, symbol, fis_amount, rtoken_amount, pool_unit, lp_unit));
             Ok(())
         }
 
@@ -170,7 +146,9 @@ decl_module! {
         pub fn remove_liquidity(origin, symbol: RSymbol, rm_unit: u128, swap_unit: u128, input_is_fis: bool) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let mut pool = Self::swap_pools(symbol).ok_or(Error::<T>::PoolNotExist)?;
-            let lp_unit = T::RCurrency::free_balance(&who, symbol);
+            let lp_unit = T::LpCurrency::free_balance(&who, symbol);
+            let pool_fis_balance = T::Currency::free_balance(&Self::account_id()).saturated_into::<u128>();
+            let pool_rtoken_balance = T::RCurrency::free_balance(&Self::account_id(), symbol);
 
             ensure!(rm_unit > 0 && rm_unit <= lp_unit && rm_unit >= swap_unit, Error::<T>::UnitAmountImproper);
 
@@ -196,6 +174,9 @@ decl_module! {
                 }
             }
 
+            ensure!(pool_fis_balance >= rm_fis_amount, Error::<T>::PoolFisBalanceNotEnough);
+            ensure!(pool_rtoken_balance >= rm_rtoken_amount, Error::<T>::PoolRTokenBalanceNotEnough);
+
             // transfer token to user
             if rm_fis_amount > 0 {
                 T::Currency::transfer(&Self::account_id(), &who, rm_fis_amount.saturated_into(), KeepAlive)?;
@@ -208,6 +189,34 @@ decl_module! {
             // update pool
             <SwapPools>::insert(symbol, pool);
             Self::deposit_event(RawEvent::RemoveLiquidity(who, symbol, rm_unit, swap_unit, rm_fis_amount, rm_rtoken_amount, input_is_fis));
+            Ok(())
+        }
+
+        /// create pool
+        #[weight = 10_000]
+        pub fn create_pool(origin, who: T::AccountId, symbol: RSymbol, rtoken_amount: u128, fis_amount: u128) -> DispatchResult {
+            ensure_root(origin.clone())?;
+            ensure!(Self::swap_pools(symbol).is_none(), Error::<T>::PoolAlreadyExist);
+            ensure!(fis_amount > 0 && rtoken_amount > 0, Error::<T>::AmountZero);
+            ensure!(T::RCurrency::free_balance(&who, symbol) >= rtoken_amount, Error::<T>::RTokenAmountNotEnough);
+
+            let (pool_unit, lp_unit) = Self::cal_pool_unit(0, 0, 0, fis_amount, rtoken_amount);
+            // create pool/lp
+            let pool = SwapPool {
+                symbol: symbol,
+                fis_balance: fis_amount,
+                rtoken_balance: rtoken_amount,
+                total_unit: pool_unit,
+            };
+
+            // transfer token to module account
+            T::Currency::transfer(&who, &Self::account_id(), fis_amount.saturated_into(), KeepAlive)?;
+            T::RCurrency::transfer(&who, &Self::account_id(), symbol, rtoken_amount)?;
+
+            // update pool/lp
+            T::LpCurrency::mint(&who, symbol, lp_unit)?;
+            <SwapPools>::insert(symbol, pool);
+            Self::deposit_event(RawEvent::CreatePool(who, symbol, fis_amount, rtoken_amount, pool_unit, lp_unit));
             Ok(())
         }
     }
@@ -252,21 +261,6 @@ impl<T: Trait> Module<T> {
         let f = U512::from(fis_amount);
         let r = U512::from(rtoken_amount);
 
-        let slip_adj_denominator = f
-            .saturating_add(f_capital)
-            .saturating_mul(r.saturating_add(r_capital));
-
-        let abs: U512;
-        if f_capital.saturating_mul(r) > f.saturating_mul(r_capital) {
-            abs = f_capital
-                .saturating_mul(r)
-                .saturating_sub(f.saturating_mul(r_capital));
-        } else {
-            abs = f
-                .saturating_mul(r_capital)
-                .saturating_sub(f_capital.saturating_mul(r));
-        }
-
         let numerator = f_capital
             .saturating_mul(r)
             .saturating_add(f.saturating_mul(r_capital));
@@ -281,10 +275,30 @@ impl<T: Trait> Module<T> {
         if raw_unit.is_zero() {
             return (0, 0);
         }
-        let adj_unit = raw_unit
-            .saturating_mul(abs)
-            .checked_div(slip_adj_denominator)
-            .unwrap_or(U512::zero());
+
+        let abs: U512;
+        if f_capital.saturating_mul(r) > f.saturating_mul(r_capital) {
+            abs = f_capital
+                .saturating_mul(r)
+                .saturating_sub(f.saturating_mul(r_capital));
+        } else {
+            abs = f
+                .saturating_mul(r_capital)
+                .saturating_sub(f_capital.saturating_mul(r));
+        }
+
+        let mut adj_unit = U512::zero();
+        if !abs.is_zero() {
+            let slip_adj_denominator = f
+                .saturating_add(f_capital)
+                .saturating_mul(r.saturating_add(r_capital));
+
+            adj_unit = raw_unit
+                .saturating_mul(abs)
+                .checked_div(slip_adj_denominator)
+                .unwrap_or(U512::zero());
+        }
+
         let add_unit = raw_unit.saturating_sub(adj_unit);
         let total_unit = p_capital.saturating_add(add_unit);
 

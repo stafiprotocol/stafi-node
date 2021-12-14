@@ -91,7 +91,7 @@ rdexn-signatures = { version = "0.4.10", default-features = false, path = "../pa
 rdexn-swap = { version = "0.4.10", default-features = false, path = "../pallets/rdexn/swap" }
 rdex-swap = { version = "0.4.10", default-features = false, path = "../pallets/rdex/swap" }
 rdex-balances = { version = "0.4.10", default-features = false, path = "../pallets/rdex/balances" }
-rdex-stake = { version = "0.4.10", default-features = false, path = "../pallets/rdex/stake" }
+rdex-mining = { version = "0.4.10", default-features = false, path = "../pallets/rdex/mining" }
 [build-dependencies]
 wasm-builder-runner = { branch = "master", package = "substrate-wasm-builder-runner", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
@@ -168,7 +168,7 @@ std = [
 	"rdexn-swap/std",
 	"rdex-swap/std",
 	"rdex-balances/std",
-	"rdex-stake/std",
+	"rdex-mining/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

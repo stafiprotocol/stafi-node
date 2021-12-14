@@ -1,24 +1,20 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-use sp_std::prelude::*;
-use sp_std::{convert::Infallible};
-use codec::{Encode, Decode};
-use frame_support::{
-	decl_event, decl_storage, decl_module, decl_error, ensure,
-};
-use sp_runtime::{
-	RuntimeDebug, DispatchResult,
-	traits::{
-		Zero, StaticLookup,
-	},
-};
+use codec::{Decode, Encode};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
 use frame_system::{self as system, ensure_signed};
 use node_primitives::RSymbol;
+use sp_runtime::{
+	traits::{StaticLookup, Zero},
+	DispatchResult, RuntimeDebug,
+};
+use sp_std::convert::Infallible;
+use sp_std::prelude::*;
 
 pub mod traits;
 
 pub trait Trait: system::Trait {
-    /// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+	/// The overarching event type.
+	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 }
 
 decl_event!(
@@ -26,7 +22,7 @@ decl_event!(
 		<T as frame_system::Trait>::AccountId,
 	{
 		/// Transfer succeeded. \[from, to, symbol, value\]
-        Transfer(AccountId, AccountId, RSymbol, u128),
+		Transfer(AccountId, AccountId, RSymbol, u128),
 		/// Some balance was deposited
 		Minted(AccountId, RSymbol, u128),
 		/// Some balance was burned
@@ -55,7 +51,7 @@ pub struct AccountLpData {
 decl_storage! {
 	trait Store for Module<T: Trait> as RDexBalances {
 		/// The total units issued in the system.
-        pub TotalIssuance get(fn total_issuance): map hasher(blake2_128_concat) RSymbol => u128;
+		pub TotalIssuance get(fn total_issuance): map hasher(blake2_128_concat) RSymbol => u128;
 
 		/// NOTE: This is only used in the case that this module is used to store balances.
 		pub Account get(fn account):
@@ -77,46 +73,44 @@ decl_module! {
 		) {
 			let transactor = ensure_signed(origin)?;
 			let dest = T::Lookup::lookup(dest)?;
-            <Self as traits::Currency<_>>::transfer(&transactor, &dest, symbol, value)?;
-        }
-    }
+			<Self as traits::Currency<_>>::transfer(&transactor, &dest, symbol, value)?;
+		}
+	}
 }
 
 impl<T: Trait> Module<T> {
-    pub fn mutate_account<R>(
+	pub fn mutate_account<R>(
 		who: &T::AccountId,
 		symbol: RSymbol,
-		f: impl FnOnce(&mut AccountLpData) -> R
+		f: impl FnOnce(&mut AccountLpData) -> R,
 	) -> R {
 		Self::try_mutate_account(who, symbol, |a| -> Result<R, Infallible> { Ok(f(a)) })
 			.expect("Error is infallible; qed")
 	}
 
-    /// Mutate an account to some new value
+	/// Mutate an account to some new value
 	/// NOTE: LOW-LEVEL: This will not attempt to maintain total issuance. It is expected that
 	/// the caller will do this.
 	fn try_mutate_account<R, E>(
 		who: &T::AccountId,
 		symbol: RSymbol,
-		f: impl FnOnce(&mut AccountLpData) -> Result<R, E>
+		f: impl FnOnce(&mut AccountLpData) -> Result<R, E>,
 	) -> Result<R, E> {
-        Account::<T>::try_mutate_exists(symbol, who, |maybe_value| {
-            let mut maybe_data = maybe_value.take().unwrap_or_default();
+		Account::<T>::try_mutate_exists(symbol, who, |maybe_value| {
+			let mut maybe_data = maybe_value.take().unwrap_or_default();
 			f(&mut maybe_data).map(|result| {
-                *maybe_value = Some(maybe_data);
+				*maybe_value = Some(maybe_data);
 				result
 			})
-		}).map(|result| {
-            result
-        })
+		})
+		.map(|result| result)
 	}
 }
 
-impl<T: Trait> traits::Currency<T::AccountId> for Module<T>
-{
+impl<T: Trait> traits::Currency<T::AccountId> for Module<T> {
 	fn free_balance(who: &T::AccountId, symbol: RSymbol) -> u128 {
-		if let Some(rdata) = <Account<T>>::get(symbol, &who) {
-			rdata.free
+		if let Some(data) = <Account<T>>::get(symbol, &who) {
+			data.free
 		} else {
 			0
 		}
@@ -135,8 +129,13 @@ impl<T: Trait> traits::Currency<T::AccountId> for Module<T>
 		amount: u128,
 		new_balance: u128,
 	) -> DispatchResult {
-		if amount.is_zero() { return Ok(()) }
-		ensure!(new_balance >= Zero::zero(), Error::<T>::LiquidityRestrictions);
+		if amount.is_zero() {
+			return Ok(());
+		}
+		ensure!(
+			new_balance >= Zero::zero(),
+			Error::<T>::LiquidityRestrictions
+		);
 		Ok(())
 	}
 
@@ -148,23 +147,33 @@ impl<T: Trait> traits::Currency<T::AccountId> for Module<T>
 		symbol: RSymbol,
 		value: u128,
 	) -> DispatchResult {
-        if value.is_zero() || transactor == dest { return Ok(()) }
-        
-		Self::try_mutate_account(dest, symbol, |to_account_rdata| -> DispatchResult {
-			Self::try_mutate_account(transactor, symbol, |from_account_rdata| -> DispatchResult {
-				from_account_rdata.free = from_account_rdata.free.checked_sub(value)
+		if value.is_zero() || transactor == dest {
+			return Ok(());
+		}
+		Self::try_mutate_account(dest, symbol, |to_account_data| -> DispatchResult {
+			Self::try_mutate_account(transactor, symbol, |from_account_data| -> DispatchResult {
+				from_account_data.free = from_account_data
+					.free
+					.checked_sub(value)
 					.ok_or(Error::<T>::InsufficientBalance)?;
 
-				to_account_rdata.free = to_account_rdata.free.checked_add(value).ok_or(Error::<T>::Overflow)?;
+				to_account_data.free = to_account_data
+					.free
+					.checked_add(value)
+					.ok_or(Error::<T>::Overflow)?;
 
-				Self::ensure_can_withdraw(transactor, symbol, value, from_account_rdata.free)?;
-                
+				Self::ensure_can_withdraw(transactor, symbol, value, from_account_data.free)?;
 				Ok(())
 			})
 		})?;
 
 		// Emit transfer event.
-		Self::deposit_event(RawEvent::Transfer(transactor.clone(), dest.clone(), symbol.clone(), value));
+		Self::deposit_event(RawEvent::Transfer(
+			transactor.clone(),
+			dest.clone(),
+			symbol.clone(),
+			value,
+		));
 
 		Ok(())
 	}
@@ -172,23 +181,24 @@ impl<T: Trait> traits::Currency<T::AccountId> for Module<T>
 	/// Deposit some `value` into the free balance of an existing target account `who`.
 	///
 	/// Is a no-op if the `value` to be deposited is zero.
-	fn mint(
-		who: &T::AccountId,
-		symbol: RSymbol,
-		value: u128
-	) -> DispatchResult {
-		if value.is_zero() { return Ok(()) }
+	fn mint(who: &T::AccountId, symbol: RSymbol, value: u128) -> DispatchResult {
+		if value.is_zero() {
+			return Ok(());
+		}
 
-		Self::try_mutate_account(who, symbol, |account_rdata| -> DispatchResult {
-			account_rdata.free = account_rdata.free.checked_add(value).ok_or(Error::<T>::Overflow)?;
+		Self::try_mutate_account(who, symbol, |account_data| -> DispatchResult {
+			account_data.free = account_data
+				.free
+				.checked_add(value)
+				.ok_or(Error::<T>::Overflow)?;
 			Ok(())
 		})?;
 
-		<TotalIssuance>::mutate(symbol, |issued|
-			*issued = issued.checked_add(value).unwrap_or_else(|| {
-                u128::max_value()
-			})
-        );
+		<TotalIssuance>::mutate(symbol, |issued| {
+			*issued = issued
+				.checked_add(value)
+				.unwrap_or_else(|| u128::max_value())
+		});
 
 		// deposit into event.
 		Self::deposit_event(RawEvent::Minted(who.clone(), symbol.clone(), value));
@@ -198,25 +208,23 @@ impl<T: Trait> traits::Currency<T::AccountId> for Module<T>
 	/// Deposit some `value` into the free balance of an existing target account `who`.
 	///
 	/// Is a no-op if the `value` to be deposited is zero.
-	fn burn(
-		who: &T::AccountId,
-		symbol: RSymbol,
-		value: u128
-	) -> DispatchResult {
-		if value.is_zero() { return Ok(()) }
-		
-		Self::try_mutate_account(who, symbol, |account_rdata| -> DispatchResult {
-			account_rdata.free = account_rdata.free.checked_sub(value).ok_or(Error::<T>::InsufficientBalance)?;
-			Self::ensure_can_withdraw(who, symbol, value, account_rdata.free)?;
+	fn burn(who: &T::AccountId, symbol: RSymbol, value: u128) -> DispatchResult {
+		if value.is_zero() {
+			return Ok(());
+		}
+		Self::try_mutate_account(who, symbol, |account_data| -> DispatchResult {
+			account_data.free = account_data
+				.free
+				.checked_sub(value)
+				.ok_or(Error::<T>::InsufficientBalance)?;
+			Self::ensure_can_withdraw(who, symbol, value, account_data.free)?;
 
 			Ok(())
 		})?;
 
 		<TotalIssuance>::mutate(symbol, |issued| {
-			*issued = issued.checked_sub(value).unwrap_or_else(|| {
-                0
-			});
-        });
+			*issued = issued.checked_sub(value).unwrap_or_else(|| 0);
+		});
 
 		// withdraw from event.
 		Self::deposit_event(RawEvent::Burned(who.clone(), symbol.clone(), value));

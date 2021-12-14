@@ -3901,7 +3901,7 @@ dependencies = [
  "parity-scale-codec",
  "rclaim",
  "rdex-balances",
- "rdex-stake",
+ "rdex-mining",
  "rdex-swap",
  "rdexn-payers",
  "rdexn-signatures",
@@ -5580,7 +5580,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rdex-stake"
+name = "rdex-mining"
 version = "0.4.10"
 dependencies = [
  "frame-support",

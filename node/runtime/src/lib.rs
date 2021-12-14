@@ -932,7 +932,7 @@ impl rdex_swap::Trait for Runtime {
 	type LpCurrency = LpBalances;
 }
 
-impl rdex_stake::Trait for Runtime {
+impl rdex_mining::Trait for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type LpCurrency = LpBalances;
@@ -992,7 +992,7 @@ construct_runtime!(
 		RDexnSwap: rdexn_swap::{Module, Call, Storage, Event<T>},
 		RDexSwap: rdex_swap::{Module, Call, Storage, Event<T>},
 		LpBalances: rdex_balances::{Module, Call, Storage, Event<T>},
-		RDexStake: rdex_stake::{Module, Call, Storage, Event<T>},
+		RDexMining: rdex_mining::{Module, Call, Storage, Event<T>},
 	}
 );
 

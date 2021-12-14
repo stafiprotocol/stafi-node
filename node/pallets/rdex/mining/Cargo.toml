@@ -1,5 +1,5 @@
 [package]
-name = "rdex-stake"
+name = "rdex-mining"
 version = "0.4.10"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"

@@ -27,7 +27,7 @@ pub mod models;
 pub use models::*;
 use sp_core::U512;
 
-const MODULE_ID: ModuleId = ModuleId(*b"rdx/stak");
+const MODULE_ID: ModuleId = ModuleId(*b"rdx/mine");
 const REWARD_FACTOR: u128 = 1_000_000_000_000;
 decl_event! {
     pub enum Event<T> where
@@ -39,8 +39,8 @@ decl_event! {
         Withdraw(AccountId, RSymbol, u32, u32, u128, u128, u128),
         /// EmergencyEithdraw: account, symbol, pool index, stake index, lp amount
         EmergencyWithdraw(AccountId, RSymbol, u32, u32, u128),
-        /// AddPool: symbol, pool index, start block, lp locked block, reward per block, total reward, guard impermanent loss
-        AddPool(RSymbol, u32, u32, u32, u128, u128, bool),
+        /// AddPool: symbol, pool index, grade index, start block, lp locked block, reward per block, total reward, guard impermanent loss
+        AddPool(RSymbol, u32, u32, u32, u32, u128, u128, bool),
     }
 }
 
@@ -63,7 +63,7 @@ decl_error! {
 }
 
 decl_storage! {
-    trait Store for Module<T: Trait> as RDexStake {
+    trait Store for Module<T: Trait> as RDexMining {
         /// stake pools: (symbol, pool index) => vec[]stake pool info
         pub StakePools get(fn stake_pools): map hasher(blake2_128_concat) (RSymbol, u32) => Option<Vec<StakePool>>;
         /// pool count: (symbol, pool index) => pool count
@@ -251,9 +251,9 @@ decl_module! {
                 guard_impermanent_loss: guard_impermanent_loss,
             };
             stake_pool_vec.push(stake_pool);
-
+            let grade_index = stake_pool_vec.len() as u32 - 1;
             <StakePools>::insert((symbol, pool_index), stake_pool_vec);
-            Self::deposit_event(RawEvent::AddPool(symbol, pool_index, start_block, lp_locked_blocks, reward_per_block, total_reward, guard_impermanent_loss));
+            Self::deposit_event(RawEvent::AddPool(symbol, pool_index, grade_index, start_block, lp_locked_blocks, reward_per_block, total_reward, guard_impermanent_loss));
             Ok(())
         }
 
