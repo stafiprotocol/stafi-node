@@ -3,7 +3,7 @@ use node_primitives::RSymbol;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Copy)]
 pub struct StakePool {
     /// rToken symbol
     pub symbol: RSymbol,
@@ -45,4 +45,6 @@ pub struct StakeUser<AccountId> {
     pub total_rtoken_value: u128,
     /// last deposit height
     pub deposit_height: u32,
+    /// stake pool grade index
+    pub grade_index: u32,
 }

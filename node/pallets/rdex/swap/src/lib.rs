@@ -53,7 +53,6 @@ decl_error! {
         AmountAllZero,
         PoolAlreadyExist,
         PoolNotExist,
-        LiquidityProviderNotExist,
         RTokenAmountNotEnough,
         PoolBalanceNotEnough,
         UnitAmountImproper,
