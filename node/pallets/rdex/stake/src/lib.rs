@@ -33,8 +33,14 @@ decl_event! {
     pub enum Event<T> where
         AccountId = <T as system::Trait>::AccountId
     {
-        /// stake: account, symbol, lp amount
-        Stake(AccountId, RSymbol, u128),
+        /// deposit: account, symbol, pool index, stake index, lp amount
+        Deposit(AccountId, RSymbol, u32, u32, u128),
+        /// withdraw: account, symbol, pool index, stake index, lp amount, reward, guard amount
+        Withdraw(AccountId, RSymbol, u32, u32, u128, u128, u128),
+        /// emergency withdraw: account, symbol, pool index, stake index, lp amount
+        EmergencyWithdraw(AccountId, RSymbol, u32, u32, u128),
+        /// addpool: symbol, pool index, start block, lp locked block, reward per block, total reward, guard impermanent loss
+        AddPool(RSymbol, u32, u32, u32, u128, u128, bool),
     }
 }
 
@@ -103,11 +109,12 @@ decl_module! {
                 total_fis_value: Self::cal_share_amount(swap_pool.total_unit, lp_amount, swap_pool.fis_balance),
                 total_rtoken_value: Self::cal_share_amount(swap_pool.total_unit, lp_amount, swap_pool.rtoken_balance),
                 deposit_height: now_block};
+            let new_stake_count = user_stake_count + 1;
 
             <StakeUsers<T>>::insert((symbol, pool_index, &who, user_stake_count), new_stake_user);
             <StakePools>::insert((symbol, pool_index), stake_pool);
-            <UserStakeCount<T>>::insert((symbol, pool_index, &who), user_stake_count + 1);
-
+            <UserStakeCount<T>>::insert((symbol, pool_index, &who), new_stake_count);
+            Self::deposit_event(RawEvent::Deposit(who, symbol, pool_index, user_stake_count, lp_amount));
             Ok(())
         }
 
@@ -134,13 +141,13 @@ decl_module! {
                 saturating_add(stake_user.reserved_reward);
             let withdraw_reward = Self::cal_share_amount(stake_user.lp_amount, lp_amount, total_reward);
 
+            let mut guard_amount:u128 = 0;
             if stake_pool.guard_impermanent_loss {
                 let guard_address = Self::guard_address().ok_or(Error::<T>::NoGuardAddress)?;
                 let guard_line = Self::guard_line((symbol, pool_index));
                 let total_deposit_value_in_fis = Self::cal_share_amount(swap_pool.rtoken_balance, swap_pool.fis_balance, stake_user.total_rtoken_value).
-                saturating_add(stake_user.total_fis_value);
-                let total_now_value_in_fis = Self::cal_share_amount(swap_pool.total_unit,stake_user.lp_amount, swap_pool.fis_balance).saturating_mul(2);
-                let mut guard_amount:u128 = 0;
+                    saturating_add(stake_user.total_fis_value);
+                let total_now_value_in_fis = Self::cal_share_amount(swap_pool.total_unit, stake_user.lp_amount, swap_pool.fis_balance).saturating_mul(2);
                 if total_now_value_in_fis.saturating_add(total_reward) < total_deposit_value_in_fis {
                     guard_amount = total_deposit_value_in_fis.saturating_sub(total_now_value_in_fis.saturating_add(total_reward));
                     guard_amount = Self::cal_share_amount(stake_user.lp_amount, lp_amount, guard_amount);
@@ -172,7 +179,7 @@ decl_module! {
             T::LpCurrency::transfer(&Self::account_id(), &who, symbol, lp_amount)?;
             <StakeUsers<T>>::insert((symbol, pool_index, &who, stake_index), stake_user);
             <StakePools>::insert((symbol, pool_index), stake_pool);
-
+            Self::deposit_event(RawEvent::Withdraw(who, symbol, pool_index, stake_index, lp_amount, withdraw_reward, guard_amount));
             Ok(())
         }
 
@@ -182,17 +189,22 @@ decl_module! {
              let who = ensure_signed(origin)?;
              let mut stake_pool = Self::stake_pools((symbol, pool_index)).ok_or(Error::<T>::StakePoolNotExist)?;
              let mut stake_user = Self::stake_users((symbol, pool_index, &who, stake_index)).ok_or(Error::<T>::StakeUserNotExist)?;
+
              ensure!(stake_pool.emergency_switch, Error::<T>::EmergencySwitchIsClose);
              ensure!(stake_user.lp_amount > 0, Error::<T>::AmountZero);
-             stake_pool.total_stake_lp = stake_pool.total_stake_lp.saturating_sub(stake_user.lp_amount);
+
+             let lp_amount = stake_user.lp_amount;
+             stake_pool.total_stake_lp = stake_pool.total_stake_lp.saturating_sub(lp_amount);
 
              stake_user.lp_amount = 0;
              stake_user.reward_debt = 0;
              stake_user.total_fis_value = 0;
              stake_user.total_rtoken_value = 0;
-             T::LpCurrency::transfer(&Self::account_id(), &who, symbol, stake_user.lp_amount)?;
+
+             T::LpCurrency::transfer(&Self::account_id(), &who, symbol, lp_amount)?;
              <StakeUsers<T>>::insert((symbol, pool_index, &who, stake_index), stake_user);
              <StakePools>::insert((symbol, pool_index), stake_pool);
+             Self::deposit_event(RawEvent::EmergencyWithdraw(who, symbol, pool_index, stake_index, lp_amount));
              Ok(())
          }
 
@@ -218,7 +230,7 @@ decl_module! {
 
             <StakePools>::insert((symbol, pool_count), stake_pool);
             <PoolCount>::insert(symbol, pool_count + 1);
-
+            Self::deposit_event(RawEvent::AddPool(symbol, pool_count, start_block, lp_locked_blocks, reward_per_block, total_reward, guard_impermanent_loss));
             Ok(())
         }
 

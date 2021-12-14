@@ -72,7 +72,7 @@ decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event() = default;
 
-        /// swap rtoken for fis
+        /// swap
         #[weight = 10_000_000_000]
         pub fn swap(origin, symbol: RSymbol, input_amount: u128, min_out_amount: u128, input_is_fis: bool) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -150,7 +150,7 @@ decl_module! {
 
             let (new_total_pool_unit, add_lp_unit) = Self::cal_pool_unit(pool.total_unit, pool.fis_balance, pool.rtoken_balance, fis_amount, rtoken_amount);
 
-            // transfer token to moudle account
+            // transfer token to module account
             T::Currency::transfer(&who, &Self::account_id(), fis_amount.saturated_into(), KeepAlive)?;
             T::RCurrency::transfer(&who, &Self::account_id(), symbol, rtoken_amount)?;
 
@@ -166,7 +166,7 @@ decl_module! {
             Ok(())
         }
 
-        /// remove liduidity
+        /// remove liquidity
         #[weight = 10_000_000_000]
         pub fn remove_liquidity(origin, symbol: RSymbol, rm_unit: u128, swap_unit: u128, input_is_fis: bool) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -370,20 +370,5 @@ impl<T: Trait> Module<T> {
             rtoken_amount.as_u128(),
             swap_amount.as_u128(),
         )
-    }
-
-    pub fn cal_share_amount(pool_unit: u128, share_unit: u128, amount: u128) -> u128 {
-        if pool_unit == 0 || share_unit == 0 || amount == 0 {
-            return 0;
-        }
-        let use_pool_unit = U512::from(pool_unit);
-        let use_share_unit = U512::from(share_unit);
-        let use_amount = U512::from(amount);
-        let share_amount = use_amount
-            .saturating_mul(use_share_unit)
-            .checked_div(use_pool_unit)
-            .unwrap_or(U512::zero());
-
-        share_amount.as_u128()
     }
 }
