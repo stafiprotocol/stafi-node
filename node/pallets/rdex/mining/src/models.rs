@@ -37,8 +37,8 @@ pub struct StakeUser<AccountId> {
     pub lp_amount: u128,
     /// Reward debt
     pub reward_debt: u128,
-    /// The amount minted by user but not claimed
-    pub reserved_reward: u128,
+    /// The total amount minted by user reserved lp, and already claimed
+    pub reserved_lp_reward: u128,
     /// total stake fis value
     pub total_fis_value: u128,
     /// total stake rtoken value
