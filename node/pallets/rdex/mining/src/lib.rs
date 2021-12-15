@@ -41,6 +41,8 @@ decl_event! {
         EmergencyWithdraw(AccountId, RSymbol, u32, u32, u128),
         /// AddPool: symbol, pool index, grade index, start block, lp locked block, reward per block, total reward, guard impermanent loss
         AddPool(RSymbol, u32, u32, u32, u32, u128, u128, bool),
+        /// RmPool: symbol, pool index, grade index
+        RmPool(RSymbol, u32, u32),
     }
 }
 
@@ -59,6 +61,7 @@ decl_error! {
         UnLockWillAfterEndErr,
         LpStillLocked,
         GradeIndexOverflow,
+        LpBalanceNotEmpty,
     }
 }
 
@@ -77,7 +80,7 @@ decl_storage! {
         /// guard blocks: (symbol, pool index) => blocks
         pub GuardLine get(fn guard_line): map hasher(blake2_128_concat) (RSymbol, u32) => u32 = 1_440_000;
         /// guard Reserve: symbol => reserve fis amount
-        pub GuardReserve get(fn guard_reserve): map hasher(blake2_128_concat) RSymbol => u128 = 1_440_000;
+        pub GuardReserve get(fn guard_reserve): map hasher(blake2_128_concat) RSymbol => u128;
     }
 }
 
@@ -96,7 +99,7 @@ decl_module! {
             let user_stake_count = Self::user_stake_count((symbol, pool_index, &who));
             let pool_du_block = stake_pool.total_reward.checked_div(stake_pool.reward_per_block).ok_or(Error::<T>::CalPoolDuBlockErr)?;
 
-            ensure!(lp_amount > 0,Error::<T>::AmountZero);
+            ensure!(lp_amount > 0, Error::<T>::AmountZero);
             ensure!(!stake_pool.emergency_switch, Error::<T>::EmergencySwitchIsOpen);
             ensure!(T::LpCurrency::free_balance(&who, symbol) >= lp_amount, Error::<T>::LpBalanceNotEnough);
             ensure!(now_block + stake_pool.lp_locked_blocks < stake_pool.start_block.saturating_add(pool_du_block as u32), Error::<T>::UnLockWillAfterEndErr);
@@ -173,7 +176,7 @@ decl_module! {
 
                 if guard_amount > 0 {
                     T::Currency::transfer(&guard_address, &who, guard_amount.saturated_into(), KeepAlive)?;
-                    <GuardReserve>::insert(symbol,guard_reserve.saturating_sub(guard_amount));
+                    <GuardReserve>::insert(symbol, guard_reserve.saturating_sub(guard_amount));
                 }
             }
 
@@ -252,6 +255,21 @@ decl_module! {
             let grade_index = stake_pool_vec.len() as u32 - 1;
             <StakePools>::insert((symbol, pool_index), stake_pool_vec);
             Self::deposit_event(RawEvent::AddPool(symbol, pool_index, grade_index, start_block, lp_locked_blocks, reward_per_block, total_reward, guard_impermanent_loss));
+            Ok(())
+        }
+
+        /// remove pool
+        #[weight = 10_000]
+        pub fn rm_pool(origin, symbol: RSymbol, pool_index: u32, grade_index: u32) -> DispatchResult {
+            ensure_root(origin.clone())?;
+            let mut stake_pool_vec = Self::stake_pools((symbol, pool_index)).ok_or(Error::<T>::StakePoolNotExist)?;
+            let stake_pool = *stake_pool_vec.get(grade_index as usize).ok_or(Error::<T>::GradeIndexOverflow)?;
+            ensure!(stake_pool.total_stake_lp == 0, Error::<T>::LpBalanceNotEmpty);
+
+            stake_pool_vec.remove(grade_index as usize);
+            
+            <StakePools>::insert((symbol, pool_index), stake_pool_vec);
+            Self::deposit_event(RawEvent::RmPool(symbol, pool_index, grade_index));
             Ok(())
         }
 
