@@ -33,12 +33,14 @@ decl_event! {
     pub enum Event<T> where
         AccountId = <T as system::Trait>::AccountId
     {
-        /// Deposit: account, symbol, pool index, stake index, lp amount
-        Deposit(AccountId, RSymbol, u32, u32, u128),
-        /// Withdraw: account, symbol, pool index, stake index, lp amount, reward, guard amount
-        Withdraw(AccountId, RSymbol, u32, u32, u128, u128, u128),
-        /// EmergencyEithdraw: account, symbol, pool index, stake index, lp amount
-        EmergencyWithdraw(AccountId, RSymbol, u32, u32, u128),
+        /// Deposit: account, symbol, pool index, grade_index, stake index, lp amount
+        Deposit(AccountId, RSymbol, u32, u32, u32, u128),
+        /// Withdraw: account, symbol, pool index, grade_index, stake index, lp amount,withdraw reward, guard amount
+        Withdraw(AccountId, RSymbol, u32, u32, u32, u128, u128, u128),
+        /// Withdraw: account, symbol, pool index, grade index, stake index, withdraw reward
+        ClaimReward(AccountId, RSymbol, u32, u32, u32, u128),
+        /// EmergencyEithdraw: account, symbol, pool index,grade index, stake index, lp amount
+        EmergencyWithdraw(AccountId, RSymbol, u32, u32, u32, u128),
         /// AddPool: symbol, pool index, grade index, start block, lp locked block, reward per block, total reward, guard impermanent loss
         AddPool(RSymbol, u32, u32, u32, u32, u128, u128, bool),
         /// RmPool: symbol, pool index, grade index
@@ -121,7 +123,7 @@ decl_module! {
             <StakeUsers<T>>::insert((symbol, pool_index, &who, user_stake_count), new_stake_user);
             <StakePools>::insert((symbol, pool_index), stake_pool_vec);
             <UserStakeCount<T>>::insert((symbol, pool_index, &who), new_stake_count);
-            Self::deposit_event(RawEvent::Deposit(who, symbol, pool_index, user_stake_count, lp_amount));
+            Self::deposit_event(RawEvent::Deposit(who, symbol, pool_index, grade_index, user_stake_count, lp_amount));
             Ok(())
         }
 
@@ -203,7 +205,7 @@ decl_module! {
             T::LpCurrency::transfer(&Self::account_id(), &who, symbol, lp_amount)?;
             <StakeUsers<T>>::insert((symbol, pool_index, &who, stake_index), stake_user);
             <StakePools>::insert((symbol, pool_index), stake_pool_vec);
-            Self::deposit_event(RawEvent::Withdraw(who, symbol, pool_index, stake_index, lp_amount, withdraw_reward, guard_amount));
+            Self::deposit_event(RawEvent::Withdraw(who, symbol, pool_index, grade_index, stake_index, lp_amount, withdraw_reward, guard_amount));
             Ok(())
         }
 
@@ -235,10 +237,9 @@ decl_module! {
             }
             <StakeUsers<T>>::insert((symbol, pool_index, &who, stake_index), stake_user);
             <StakePools>::insert((symbol, pool_index), stake_pool_vec);
+            Self::deposit_event(RawEvent::ClaimReward(who, symbol, pool_index, grade_index, stake_index, withdraw_reward));
             Ok(())
         }
-
-
 
          /// emergency withdraw
          #[weight = 10_000_000_000]
@@ -263,7 +264,7 @@ decl_module! {
              T::LpCurrency::transfer(&Self::account_id(), &who, symbol, lp_amount)?;
              <StakeUsers<T>>::insert((symbol, pool_index, &who, stake_index), stake_user);
              <StakePools>::insert((symbol, pool_index), stake_pool_vec);
-             Self::deposit_event(RawEvent::EmergencyWithdraw(who, symbol, pool_index, stake_index, lp_amount));
+             Self::deposit_event(RawEvent::EmergencyWithdraw(who, symbol, pool_index, grade_index, stake_index, lp_amount));
              Ok(())
          }
 
