@@ -175,8 +175,6 @@ decl_module! {
                     T::Currency::transfer(&guard_address, &who, guard_amount.saturated_into(), KeepAlive)?;
                     <GuardReserve>::insert(symbol,guard_reserve.saturating_sub(guard_amount));
                 }
-
-
             }
 
             stake_user.total_fis_value = stake_user.total_fis_value.
@@ -233,7 +231,7 @@ decl_module! {
 
         /// create pool
         #[weight = 10_000]
-        pub fn add_pool(origin, symbol: RSymbol,pool_index: u32, start_block: u32, lp_locked_blocks: u32, reward_per_block: u128, total_reward: u128, guard_impermanent_loss: bool) -> DispatchResult {
+        pub fn add_pool(origin, symbol: RSymbol, pool_index: u32, start_block: u32, lp_locked_blocks: u32, reward_per_block: u128, total_reward: u128, guard_impermanent_loss: bool) -> DispatchResult {
             ensure_root(origin.clone())?;
             let mut stake_pool_vec = Self::stake_pools((symbol, pool_index)).ok_or(Error::<T>::StakePoolNotExist)?;
 
@@ -265,6 +263,7 @@ decl_module! {
 
             <StakePools>::insert((symbol, pool_count), Vec::<StakePool>::new());
             <PoolCount>::insert(symbol, pool_count + 1);
+
             Ok(())
         }
 
