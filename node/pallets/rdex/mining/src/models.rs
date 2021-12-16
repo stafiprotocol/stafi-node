@@ -47,4 +47,6 @@ pub struct StakeUser<AccountId> {
     pub deposit_height: u32,
     /// stake pool grade index
     pub grade_index: u32,
+    /// total claimed reward
+    pub claimed_reward: u128,
 }

@@ -36,14 +36,14 @@ decl_event! {
     pub enum Event<T> where
         AccountId = <T as system::Trait>::AccountId
     {
-        /// Swap: account, symbol, input amount, output amount, fee amount, input is fis
-        Swap(AccountId, RSymbol, u128, u128, u128, bool),
-        /// CreatePool: account, symbol, fis amount, rToken amount, new total unit, add lp unit,
+        /// Swap: (account, symbol, input amount, output amount, fee amount, input is fis, fis balance, rtoken balance)
+        Swap(AccountId, RSymbol, u128, u128, u128, bool, u128, u128),
+        /// CreatePool: (account, symbol, fis amount, rToken amount, new total unit, add lp unit)
         CreatePool(AccountId, RSymbol, u128, u128, u128, u128),
-        /// AddLiquidity: account, symbol, fis amount, rToken amount, new total unit, add lp unit,
-        AddLiquidity(AccountId, RSymbol, u128, u128, u128, u128),
-        /// RemoveLiquidity: account, symbol, rm unit, swap unit, rm fis amount, rm rToken amount, input is fis
-        RemoveLiquidity(AccountId, RSymbol, u128, u128, u128, u128, bool),
+        /// AddLiquidity: (account, symbol, fis amount, rToken amount, new total unit, add lp unit, fis balance, rtoken balance)
+        AddLiquidity(AccountId, RSymbol, u128, u128, u128, u128, u128, u128),
+        /// RemoveLiquidity: (account, symbol, rm unit, swap unit, rm fis amount, rm rToken amount, input is fis, fis balance, rtoken balance)
+        RemoveLiquidity(AccountId, RSymbol, u128, u128, u128, u128, bool, u128, u128),
     }
 }
 
@@ -109,8 +109,8 @@ decl_module! {
             }
 
             // update pool storage
-            <SwapPools>::insert(symbol, pool);
-            Self::deposit_event(RawEvent::Swap(who, symbol, input_amount, result, fee, input_is_fis));
+            <SwapPools>::insert(symbol, pool.clone());
+            Self::deposit_event(RawEvent::Swap(who, symbol, input_amount, result, fee, input_is_fis, pool.fis_balance, pool.rtoken_balance));
             Ok(())
         }
 
@@ -136,8 +136,8 @@ decl_module! {
 
             // update pool/lp storage
             T::LpCurrency::mint(&who, symbol, add_lp_unit)?;
-            <SwapPools>::insert(symbol, pool);
-            Self::deposit_event(RawEvent::AddLiquidity(who, symbol, fis_amount, rtoken_amount, new_total_pool_unit, add_lp_unit));
+            <SwapPools>::insert(symbol, pool.clone());
+            Self::deposit_event(RawEvent::AddLiquidity(who, symbol, fis_amount, rtoken_amount, new_total_pool_unit, add_lp_unit, pool.fis_balance, pool.rtoken_balance));
             Ok(())
         }
 
@@ -187,8 +187,8 @@ decl_module! {
             // burn unit
             T::LpCurrency::burn(&who, symbol, rm_unit)?;
             // update pool
-            <SwapPools>::insert(symbol, pool);
-            Self::deposit_event(RawEvent::RemoveLiquidity(who, symbol, rm_unit, swap_unit, rm_fis_amount, rm_rtoken_amount, input_is_fis));
+            <SwapPools>::insert(symbol, pool.clone());
+            Self::deposit_event(RawEvent::RemoveLiquidity(who, symbol, rm_unit, swap_unit, rm_fis_amount, rm_rtoken_amount, input_is_fis, pool.fis_balance, pool.rtoken_balance));
             Ok(())
         }
 
