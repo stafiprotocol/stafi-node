@@ -77,8 +77,6 @@ decl_storage! {
         pub StakeUsers get(fn stake_users): map hasher(blake2_128_concat) (RSymbol, u32, T::AccountId, u32) => Option<StakeUser<T::AccountId>>;
         /// user stake count: (symbol, pool index, account) => stake count
         pub UserStakeCount get(fn user_stake_count): map hasher(blake2_128_concat) (RSymbol, u32, T::AccountId) => u32;
-        /// guard address for impermanent loss
-        pub GuardAddress get(fn guard_address): Option<T::AccountId>;
         /// guard blocks: (symbol, pool index) => blocks
         pub GuardLine get(fn guard_line): map hasher(blake2_128_concat) (RSymbol, u32) => u32 = 1_440_000;
         /// guard Reserve: symbol => reserve fis amount
@@ -154,15 +152,14 @@ decl_module! {
                 saturating_sub(stake_user.reward_debt);
             let mut withdraw_reward = pending_reward;
             // recheck balance
-            let reward_free_balance = T::Currency::free_balance(&Self::account_id()).saturated_into::<u128>();
-            if withdraw_reward > reward_free_balance {
-                withdraw_reward = reward_free_balance;
+            let module_free_balance = T::Currency::free_balance(&Self::account_id()).saturated_into::<u128>();
+            if withdraw_reward > module_free_balance {
+                withdraw_reward = module_free_balance;
             }
             let reserved_lp_total_reward = stake_user.reserved_lp_reward.saturating_add(withdraw_reward);
 
             let mut guard_amount: u128 = 0;
             if stake_pool.guard_impermanent_loss {
-                let guard_address = Self::guard_address().ok_or(Error::<T>::NoGuardAddress)?;
                 let guard_line = Self::guard_line((symbol, pool_index));
                 let guard_reserve = Self::guard_reserve(symbol);
                 let total_deposit_value_in_fis = Self::cal_share_amount(swap_pool.rtoken_balance, swap_pool.fis_balance, stake_user.total_rtoken_value).
@@ -181,12 +178,12 @@ decl_module! {
                         guard_amount = guard_reserve;
                     }
                     // recheck guard balance
-                    let guard_free_balance = T::Currency::free_balance(&guard_address).saturated_into::<u128>();
-                    if guard_amount > guard_free_balance {
-                        guard_amount = guard_free_balance;
+                    let new_module_free_balance = module_free_balance.saturating_sub(withdraw_reward);
+                    if guard_amount > new_module_free_balance {
+                        guard_amount = new_module_free_balance;
                     }
                     if guard_amount > 0 {
-                        T::Currency::transfer(&guard_address, &who, guard_amount.saturated_into(), KeepAlive)?;
+                        T::Currency::transfer(&Self::account_id(), &who, guard_amount.saturated_into(), KeepAlive)?;
                         <GuardReserve>::insert(symbol, guard_reserve.saturating_sub(guard_amount));
                     }
                 }
@@ -231,9 +228,9 @@ decl_module! {
                 saturating_sub(stake_user.reward_debt);
             let mut withdraw_reward = pending_reward;
             // recheck balance
-            let reward_free_balance = T::Currency::free_balance(&Self::account_id()).saturated_into::<u128>();
-            if withdraw_reward > reward_free_balance {
-                withdraw_reward = reward_free_balance;
+            let module_free_balance = T::Currency::free_balance(&Self::account_id()).saturated_into::<u128>();
+            if withdraw_reward > module_free_balance {
+                withdraw_reward = module_free_balance;
             }
             stake_user.reserved_lp_reward = stake_user.reserved_lp_reward.saturating_add(withdraw_reward);
             stake_user.claimed_reward = stake_user.claimed_reward.saturating_add(withdraw_reward);
@@ -343,11 +340,23 @@ decl_module! {
             Ok(())
         }
 
-        /// set fund address
+        /// withdraw guard fund
         #[weight = 100_000]
-        fn set_guard_address(origin, address: T::AccountId) -> DispatchResult {
+        fn withdraw_guard_fund(origin, symbol: RSymbol, to_address: T::AccountId, amount: u128) -> DispatchResult {
             ensure_root(origin)?;
-            <GuardAddress<T>>::put(address);
+            let mut withdraw_amount = amount;
+            let guard_reserve = Self::guard_reserve(symbol);
+            if withdraw_amount > guard_reserve {
+                withdraw_amount = guard_reserve;
+            }
+            let module_free_balance = T::Currency::free_balance(&Self::account_id()).saturated_into::<u128>();
+            if withdraw_amount > module_free_balance {
+                withdraw_amount = module_free_balance;
+            }
+            if withdraw_amount > 0 {
+                T::Currency::transfer(&Self::account_id(), &to_address, withdraw_amount.saturated_into(), KeepAlive)?;
+            }
+            <GuardReserve>::insert(symbol, guard_reserve.saturating_sub(withdraw_amount));
             Ok(())
         }
 
@@ -356,6 +365,13 @@ decl_module! {
         fn set_guard_line(origin, symbol: RSymbol, pool_index: u32, line: u32) -> DispatchResult {
             ensure_root(origin)?;
             <GuardLine>::insert((symbol, pool_index), line);
+            Ok(())
+        }
+        /// set guard line
+        #[weight = 100_000]
+        fn set_guard_reserve(origin, symbol: RSymbol, amount: u128) -> DispatchResult {
+            ensure_root(origin)?;
+            <GuardReserve>::insert(symbol, amount);
             Ok(())
         }
     }
