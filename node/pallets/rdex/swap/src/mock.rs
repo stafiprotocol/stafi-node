@@ -1,6 +1,8 @@
+use crate as rdex_swap;
 use crate::{Module, Trait};
 use frame_support::{
-    impl_outer_dispatch, impl_outer_event, impl_outer_origin, parameter_types, traits::Get, weights::Weight,
+    impl_outer_dispatch, impl_outer_event, impl_outer_origin, parameter_types, traits::Get,
+    weights::Weight,
 };
 use frame_system::EnsureRoot;
 use node_primitives::BlockNumber;
@@ -11,24 +13,23 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
     Perbill,
 };
-use crate as rdex_swap;
 use sp_std::cell::RefCell;
 
 pub(crate) type Balance = u128;
 
 thread_local! {
-	static EXISTENTIAL_DEPOSIT: RefCell<Balance> = RefCell::new(0);
+    static EXISTENTIAL_DEPOSIT: RefCell<Balance> = RefCell::new(0);
 }
 
 impl_outer_origin! {
     pub enum Origin for Test where system = frame_system {}
 }
 
-impl_outer_event!{
-	pub enum TestEvent for Test {
-		frame_system<T>,
-		rdex_swap<T>,
-	}
+impl_outer_event! {
+    pub enum TestEvent for Test {
+        frame_system<T>,
+        rdex_swap<T>,
+    }
 }
 
 impl_outer_dispatch! {
@@ -79,33 +80,39 @@ impl frame_system::Trait for Test {
 
 impl Trait for Test {
     type Event = ();
-	type Currency = Balances;
-	type RCurrency = RBalances;
-	type LpCurrency = LpBalances;
+    type Currency = Balances;
+    type RCurrency = RBalances;
+    type LpCurrency = LpBalances;
 }
 
 impl pallet_balances::Trait for Test {
-	type MaxLocks = ();
-	type Balance = Balance;
-	type DustRemoval = ();
-	type Event = ();
-	type ExistentialDeposit = (ExistentialDeposit);
-	type AccountStore = System;
-	type WeightInfo = ();
+    type MaxLocks = ();
+    type Balance = Balance;
+    type DustRemoval = ();
+    type Event = ();
+    type ExistentialDeposit = (ExistentialDeposit);
+    type AccountStore = System;
+    type WeightInfo = ();
 }
 
 impl rdex_balances::Trait for Test {
-	type Event = ();
+    type Event = ();
 }
 
 impl rtoken_balances::Trait for Test {
-	type Event = ();
+    type Event = ();
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
     let mut t = frame_system::GenesisConfig::default()
         .build_storage::<Test>()
         .unwrap();
+
+    pallet_balances::GenesisConfig::<Test> {
+        balances: vec![(42, 100), (1, 100), (2, 100)],
+    }
+    .assimilate_storage(&mut t)
+    .unwrap();
 
     t.into()
 }
@@ -118,7 +125,7 @@ pub type LpBalances = rdex_balances::Module<Test>;
 
 pub struct ExistentialDeposit;
 impl Get<Balance> for ExistentialDeposit {
-	fn get() -> Balance {
-		EXISTENTIAL_DEPOSIT.with(|v| *v.borrow())
-	}
+    fn get() -> Balance {
+        EXISTENTIAL_DEPOSIT.with(|v| *v.borrow())
+    }
 }
