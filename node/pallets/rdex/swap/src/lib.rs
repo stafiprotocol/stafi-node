@@ -30,6 +30,11 @@ pub mod models;
 pub use models::*;
 use sp_core::U512;
 
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
+
 const MODULE_ID: ModuleId = ModuleId(*b"rdx/swap");
 
 decl_event! {
@@ -302,7 +307,7 @@ impl<T: Trait> Module<T> {
         let add_unit = raw_unit.saturating_sub(adj_unit);
         let total_unit = p_capital.saturating_add(add_unit);
 
-        (total_unit.as_u128(), add_unit.as_u128())
+        (Self::safe_to_u128(total_unit), Self::safe_to_u128(add_unit))
     }
 
     // y = (x * X * Y) / (x + X)^2
@@ -336,7 +341,7 @@ impl<T: Trait> Module<T> {
             .checked_div(denominator)
             .unwrap_or(U512::zero());
 
-        (y.as_u128(), fee.as_u128())
+        (Self::safe_to_u128(y), Self::safe_to_u128(fee))
     }
 
     pub fn cal_remove_result(
@@ -385,9 +390,17 @@ impl<T: Trait> Module<T> {
         }
 
         (
-            fis_amount.as_u128(),
-            rtoken_amount.as_u128(),
-            swap_amount.as_u128(),
+            Self::safe_to_u128(fis_amount),
+            Self::safe_to_u128(rtoken_amount),
+            Self::safe_to_u128(swap_amount),
         )
+    }
+
+    pub fn safe_to_u128(number: U512) -> u128 {
+        if number > U512::from(u128::max_value()) {
+            u128::max_value()
+        } else {
+            number.as_u128()
+        }
     }
 }

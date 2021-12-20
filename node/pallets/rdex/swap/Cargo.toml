@@ -18,12 +18,12 @@ sp-io = { branch = "master", default-features = false, git = 'https://github.com
 # frame dependencies
 frame-support = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 frame-system = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-pallet-staking = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-sp-arithmetic = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 node-primitives = { path = "../../../primitives", default-features = false }
 rtoken-balances = { path = "../../rtoken/balances", default-features = false}
 rdex-balances = { path = "../balances", default-features = false}
 
+[dev-dependencies]
+pallet-balances = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
 [features]
 default = ["std"]
@@ -36,8 +36,7 @@ std = [
   "sp-io/std",
   "frame-support/std",
   "frame-system/std",
-  "sp-arithmetic/std",
-  "pallet-staking/std",
+  "pallet-balances/std",
   "rtoken-balances/std",
   "rdex-balances/std",
 ]

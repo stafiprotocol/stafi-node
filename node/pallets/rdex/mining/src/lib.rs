@@ -439,6 +439,14 @@ impl<T: Trait> Module<T> {
             .checked_div(use_pool_unit)
             .unwrap_or(U512::zero());
 
-        share_amount.as_u128()
+        Self::safe_to_u128(share_amount)
+    }
+
+    pub fn safe_to_u128(number: U512) -> u128 {
+        if number > U512::from(u128::max_value()) {
+            u128::max_value()
+        } else {
+            number.as_u128()
+        }
     }
 }
