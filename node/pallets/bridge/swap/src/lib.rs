@@ -28,11 +28,6 @@ use node_primitives::{ChainId, RSymbol, XSymbol};
 use rtoken_balances::{traits::{Currency as RCurrency}};
 use xtoken_balances::{traits::{Currency as XCurrency}};
 
-#[cfg(test)]
-mod mock;
-#[cfg(test)]
-mod tests;
-
 type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
 pub trait Trait: system::Trait + bridge::Trait {

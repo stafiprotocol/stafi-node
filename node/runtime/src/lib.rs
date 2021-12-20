@@ -102,7 +102,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version
-	spec_version: 50,
+	spec_version: 51,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -348,6 +348,10 @@ impl xtoken_balances::Trait for Runtime {
 }
 
 impl rtoken_balances::Trait for Runtime {
+	type Event = Event;
+}
+
+impl rdex_balances::Trait for Runtime {
 	type Event = Event;
 }
 
@@ -921,6 +925,19 @@ impl rdexn_swap::Trait for Runtime {
 	type RCurrency = RBalances;
 }
 
+impl rdex_swap::Trait for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type RCurrency = RBalances;
+	type LpCurrency = LpBalances;
+}
+
+impl rdex_mining::Trait for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type LpCurrency = LpBalances;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -973,6 +990,9 @@ construct_runtime!(
 		RDexnPayers: rdexn_payers::{Module, Call, Storage, Event<T>},
 		RDexnSignatures: rdexn_signatures::{Module, Call, Storage, Event<T>},
 		RDexnSwap: rdexn_swap::{Module, Call, Storage, Event<T>},
+		RDexSwap: rdex_swap::{Module, Call, Storage, Event<T>},
+		LpBalances: rdex_balances::{Module, Call, Storage, Event<T>},
+		RDexMining: rdex_mining::{Module, Call, Storage, Event<T>},
 	}
 );
 
