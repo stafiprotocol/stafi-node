@@ -25,6 +25,7 @@ impl_outer_origin!{
 impl_outer_event!{
 	pub enum TestEvent for Test {
 		frame_system<T>,
+		bridge_relayers<T>,
 		bridge_common<T>,
 	}
 }
@@ -32,6 +33,7 @@ impl_outer_event!{
 impl_outer_dispatch! {
 	pub enum Call for Test where origin: Origin {
 		frame_system::System,
+		bridge_relayers::BridgeRelayers,
 		self::BridgeCommon,
 	}
 }
@@ -77,6 +79,10 @@ impl frame_system::Trait for Test {
 	type SystemWeightInfo = ();
 }
 
+impl bridge_relayers::Trait for Test {
+	type Event = TestEvent;
+}
+
 parameter_types! {
 	pub const ChainIdentity: ChainId = 1;
 	pub const ProposalLifetime: BlockNumber = 50;
@@ -96,6 +102,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 }
 
 pub type System = frame_system::Module<Test>;
+pub type BridgeRelayers = bridge_relayers::Module<Test>;
 pub type BridgeCommon = Module<Test>;
 
 // Relayers
