@@ -104,7 +104,12 @@ decl_module! {
             if fee > 0 {
                 T::Currency::transfer(&who, &receiver, fee.saturated_into(), KeepAlive)?;
             }
-            T::RCurrency::transfer(&who, &bridger, symbol, amount)?;
+
+            if symbol == RSymbol::RETH {
+                T::RCurrency::burn(&who, symbol, amount)?;
+            } else {
+                T::RCurrency::transfer(&who, &bridger, symbol, amount)?;
+            }
 
             <bridge::Module<T>>::transfer_fungible(who, dest_id, resource, recipient, U256::from(amount))
         }
@@ -116,7 +121,11 @@ decl_module! {
             let op_sym = <bridge::Module<T>>::resource_rsymbol(&resource_id);
             ensure!(op_sym.is_some(), Error::<T>::ResourceNotMapped);
             let sym = op_sym.unwrap();
-            T::RCurrency::transfer(&bridge_id, &recipient, sym, amount)?;
+            if sym == RSymbol::RETH {
+                T::RCurrency::mint(&recipient, sym, amount)?;
+            } else {
+                T::RCurrency::transfer(&bridge_id, &recipient, sym, amount)?;
+            }
             Ok(())
         }
 

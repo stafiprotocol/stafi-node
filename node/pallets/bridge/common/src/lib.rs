@@ -29,6 +29,11 @@ use sp_runtime::{
 use node_primitives::{ChainId, ETH_CHAIN_ID, BSC_CHAIN_ID, Balance, RSymbol, XSymbol};
 use bridge_relayers as brelayers;
 
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
+
 const DEFAULT_RELAYER_THRESHOLD: u32 = 1;
 const MODULE_ID: ModuleId = ModuleId(*b"cb/bridg");
 

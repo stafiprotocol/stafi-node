@@ -1,7 +1,7 @@
 use super::mock::{Call, *};
 use super::*;
 use frame_support::{assert_err, assert_noop, assert_ok};
-
+use node_primitives::RSymbol;
 pub struct CalPoolUnitData {
     pub old_pool_unit: u128,
     pub fis_balance: u128,
@@ -277,8 +277,120 @@ fn safe_to_u128_should_work() {
             },
         ];
         for data in test_datas {
-            let (u128_value) = RDexSwap::safe_to_u128(data.number);
+            let u128_value = RDexSwap::safe_to_u128(data.number);
             assert_eq!(u128_value, data.expect_u128);
         }
+    });
+}
+
+// origin, who: T::AccountId, symbol: RSymbol, rtoken_amount: u128, fis_amount: u128)
+#[test]
+fn create_pool_should_work() {
+    new_test_ext().execute_with(|| {
+        let symbol = RSymbol::RATOM;
+        assert_ok!(RBalances::mint(&(42 as u64), symbol, 100));
+        assert_ok!(RDexSwap::create_pool(
+            Origin::root(),
+            42 as u64,
+            symbol,
+            20,
+            10
+        ));
+        let pool = RDexSwap::swap_pools(symbol).unwrap();
+
+        assert_eq!(RBalances::free_balance(&(42 as u64), symbol), 80);
+        assert_eq!(Balances::free_balance(RDexSwap::account_id()), 10);
+        assert_eq!(RBalances::free_balance(&RDexSwap::account_id(), symbol), 20);
+        assert_eq!(pool.fis_balance, 10);
+        assert_eq!(pool.rtoken_balance, 20);
+        assert_eq!(pool.total_unit, 10);
+    });
+}
+
+// add_liquidity(origin, symbol: RSymbol, rtoken_amount: u128, fis_amount: u128)
+#[test]
+fn add_liquidity_should_work() {
+    new_test_ext().execute_with(|| {
+        let symbol = RSymbol::RATOM;
+
+        // create pool
+        assert_ok!(RBalances::mint(&(42 as u64), symbol, 100));
+        assert_ok!(RDexSwap::create_pool(
+            Origin::root(),
+            42 as u64,
+            symbol,
+            20,
+            10
+        ));
+
+        let pool = RDexSwap::swap_pools(symbol).unwrap();
+        assert_eq!(RBalances::free_balance(&(42 as u64), symbol), 80);
+        assert_eq!(LpBalances::free_balance(&(42 as u64), symbol), 10);
+        assert_eq!(Balances::free_balance(RDexSwap::account_id()), 10);
+        assert_eq!(RBalances::free_balance(&RDexSwap::account_id(), symbol), 20);
+        assert_eq!(pool.fis_balance, 10);
+        assert_eq!(pool.rtoken_balance, 20);
+        assert_eq!(pool.total_unit, 10);
+
+        // add liquidity
+        assert_ok!(RBalances::mint(&(1 as u64), symbol, 100));
+        assert_ok!(RDexSwap::add_liquidity(Origin::signed(1), symbol, 20, 10));
+
+        let pool = RDexSwap::swap_pools(symbol).unwrap();
+        assert_eq!(RBalances::free_balance(&(1 as u64), symbol), 80);
+        assert_eq!(LpBalances::free_balance(&(1 as u64), symbol), 10);
+        assert_eq!(Balances::free_balance(RDexSwap::account_id()), 20);
+        assert_eq!(RBalances::free_balance(&RDexSwap::account_id(), symbol), 40);
+        assert_eq!(pool.fis_balance, 20);
+        assert_eq!(pool.rtoken_balance, 40);
+        assert_eq!(pool.total_unit, 20);
+    });
+}
+
+// swap(origin, symbol: RSymbol, input_amount: u128, min_out_amount: u128, input_is_fis: bool)
+
+#[test]
+fn swap_should_work() {
+    new_test_ext().execute_with(|| {
+        let symbol = RSymbol::RATOM;
+
+        // create pool
+        assert_ok!(RBalances::mint(&(42 as u64), symbol, 100));
+        assert_ok!(RDexSwap::create_pool(
+            Origin::root(),
+            42 as u64,
+            symbol,
+            20,
+            10
+        ));
+
+        let pool = RDexSwap::swap_pools(symbol).unwrap();
+        assert_eq!(RBalances::free_balance(&(42 as u64), symbol), 80);
+        assert_eq!(LpBalances::free_balance(&(42 as u64), symbol), 10);
+        assert_eq!(Balances::free_balance(RDexSwap::account_id()), 10);
+        assert_eq!(RBalances::free_balance(&RDexSwap::account_id(), symbol), 20);
+        assert_eq!(pool.fis_balance, 10);
+        assert_eq!(pool.rtoken_balance, 20);
+        assert_eq!(pool.total_unit, 10);
+
+        // add liquidity
+        assert_ok!(RBalances::mint(&(1 as u64), symbol, 1000));
+        assert_ok!(RDexSwap::add_liquidity(Origin::signed(1), symbol, 980, 90));
+
+        let pool = RDexSwap::swap_pools(symbol).unwrap();
+        assert_eq!(RBalances::free_balance(&(1 as u64), symbol), 20);
+        // assert_eq!(LpBalances::free_balance(&(1 as u64), symbol), 10);
+        assert_eq!(Balances::free_balance(RDexSwap::account_id()), 100);
+        assert_eq!(
+            RBalances::free_balance(&RDexSwap::account_id(), symbol),
+            1000
+        );
+        assert_eq!(pool.fis_balance, 100);
+        assert_eq!(pool.rtoken_balance, 1000);
+        // assert_eq!(pool.total_unit, 20);
+
+        // swap
+        assert_ok!(RDexSwap::swap(Origin::signed(2), symbol, 10, 82, true));
+        assert_eq!(RBalances::free_balance(&(2 as u64), symbol), 82);
     });
 }
