@@ -394,3 +394,67 @@ fn swap_should_work() {
         assert_eq!(RBalances::free_balance(&(2 as u64), symbol), 82);
     });
 }
+
+#[test]
+fn swap_should_failed() {
+    new_test_ext().execute_with(|| {
+        let symbol = RSymbol::RATOM;
+
+        // create pool
+        assert_ok!(RBalances::mint(&(42 as u64), symbol, 100));
+        assert_ok!(RDexSwap::create_pool(
+            Origin::root(),
+            42 as u64,
+            symbol,
+            20,
+            10
+        ));
+
+        let pool = RDexSwap::swap_pools(symbol).unwrap();
+        assert_eq!(RBalances::free_balance(&(42 as u64), symbol), 80);
+        assert_eq!(LpBalances::free_balance(&(42 as u64), symbol), 10);
+        assert_eq!(Balances::free_balance(RDexSwap::account_id()), 10);
+        assert_eq!(RBalances::free_balance(&RDexSwap::account_id(), symbol), 20);
+        assert_eq!(pool.fis_balance, 10);
+        assert_eq!(pool.rtoken_balance, 20);
+        assert_eq!(pool.total_unit, 10);
+
+        // add liquidity
+        assert_ok!(RBalances::mint(&(1 as u64), symbol, 1000));
+        assert_ok!(RDexSwap::add_liquidity(Origin::signed(1), symbol, 980, 90));
+
+        let pool = RDexSwap::swap_pools(symbol).unwrap();
+        assert_eq!(RBalances::free_balance(&(1 as u64), symbol), 20);
+        assert_eq!(Balances::free_balance(RDexSwap::account_id()), 100);
+        assert_eq!(
+            RBalances::free_balance(&RDexSwap::account_id(), symbol),
+            1000
+        );
+        assert_eq!(pool.fis_balance, 100);
+        assert_eq!(pool.rtoken_balance, 1000);
+
+        // swap
+        assert_err!(
+            RDexSwap::swap(Origin::signed(2), RSymbol::RETH, 10, 83, true),
+            Error::<Test>::PoolNotExist
+        );
+        assert_err!(
+            RDexSwap::swap(Origin::signed(2), symbol, 0, 83, true),
+            Error::<Test>::AmountZero
+        );
+        assert_err!(
+            RDexSwap::swap(Origin::signed(2), symbol, 10, 0, true),
+            Error::<Test>::AmountZero
+        );
+
+        assert_err!(
+            RDexSwap::swap(Origin::signed(2), symbol, 10, 83, true),
+            Error::<Test>::LessThanMinOutAmount
+        );
+
+        assert_err!(
+            RDexSwap::swap(Origin::signed(2), symbol, 200, 83, true),
+            Error::<Test>::UserFisAmountNotEnough
+        );
+    });
+}

@@ -4,10 +4,7 @@ use frame_support::{
     impl_outer_dispatch, impl_outer_event, impl_outer_origin, parameter_types, traits::Get,
     weights::Weight,
 };
-use frame_system::EnsureRoot;
-use node_primitives::BlockNumber;
 use sp_core::H256;
-use sp_io::hashing::blake2_128;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
