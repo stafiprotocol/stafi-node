@@ -27,6 +27,11 @@ pub mod models;
 pub use models::*;
 use sp_core::U512;
 
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
+
 const MODULE_ID: ModuleId = ModuleId(*b"rdx/mine");
 const REWARD_FACTOR: u128 = 1_000_000_000_000;
 decl_event! {
@@ -106,6 +111,8 @@ decl_module! {
 
             T::LpCurrency::transfer(&who, &Self::account_id(), symbol, lp_amount)?;
             stake_pool = Self::update_pool(symbol, pool_index, grade_index);
+            stake_pool.total_stake_lp = stake_pool.total_stake_lp.saturating_add(lp_amount);
+            stake_pool_vec[grade_index as usize] = stake_pool;
             let new_stake_user = StakeUser {
                 account: who.clone(),
                 lp_amount: lp_amount,
@@ -117,12 +124,10 @@ decl_module! {
                 grade_index: grade_index,
                 claimed_reward: 0
             };
-            let new_stake_count = user_stake_count + 1;
-            stake_pool_vec[grade_index as usize] = stake_pool;
 
             <StakeUsers<T>>::insert((symbol, pool_index, &who, user_stake_count), new_stake_user);
             <StakePools>::insert((symbol, pool_index), stake_pool_vec);
-            <UserStakeCount<T>>::insert((symbol, pool_index, &who), new_stake_count);
+            <UserStakeCount<T>>::insert((symbol, pool_index, &who), user_stake_count + 1);
             Self::deposit_event(RawEvent::Deposit(who, symbol, pool_index, grade_index, user_stake_count, lp_amount));
             Ok(())
         }
@@ -312,7 +317,7 @@ decl_module! {
             Ok(())
         }
 
-        /// create pool
+        /// increase pool index
         #[weight = 10_000]
         pub fn increase_pool_index(origin, symbol: RSymbol) -> DispatchResult {
             ensure_root(origin.clone())?;
@@ -367,7 +372,7 @@ decl_module! {
             <GuardLine>::insert((symbol, pool_index), line);
             Ok(())
         }
-        /// set guard line
+        /// set guard reserve
         #[weight = 100_000]
         fn set_guard_reserve(origin, symbol: RSymbol, amount: u128) -> DispatchResult {
             ensure_root(origin)?;

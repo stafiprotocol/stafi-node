@@ -1,10 +1,10 @@
-use crate as rdex_swap;
+use crate as rdex_mining;
 use crate::{Module, Trait};
 use frame_support::{
     impl_outer_dispatch, impl_outer_event, impl_outer_origin, parameter_types, traits::Get,
     weights::Weight,
 };
-use sp_core::H256;
+use sp_core::{H256, U256};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
@@ -25,6 +25,7 @@ impl_outer_origin! {
 impl_outer_event! {
     pub enum TestEvent for Test {
         frame_system<T>,
+        rdex_mining<T>,
         rdex_swap<T>,
     }
 }
@@ -32,6 +33,7 @@ impl_outer_event! {
 impl_outer_dispatch! {
     pub enum Call for Test where origin: Origin {
         frame_system::System,
+        self::RDexMining,
         self::RDexSwap,
     }
 }
@@ -55,7 +57,7 @@ impl frame_system::Trait for Test {
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
-    type AccountId = u64;
+    type AccountId = U256;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
     type Event = ();
@@ -78,7 +80,13 @@ impl frame_system::Trait for Test {
 impl Trait for Test {
     type Event = ();
     type Currency = Balances;
+    type LpCurrency = LpBalances;
+}
+
+impl rdex_swap::Trait for Test {
+    type Event = ();
     type RCurrency = RBalances;
+    type Currency = Balances;
     type LpCurrency = LpBalances;
 }
 
@@ -106,7 +114,11 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
         .unwrap();
 
     pallet_balances::GenesisConfig::<Test> {
-        balances: vec![(42, 100), (1, 100), (2, 100)],
+        balances: vec![
+            (U256::from(42), 100),
+            (U256::from(1), 100),
+            (U256::from(2), 100),
+        ],
     }
     .assimilate_storage(&mut t)
     .unwrap();
@@ -114,11 +126,12 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     t.into()
 }
 
-pub type RDexSwap = Module<Test>;
+pub type RDexMining = Module<Test>;
 pub type System = frame_system::Module<Test>;
 pub type Balances = pallet_balances::Module<Test>;
-pub type RBalances = rtoken_balances::Module<Test>;
 pub type LpBalances = rdex_balances::Module<Test>;
+pub type RDexSwap = rdex_swap::Module<Test>;
+pub type RBalances = rtoken_balances::Module<Test>;
 
 pub struct ExistentialDeposit;
 impl Get<Balance> for ExistentialDeposit {
