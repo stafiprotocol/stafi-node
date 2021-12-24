@@ -407,4 +407,8 @@ impl<T: Trait> Module<T> {
             number.as_u128()
         }
     }
+    // used in tests
+    pub fn help_set_pool(symbol: RSymbol, pool: SwapPool) {
+        <SwapPools>::insert(symbol, pool);
+    }
 }

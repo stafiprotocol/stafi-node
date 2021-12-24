@@ -239,6 +239,9 @@ decl_module! {
             }
             stake_user.reserved_lp_reward = stake_user.reserved_lp_reward.saturating_add(withdraw_reward);
             stake_user.claimed_reward = stake_user.claimed_reward.saturating_add(withdraw_reward);
+            stake_user.reward_debt = stake_user.lp_amount.
+                saturating_mul(stake_pool.reward_per_share).
+                checked_div(REWARD_FACTOR).unwrap_or(0);
 
             if withdraw_reward > 0 {
                 T::Currency::transfer(&Self::account_id(), &who, withdraw_reward.saturated_into(), KeepAlive)?;
@@ -396,13 +399,19 @@ impl<T: Trait> Module<T> {
         if current_block_num <= stake_pool.last_reward_block {
             return stake_pool;
         }
-        if stake_pool.total_stake_lp == 0 {
+        if stake_pool.total_stake_lp == 0 || current_block_num <= stake_pool.start_block {
             stake_pool.last_reward_block = current_block_num;
             return stake_pool;
         }
 
+        let from = if stake_pool.last_reward_block < stake_pool.start_block {
+            stake_pool.start_block
+        } else {
+            stake_pool.last_reward_block
+        };
+
         let reward = Self::get_pool_reward(
-            stake_pool.last_reward_block,
+            from,
             current_block_num,
             stake_pool.reward_per_block,
             stake_pool.left_reward,

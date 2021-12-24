@@ -117,7 +117,10 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
         balances: vec![
             (U256::from(42), 100),
             (U256::from(1), 100),
-            (U256::from(2), 100),
+            (U256::from(2), 1000),
+            (U256::from(3), 1000),
+            (U256::from(4), 1000),
+            (U256::from(5), 2000),
         ],
     }
     .assimilate_storage(&mut t)
