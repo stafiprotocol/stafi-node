@@ -285,6 +285,12 @@ decl_module! {
         pub fn add_pool(origin, symbol: RSymbol, pool_index: u32, start_block: u32, lp_locked_blocks: u32, reward_per_block: u128, total_reward: u128, guard_impermanent_loss: bool) -> DispatchResult {
             ensure_root(origin.clone())?;
             let mut stake_pool_vec = Self::stake_pools((symbol, pool_index)).ok_or(Error::<T>::StakePoolNotExist)?;
+            let current_block_num = system::Module::<T>::block_number().saturated_into::<u32>();
+            let last_reward_block = if current_block_num < start_block {
+                start_block
+            } else {
+                current_block_num
+            };
 
             let stake_pool = StakePool {
                 symbol: symbol,
@@ -295,7 +301,7 @@ decl_module! {
                 total_reward: total_reward,
                 left_reward: total_reward,
                 lp_locked_blocks: lp_locked_blocks,
-                last_reward_block: 0,
+                last_reward_block: last_reward_block,
                 reward_per_share: 0,
                 guard_impermanent_loss: guard_impermanent_loss,
             };
@@ -382,6 +388,22 @@ decl_module! {
             <GuardReserve>::insert(symbol, amount);
             Ok(())
         }
+
+        /// set pool
+        #[weight = 10_000]
+        pub fn set_pool(origin, symbol: RSymbol, pool_index: u32, grade_index: u32, last_reward_block: u32) -> DispatchResult {
+            ensure_root(origin.clone())?;
+
+            let mut stake_pool_vec = Self::stake_pools((symbol, pool_index)).ok_or(Error::<T>::StakePoolNotExist)?;
+            let mut stake_pool = *stake_pool_vec.get(grade_index as usize).ok_or(Error::<T>::GradeIndexOverflow)?;
+
+            stake_pool.last_reward_block = last_reward_block;
+            stake_pool_vec[grade_index as usize] = stake_pool;
+
+            <StakePools>::insert((symbol, pool_index), stake_pool_vec);
+
+            Ok(())
+        }
     }
 }
 
@@ -399,19 +421,13 @@ impl<T: Trait> Module<T> {
         if current_block_num <= stake_pool.last_reward_block {
             return stake_pool;
         }
-        if stake_pool.total_stake_lp == 0 || current_block_num <= stake_pool.start_block {
+        if stake_pool.total_stake_lp == 0 {
             stake_pool.last_reward_block = current_block_num;
             return stake_pool;
         }
 
-        let from = if stake_pool.last_reward_block < stake_pool.start_block {
-            stake_pool.start_block
-        } else {
-            stake_pool.last_reward_block
-        };
-
         let reward = Self::get_pool_reward(
-            from,
+            stake_pool.last_reward_block,
             current_block_num,
             stake_pool.reward_per_block,
             stake_pool.left_reward,

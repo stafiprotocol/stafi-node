@@ -75,7 +75,7 @@ fn add_pool_should_work() {
         assert_eq!(stake_pools[0].total_reward, total_reward);
         assert_eq!(stake_pools[0].left_reward, total_reward);
         assert_eq!(stake_pools[0].lp_locked_blocks, lp_locked_blocks);
-        assert_eq!(stake_pools[0].last_reward_block, 0);
+        assert_eq!(stake_pools[0].last_reward_block, start_block);
         assert_eq!(stake_pools[0].reward_per_share, 0);
         assert_eq!(
             stake_pools[0].guard_impermanent_loss,
@@ -274,7 +274,7 @@ fn deposit_should_work() {
         assert_eq!(stake_pools[0].total_reward, total_reward);
         assert_eq!(stake_pools[0].left_reward, total_reward);
         assert_eq!(stake_pools[0].lp_locked_blocks, lp_locked_blocks);
-        assert_eq!(stake_pools[0].last_reward_block, 0);
+        assert_eq!(stake_pools[0].last_reward_block, start_block);
         assert_eq!(stake_pools[0].reward_per_share, 0);
         assert_eq!(
             stake_pools[0].guard_impermanent_loss,
