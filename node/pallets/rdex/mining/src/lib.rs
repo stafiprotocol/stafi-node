@@ -388,22 +388,6 @@ decl_module! {
             <GuardReserve>::insert(symbol, amount);
             Ok(())
         }
-
-        /// set pool
-        #[weight = 10_000]
-        pub fn set_pool(origin, symbol: RSymbol, pool_index: u32, grade_index: u32, last_reward_block: u32) -> DispatchResult {
-            ensure_root(origin.clone())?;
-
-            let mut stake_pool_vec = Self::stake_pools((symbol, pool_index)).ok_or(Error::<T>::StakePoolNotExist)?;
-            let mut stake_pool = *stake_pool_vec.get(grade_index as usize).ok_or(Error::<T>::GradeIndexOverflow)?;
-
-            stake_pool.last_reward_block = last_reward_block;
-            stake_pool_vec[grade_index as usize] = stake_pool;
-
-            <StakePools>::insert((symbol, pool_index), stake_pool_vec);
-
-            Ok(())
-        }
     }
 }
 
