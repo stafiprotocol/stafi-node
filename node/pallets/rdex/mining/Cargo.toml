@@ -19,9 +19,12 @@ sp-io = { branch = "master", default-features = false, git = 'https://github.com
 frame-support = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 frame-system = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 node-primitives = { path = "../../../primitives", default-features = false }
-rdex-balances = { path = "../balances", default-features = false}
-rdex-swap = { path = "../swap", default-features = false}
+rdex-balances = { path = "../balances", default-features = false }
+rdex-swap = { path = "../swap", default-features = false }
 
+[dev-dependencies]
+pallet-balances = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+rtoken-balances = { path = "../../rtoken/balances", default-features = false }
 
 [features]
 default = ["std"]

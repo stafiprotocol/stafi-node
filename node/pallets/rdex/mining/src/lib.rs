@@ -27,6 +27,11 @@ pub mod models;
 pub use models::*;
 use sp_core::U512;
 
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
+
 const MODULE_ID: ModuleId = ModuleId(*b"rdx/mine");
 const REWARD_FACTOR: u128 = 1_000_000_000_000;
 decl_event! {
@@ -106,6 +111,8 @@ decl_module! {
 
             T::LpCurrency::transfer(&who, &Self::account_id(), symbol, lp_amount)?;
             stake_pool = Self::update_pool(symbol, pool_index, grade_index);
+            stake_pool.total_stake_lp = stake_pool.total_stake_lp.saturating_add(lp_amount);
+            stake_pool_vec[grade_index as usize] = stake_pool;
             let new_stake_user = StakeUser {
                 account: who.clone(),
                 lp_amount: lp_amount,
@@ -117,12 +124,10 @@ decl_module! {
                 grade_index: grade_index,
                 claimed_reward: 0
             };
-            let new_stake_count = user_stake_count + 1;
-            stake_pool_vec[grade_index as usize] = stake_pool;
 
             <StakeUsers<T>>::insert((symbol, pool_index, &who, user_stake_count), new_stake_user);
             <StakePools>::insert((symbol, pool_index), stake_pool_vec);
-            <UserStakeCount<T>>::insert((symbol, pool_index, &who), new_stake_count);
+            <UserStakeCount<T>>::insert((symbol, pool_index, &who), user_stake_count + 1);
             Self::deposit_event(RawEvent::Deposit(who, symbol, pool_index, grade_index, user_stake_count, lp_amount));
             Ok(())
         }
@@ -234,6 +239,9 @@ decl_module! {
             }
             stake_user.reserved_lp_reward = stake_user.reserved_lp_reward.saturating_add(withdraw_reward);
             stake_user.claimed_reward = stake_user.claimed_reward.saturating_add(withdraw_reward);
+            stake_user.reward_debt = stake_user.lp_amount.
+                saturating_mul(stake_pool.reward_per_share).
+                checked_div(REWARD_FACTOR).unwrap_or(0);
 
             if withdraw_reward > 0 {
                 T::Currency::transfer(&Self::account_id(), &who, withdraw_reward.saturated_into(), KeepAlive)?;
@@ -277,6 +285,12 @@ decl_module! {
         pub fn add_pool(origin, symbol: RSymbol, pool_index: u32, start_block: u32, lp_locked_blocks: u32, reward_per_block: u128, total_reward: u128, guard_impermanent_loss: bool) -> DispatchResult {
             ensure_root(origin.clone())?;
             let mut stake_pool_vec = Self::stake_pools((symbol, pool_index)).ok_or(Error::<T>::StakePoolNotExist)?;
+            let current_block_num = system::Module::<T>::block_number().saturated_into::<u32>();
+            let last_reward_block = if current_block_num < start_block {
+                start_block
+            } else {
+                current_block_num
+            };
 
             let stake_pool = StakePool {
                 symbol: symbol,
@@ -287,7 +301,7 @@ decl_module! {
                 total_reward: total_reward,
                 left_reward: total_reward,
                 lp_locked_blocks: lp_locked_blocks,
-                last_reward_block: 0,
+                last_reward_block: last_reward_block,
                 reward_per_share: 0,
                 guard_impermanent_loss: guard_impermanent_loss,
             };
@@ -312,7 +326,7 @@ decl_module! {
             Ok(())
         }
 
-        /// create pool
+        /// increase pool index
         #[weight = 10_000]
         pub fn increase_pool_index(origin, symbol: RSymbol) -> DispatchResult {
             ensure_root(origin.clone())?;
@@ -367,11 +381,27 @@ decl_module! {
             <GuardLine>::insert((symbol, pool_index), line);
             Ok(())
         }
-        /// set guard line
+        /// set guard reserve
         #[weight = 100_000]
         fn set_guard_reserve(origin, symbol: RSymbol, amount: u128) -> DispatchResult {
             ensure_root(origin)?;
             <GuardReserve>::insert(symbol, amount);
+            Ok(())
+        }
+
+        /// set pool
+        #[weight = 10_000]
+        pub fn set_pool(origin, symbol: RSymbol, pool_index: u32, grade_index: u32, last_reward_block: u32) -> DispatchResult {
+            ensure_root(origin.clone())?;
+
+            let mut stake_pool_vec = Self::stake_pools((symbol, pool_index)).ok_or(Error::<T>::StakePoolNotExist)?;
+            let mut stake_pool = *stake_pool_vec.get(grade_index as usize).ok_or(Error::<T>::GradeIndexOverflow)?;
+
+            stake_pool.last_reward_block = last_reward_block;
+            stake_pool_vec[grade_index as usize] = stake_pool;
+
+            <StakePools>::insert((symbol, pool_index), stake_pool_vec);
+
             Ok(())
         }
     }

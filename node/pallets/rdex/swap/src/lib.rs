@@ -58,7 +58,8 @@ decl_error! {
         AmountAllZero,
         PoolAlreadyExist,
         PoolNotExist,
-        RTokenAmountNotEnough,
+        UserRTokenAmountNotEnough,
+        UserFisAmountNotEnough,
         PoolFisBalanceNotEnough,
         PoolRTokenBalanceNotEnough,
         UnitAmountImproper,
@@ -84,13 +85,14 @@ decl_module! {
         pub fn swap(origin, symbol: RSymbol, input_amount: u128, min_out_amount: u128, input_is_fis: bool) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let mut pool = Self::swap_pools(symbol).ok_or(Error::<T>::PoolNotExist)?;
-            ensure!(input_amount > 0 || min_out_amount > 0, Error::<T>::AmountAllZero);
+            ensure!(input_amount > 0 && min_out_amount > 0, Error::<T>::AmountZero);
 
             let (result, fee) = Self::cal_swap_result(pool.fis_balance, pool.rtoken_balance, input_amount, input_is_fis);
             ensure!(result > 0, Error::<T>::SwapAmountTooFew);
             ensure!(result >= min_out_amount, Error::<T>::LessThanMinOutAmount);
 
             if input_is_fis {
+                ensure!(T::Currency::free_balance(&who).saturated_into::<u128>() > input_amount, Error::<T>::UserFisAmountNotEnough);
                 ensure!(result < pool.rtoken_balance, Error::<T>::PoolRTokenBalanceNotEnough);
 
                 // transfer
@@ -101,7 +103,7 @@ decl_module! {
                 pool.fis_balance = pool.fis_balance.saturating_add(input_amount);
                 pool.rtoken_balance = pool.rtoken_balance.saturating_sub(result);
             } else {
-                ensure!(T::RCurrency::free_balance(&who, symbol) >= input_amount, Error::<T>::RTokenAmountNotEnough);
+                ensure!(T::RCurrency::free_balance(&who, symbol) >= input_amount, Error::<T>::UserRTokenAmountNotEnough);
                 ensure!(result < pool.fis_balance, Error::<T>::PoolFisBalanceNotEnough);
 
                 // transfer
@@ -126,7 +128,8 @@ decl_module! {
             let mut pool = Self::swap_pools(symbol).ok_or(Error::<T>::PoolNotExist)?;
 
             ensure!(fis_amount > 0 || rtoken_amount > 0, Error::<T>::AmountAllZero);
-            ensure!(T::RCurrency::free_balance(&who, symbol) >= rtoken_amount, Error::<T>::RTokenAmountNotEnough);
+            ensure!(T::RCurrency::free_balance(&who, symbol) >= rtoken_amount, Error::<T>::UserRTokenAmountNotEnough);
+            ensure!(T::Currency::free_balance(&who).saturated_into::<u128>() > fis_amount, Error::<T>::UserFisAmountNotEnough);
 
             let (new_total_pool_unit, add_lp_unit) = Self::cal_pool_unit(pool.total_unit, pool.fis_balance, pool.rtoken_balance, fis_amount, rtoken_amount);
 
@@ -203,7 +206,8 @@ decl_module! {
             ensure_root(origin.clone())?;
             ensure!(Self::swap_pools(symbol).is_none(), Error::<T>::PoolAlreadyExist);
             ensure!(fis_amount > 0 && rtoken_amount > 0, Error::<T>::AmountZero);
-            ensure!(T::RCurrency::free_balance(&who, symbol) >= rtoken_amount, Error::<T>::RTokenAmountNotEnough);
+            ensure!(T::RCurrency::free_balance(&who, symbol) >= rtoken_amount, Error::<T>::UserRTokenAmountNotEnough);
+            ensure!(T::Currency::free_balance(&who).saturated_into::<u128>() > fis_amount, Error::<T>::UserFisAmountNotEnough);
 
             let (pool_unit, lp_unit) = Self::cal_pool_unit(0, 0, 0, fis_amount, rtoken_amount);
             // create pool/lp
@@ -402,5 +406,9 @@ impl<T: Trait> Module<T> {
         } else {
             number.as_u128()
         }
+    }
+    // used in tests
+    pub fn help_set_pool(symbol: RSymbol, pool: SwapPool) {
+        <SwapPools>::insert(symbol, pool);
     }
 }

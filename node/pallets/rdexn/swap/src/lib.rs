@@ -333,6 +333,7 @@ decl_module! {
             for trans_info in trans_block_trans_info.iter_mut() {
                 trans_info.is_deal = true;
             }
+            <TransInfos<T>>::insert((symbol, block), trans_block_trans_info);
             Ok(())
         }
     }
