@@ -965,35 +965,5 @@ fn guard_impermanent_loss_should_work() {
             LpBalances::free_balance(&RDexMining::account_id(), symbol),
             5
         );
-
-        // let stake_user = RDexMining::stake_users((symbol, 0, &U256::from(1), 0)).unwrap();
-        // assert_eq!(stake_user.lp_amount, 0);
-        // assert_eq!(stake_user.reward_debt, 0);
-        // assert_eq!(stake_user.reserved_lp_reward, 0);
-        // assert_eq!(stake_user.total_fis_value, 0);
-        // assert_eq!(stake_user.total_rtoken_value, 0);
-        // assert_eq!(stake_user.deposit_height, 0);
-        // assert_eq!(stake_user.grade_index, 0);
-        // assert_eq!(stake_user.claimed_reward, 100);
-
-        // let stake_pools = RDexMining::stake_pools((symbol, 0)).unwrap();
-        // assert_eq!(stake_pools.len(), 1);
-        // assert_eq!(stake_pools[0].symbol, symbol);
-        // assert_eq!(stake_pools[0].emergency_switch, false);
-        // assert_eq!(stake_pools[0].total_stake_lp, 0);
-        // assert_eq!(stake_pools[0].start_block, start_block);
-        // assert_eq!(stake_pools[0].reward_per_block, reward_per_block);
-        // assert_eq!(stake_pools[0].total_reward, total_reward);
-        // assert_eq!(stake_pools[0].left_reward, 100);
-        // assert_eq!(stake_pools[0].lp_locked_blocks, lp_locked_blocks);
-        // assert_eq!(stake_pools[0].last_reward_block, 12);
-        // assert_eq!(
-        //     stake_pools[0].reward_per_share,
-        //     (100 as u128).saturating_mul(REWARD_FACTOR)
-        // );
-        // assert_eq!(
-        //     stake_pools[0].guard_impermanent_loss,
-        //     guard_impermanent_loss
-        // );
     });
 }
