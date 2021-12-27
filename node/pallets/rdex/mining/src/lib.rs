@@ -158,9 +158,9 @@ decl_module! {
             let reserved_lp_total_reward = stake_user.reserved_lp_reward.saturating_add(withdraw_reward);
 
             let mut guard_amount: u128 = 0;
+            let guard_reserve = Self::guard_reserve(symbol);
             if stake_pool.guard_impermanent_loss {
                 let guard_line = Self::guard_line((symbol, pool_index));
-                let guard_reserve = Self::guard_reserve(symbol);
                 let total_deposit_value_in_fis = Self::cal_share_amount(swap_pool.rtoken_balance, swap_pool.fis_balance, stake_user.total_rtoken_value).
                     saturating_add(stake_user.total_fis_value);
                 let total_now_value_in_fis = Self::cal_share_amount(swap_pool.total_unit, stake_user.lp_amount, swap_pool.fis_balance).saturating_mul(2);
@@ -176,10 +176,6 @@ decl_module! {
                     if guard_amount > guard_reserve {
                         guard_amount = guard_reserve;
                     }
-                    if guard_amount > 0 {
-                        T::Currency::transfer(&Self::account_id(), &who, guard_amount.saturated_into(), KeepAlive)?;
-                        <GuardReserve>::insert(symbol, guard_reserve.saturating_sub(guard_amount));
-                    }
                 }
             }
 
@@ -194,8 +190,12 @@ decl_module! {
                 checked_div(REWARD_FACTOR).unwrap_or(0);
             stake_user.claimed_reward = stake_user.claimed_reward.saturating_add(withdraw_reward);
 
-            if withdraw_reward > 0 {
-                T::Currency::transfer(&Self::account_id(), &who, withdraw_reward.saturated_into(), KeepAlive)?;
+            let total_transfer_amount = withdraw_reward.saturating_add(guard_amount);
+            if total_transfer_amount > 0 {
+                T::Currency::transfer(&Self::account_id(), &who, total_transfer_amount.saturated_into(), KeepAlive)?;
+            }
+            if guard_amount > 0 {
+                <GuardReserve>::insert(symbol, guard_reserve.saturating_sub(guard_amount));
             }
             T::LpCurrency::transfer(&Self::account_id(), &who, symbol, lp_amount)?;
             <StakeUsers<T>>::insert((symbol, pool_index, &who, stake_index), stake_user.clone());
