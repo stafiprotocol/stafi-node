@@ -152,15 +152,9 @@ decl_module! {
             stake_pool.total_stake_lp = stake_pool.total_stake_lp.saturating_sub(lp_amount);
             stake_pool_vec[stake_user.grade_index as usize] = stake_pool;
 
-            let pending_reward = stake_user.lp_amount.saturating_mul(stake_pool.reward_per_share).
+            let withdraw_reward = stake_user.lp_amount.saturating_mul(stake_pool.reward_per_share).
                 checked_div(REWARD_FACTOR).unwrap_or(0).
                 saturating_sub(stake_user.reward_debt);
-            let mut withdraw_reward = pending_reward;
-            // recheck balance
-            let module_free_balance = T::Currency::free_balance(&Self::account_id()).saturated_into::<u128>();
-            if withdraw_reward > module_free_balance {
-                withdraw_reward = module_free_balance;
-            }
             let reserved_lp_total_reward = stake_user.reserved_lp_reward.saturating_add(withdraw_reward);
 
             let mut guard_amount: u128 = 0;
@@ -182,6 +176,7 @@ decl_module! {
                     if guard_amount > guard_reserve {
                         guard_amount = guard_reserve;
                     }
+                    let module_free_balance = T::Currency::free_balance(&Self::account_id()).saturated_into::<u128>();
                     // recheck guard balance
                     let new_module_free_balance = module_free_balance.saturating_sub(withdraw_reward);
                     if guard_amount > new_module_free_balance {
@@ -228,15 +223,9 @@ decl_module! {
             stake_pool = Self::update_pool(symbol, pool_index, stake_user.grade_index);
             stake_pool_vec[stake_user.grade_index as usize] = stake_pool;
 
-            let pending_reward = stake_user.lp_amount.saturating_mul(stake_pool.reward_per_share).
+            let withdraw_reward = stake_user.lp_amount.saturating_mul(stake_pool.reward_per_share).
                 checked_div(REWARD_FACTOR).unwrap_or(0).
                 saturating_sub(stake_user.reward_debt);
-            let mut withdraw_reward = pending_reward;
-            // recheck balance
-            let module_free_balance = T::Currency::free_balance(&Self::account_id()).saturated_into::<u128>();
-            if withdraw_reward > module_free_balance {
-                withdraw_reward = module_free_balance;
-            }
             stake_user.reserved_lp_reward = stake_user.reserved_lp_reward.saturating_add(withdraw_reward);
             stake_user.claimed_reward = stake_user.claimed_reward.saturating_add(withdraw_reward);
             stake_user.reward_debt = stake_user.lp_amount.
