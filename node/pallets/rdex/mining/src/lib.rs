@@ -176,12 +176,6 @@ decl_module! {
                     if guard_amount > guard_reserve {
                         guard_amount = guard_reserve;
                     }
-                    let module_free_balance = T::Currency::free_balance(&Self::account_id()).saturated_into::<u128>();
-                    // recheck guard balance
-                    let new_module_free_balance = module_free_balance.saturating_sub(withdraw_reward);
-                    if guard_amount > new_module_free_balance {
-                        guard_amount = new_module_free_balance;
-                    }
                     if guard_amount > 0 {
                         T::Currency::transfer(&Self::account_id(), &who, guard_amount.saturated_into(), KeepAlive)?;
                         <GuardReserve>::insert(symbol, guard_reserve.saturating_sub(guard_amount));
