@@ -147,7 +147,7 @@ Seiya is the public testnet of StaFi. You need to have some FIS tokens to partic
 
 - Each Telegram account can receive 1 airdrop within 12 hours.
 - Each address can only receive airdrop for 1 time.
-- The address to receive the airdrop needs to be satisfied with: the address prefix should be start with number 2 or 3 ([Create an account](https://docs.stafi.io/guides/account-creation)).
+- The address to receive the airdrop needs to be satisfied with: the address prefix should be start with number 2 or 3 ([Create an account](https://docs.stafi.io/chain-library/guides/account-creation)).
 - The maximum daily distribution of airdrops is 300, first come first served.
 - The number of each airdrop is a fixed value: 500.
 
