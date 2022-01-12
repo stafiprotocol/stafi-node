@@ -67,6 +67,7 @@ decl_error! {
         SwapAmountTooFew,
         LessThanMinOutAmount,
         AddLpUnitIsZero,
+        PoolOneSideZero,
     }
 }
 
@@ -157,7 +158,7 @@ decl_module! {
 
         /// remove liquidity
         #[weight = 10_000_000_000]
-        pub fn remove_liquidity(origin, symbol: RSymbol, rm_unit: u128, swap_unit: u128, min_swap_out_amount: u128, input_is_fis: bool) -> DispatchResult {
+        pub fn remove_liquidity(origin, symbol: RSymbol, rm_unit: u128, swap_unit: u128, min_fis_out_amount: u128, min_rtoken_out_amount: u128, input_is_fis: bool) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let mut pool = Self::swap_pools(symbol).ok_or(Error::<T>::PoolNotExist)?;
             let lp_unit = T::LpCurrency::free_balance(&who, symbol);
@@ -174,7 +175,6 @@ decl_module! {
             if swap_input_amount > 0 {
                 let (swap_result, _) = Self::cal_swap_result(pool.fis_balance, pool.rtoken_balance, swap_input_amount, input_is_fis);
                 ensure!(swap_result > 0, Error::<T>::SwapAmountTooFew);
-                ensure!(swap_result >= min_swap_out_amount, Error::<T>::LessThanMinOutAmount);
 
                 if input_is_fis {
                     ensure!(swap_result < pool.rtoken_balance, Error::<T>::PoolRTokenBalanceNotEnough);
@@ -195,6 +195,8 @@ decl_module! {
                 }
             }
 
+            ensure!(rm_fis_amount >= min_fis_out_amount && rm_rtoken_amount >= min_rtoken_out_amount, Error::<T>::LessThanMinOutAmount);
+            ensure!(!((pool.fis_balance == 0 && pool.rtoken_balance != 0) || (pool.fis_balance != 0 && pool.rtoken_balance == 0)), Error::<T>::PoolOneSideZero);
             ensure!(pool_fis_balance >= rm_fis_amount, Error::<T>::PoolFisBalanceNotEnough);
             ensure!(pool_rtoken_balance >= rm_rtoken_amount, Error::<T>::PoolRTokenBalanceNotEnough);
 
