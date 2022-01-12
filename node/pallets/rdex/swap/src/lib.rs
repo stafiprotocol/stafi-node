@@ -66,6 +66,7 @@ decl_error! {
         NoGuardPool,
         SwapAmountTooFew,
         LessThanMinOutAmount,
+        AddLpUnitIsZero,
     }
 }
 
@@ -132,10 +133,15 @@ decl_module! {
             ensure!(T::Currency::free_balance(&who).saturated_into::<u128>() > fis_amount, Error::<T>::UserFisAmountNotEnough);
 
             let (new_total_pool_unit, add_lp_unit) = Self::cal_pool_unit(pool.total_unit, pool.fis_balance, pool.rtoken_balance, fis_amount, rtoken_amount);
+            ensure!(add_lp_unit > 0, Error::<T>::AddLpUnitIsZero);
 
             // transfer token to module account
-            T::Currency::transfer(&who, &Self::account_id(), fis_amount.saturated_into(), KeepAlive)?;
-            T::RCurrency::transfer(&who, &Self::account_id(), symbol, rtoken_amount)?;
+            if fis_amount > 0 {
+                T::Currency::transfer(&who, &Self::account_id(), fis_amount.saturated_into(), KeepAlive)?;
+            }
+            if rtoken_amount > 0 {
+                T::RCurrency::transfer(&who, &Self::account_id(), symbol, rtoken_amount)?;
+            }
 
             // update pool
             pool.total_unit = new_total_pool_unit;
@@ -151,7 +157,7 @@ decl_module! {
 
         /// remove liquidity
         #[weight = 10_000_000_000]
-        pub fn remove_liquidity(origin, symbol: RSymbol, rm_unit: u128, swap_unit: u128, input_is_fis: bool) -> DispatchResult {
+        pub fn remove_liquidity(origin, symbol: RSymbol, rm_unit: u128, swap_unit: u128, min_swap_out_amount: u128, input_is_fis: bool) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let mut pool = Self::swap_pools(symbol).ok_or(Error::<T>::PoolNotExist)?;
             let lp_unit = T::LpCurrency::free_balance(&who, symbol);
@@ -167,13 +173,20 @@ decl_module! {
             pool.rtoken_balance = pool.rtoken_balance.saturating_sub(rm_rtoken_amount);
             if swap_input_amount > 0 {
                 let (swap_result, _) = Self::cal_swap_result(pool.fis_balance, pool.rtoken_balance, swap_input_amount, input_is_fis);
+                ensure!(swap_result > 0, Error::<T>::SwapAmountTooFew);
+                ensure!(swap_result >= min_swap_out_amount, Error::<T>::LessThanMinOutAmount);
+
                 if input_is_fis {
+                    ensure!(swap_result < pool.rtoken_balance, Error::<T>::PoolRTokenBalanceNotEnough);
+
                     pool.fis_balance = pool.fis_balance.saturating_add(swap_input_amount);
                     pool.rtoken_balance = pool.rtoken_balance.saturating_sub(swap_result);
 
                     rm_fis_amount = rm_fis_amount.saturating_sub(swap_input_amount);
                     rm_rtoken_amount = rm_rtoken_amount.saturating_add(swap_result);
                 } else {
+                    ensure!(swap_result < pool.fis_balance, Error::<T>::PoolFisBalanceNotEnough);
+
                     pool.rtoken_balance = pool.rtoken_balance.saturating_add(swap_input_amount);
                     pool.fis_balance = pool.fis_balance.saturating_sub(swap_result);
 
@@ -363,12 +376,9 @@ impl<T: Trait> Module<T> {
         let use_fis_balance = U512::from(fis_balance);
         let use_rtoken_balance = U512::from(rtoken_balance);
         let mut use_rm_unit = U512::from(rm_unit);
-        let mut use_swap_unit = U512::from(swap_unit);
+        let use_swap_unit = U512::from(swap_unit);
         if rm_unit > pool_unit {
             use_rm_unit = U512::from(pool_unit);
-        }
-        if swap_unit > rm_unit {
-            use_swap_unit = U512::from(rm_unit);
         }
 
         let fis_amount = use_rm_unit
