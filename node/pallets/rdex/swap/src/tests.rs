@@ -70,6 +70,24 @@ fn cal_pool_unit_should_work() {
                 expect_add_unit: 1,
                 expect_new_pool_unit: 2,
             },
+            CalPoolUnitData {
+                old_pool_unit: 100,
+                fis_balance: 100,
+                rtoken_balance: 1,
+                fis_amount: 0,
+                rtoken_amount: 2,
+                expect_add_unit: 34,
+                expect_new_pool_unit: 134,
+            },
+            CalPoolUnitData {
+                old_pool_unit: 100000000000000,
+                fis_balance: 100000000000000,
+                rtoken_balance: 10000000000,
+                fis_amount: 0,
+                rtoken_amount: 20000000000,
+                expect_add_unit: 33333333333334,
+                expect_new_pool_unit: 133333333333334,
+            },
         ];
 
         for data in test_datas {
@@ -390,6 +408,8 @@ fn rm_liquidity_should_work() {
             Origin::signed(1),
             symbol,
             1,
+            0,
+            0,
             0,
             true
         ));
