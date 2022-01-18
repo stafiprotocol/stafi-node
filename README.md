@@ -141,7 +141,7 @@ Seiya is the public testnet of StaFi. You need to have some FIS tokens to partic
 - Join StaFi Faucet Group: [Click Here](https://t.me/StafiFaucet)
 - On the Faucet group, reply /faucet + Account
      + Example: /faucet 35Eb25MdWe3aBuehR3Abx9caw7S68za39aYijvnWB5V3uv3S
-- If your account meets the requirements for issuance, 500 tokens will be automatically distributed to your account, you can view your balance via [StaFi-apps](https://apps.stafi.io).
+- If your account meets the requirements for issuance, 500 tokens will be automatically distributed to your account, you can view your balance via [StaFi-apps](https://test-apps.stafi.io).
 
 ### Faucet distribution rules
 
