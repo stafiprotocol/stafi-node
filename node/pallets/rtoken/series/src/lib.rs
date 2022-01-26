@@ -137,6 +137,7 @@ decl_storage! {
     trait Store for Module<T: Trait> as RTokenSeries {
         /// switch of bond
         BondSwitch get(fn bond_switch): bool = true;
+        RtokenBondSwitch get(fn rtoken_bond_switch): map hasher(blake2_128_concat) RSymbol => bool = true;
         /// (hash, rsymbol) => record
         pub BondRecords get(fn bond_records): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) T::Hash => Option<BondRecord<T::AccountId>>;
         pub BondReasons get(fn bond_reasons): double_map hasher(blake2_128_concat) RSymbol, hasher(blake2_128_concat) T::Hash => Option<BondReason>;
@@ -184,6 +185,15 @@ decl_module! {
             ensure_root(origin)?;
             let state = Self::bond_switch();
             BondSwitch::put(!state);
+			Ok(())
+        }
+
+        /// turn on/off rtoken bond switch
+        #[weight = 1_000_000]
+        fn toggle_rtoken_bond_switch(origin, symbol: RSymbol) -> DispatchResult {
+            ensure_root(origin)?;
+            let state = Self::rtoken_bond_switch(symbol);
+            RtokenBondSwitch::insert(symbol, !state);
 			Ok(())
         }
 
@@ -459,6 +469,7 @@ decl_module! {
         pub fn liquidity_unbond(origin, symbol: RSymbol, pool: Vec<u8>, value: u128, recipient: Vec<u8>) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(value > 0, Error::<T>::LiquidityUnbondZero);
+            ensure!(Self::rtoken_bond_switch(symbol), Error::<T>::BondSwitchClosed);
             ensure!(ledger::BondedPools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotFound);
             match verify_recipient(symbol, &recipient) {
                 false => Err(Error::<T>::InvalidPubkey)?,
@@ -606,6 +617,7 @@ impl<T: Trait> Module<T> {
 
     fn bondable(who: &T::AccountId, pubkey: &Vec<u8>, signature: &Vec<u8>, pool: &Vec<u8>, blockhash: &Vec<u8>, txhash: &Vec<u8>, amount: u128, symbol: RSymbol) -> DispatchResult {
         ensure!(Self::bond_switch(), Error::<T>::BondSwitchClosed);
+        ensure!(Self::rtoken_bond_switch(symbol), Error::<T>::BondSwitchClosed);
         ensure!(amount > 0, Error::<T>::LiquidityBondZero);
         ensure!(Self::is_txhash_available(symbol, &blockhash, &txhash), Error::<T>::TxhashUnavailable);
         ensure!(ledger::BondedPools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotBonded);
