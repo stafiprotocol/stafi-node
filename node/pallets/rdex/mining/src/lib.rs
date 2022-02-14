@@ -69,6 +69,7 @@ decl_error! {
         LpStillLocked,
         GradeIndexOverflow,
         LpBalanceNotEmpty,
+        DepositNotAllowed,
     }
 }
 
@@ -86,6 +87,10 @@ decl_storage! {
         pub GuardLine get(fn guard_line): map hasher(blake2_128_concat) (RSymbol, u32) => u32 = 1_440_000;
         /// guard Reserve: symbol => reserve fis amount
         pub GuardReserve get(fn guard_reserve): map hasher(blake2_128_concat) RSymbol => u128;
+        /// lp whitelist
+        pub LpWhitelist get(fn lp_whitelist): map hasher(blake2_128_concat) (RSymbol, T::AccountId) => bool = false;
+        /// lp switch
+        pub LpSwitch get(fn lp_switch): map hasher(blake2_128_concat)  RSymbol => bool = false;
     }
 }
 
@@ -97,6 +102,8 @@ decl_module! {
         #[weight = 10_000_000_000]
         pub fn deposit(origin, symbol: RSymbol, pool_index: u32, grade_index: u32, lp_amount: u128) -> DispatchResult {
             let who = ensure_signed(origin)?;
+            ensure!(Self::lp_whitelist((symbol, who.clone())) || Self::lp_switch(symbol), Error::<T>::DepositNotAllowed);
+
             let mut stake_pool_vec = Self::stake_pools((symbol, pool_index)).ok_or(Error::<T>::StakePoolNotExist)?;
             let mut stake_pool = *stake_pool_vec.get(grade_index as usize).ok_or(Error::<T>::GradeIndexOverflow)?;
             let swap_pool = rdex_swap::SwapPools::get(symbol).ok_or(Error::<T>::SwapPoolNotExist)?;
@@ -348,6 +355,28 @@ decl_module! {
             <GuardReserve>::insert(symbol, amount);
             Ok(())
         }
+         /// add lp to whitelist
+         #[weight = 10_000]
+         pub fn add_lp_to_whitelist(origin, symbol: RSymbol, who: T::AccountId) -> DispatchResult {
+             ensure_root(origin.clone())?;
+             <LpWhitelist<T>>::insert((symbol, who), true);
+             Ok(())
+         }
+         /// remove lp from whitelist
+         #[weight = 10_000]
+         pub fn remove_lp_from_whitelist(origin, symbol: RSymbol, who: T::AccountId) -> DispatchResult {
+             ensure_root(origin.clone())?;
+             <LpWhitelist<T>>::remove((symbol, who));
+             Ok(())
+         }
+         /// turn on/off lp switch, default closed
+         #[weight = 100_000]
+         fn toggle_lp_switch(origin, symbol: RSymbol) -> DispatchResult {
+             ensure_root(origin)?;
+             let state = Self::lp_switch(symbol);
+             LpSwitch::insert(symbol, !state);
+             Ok(())
+         }
     }
 }
 
