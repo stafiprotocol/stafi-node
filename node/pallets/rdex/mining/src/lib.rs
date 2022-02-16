@@ -279,6 +279,27 @@ decl_module! {
             Ok(())
         }
 
+        /// update pool params
+        #[weight = 10_000]
+        pub fn up_pool(origin, symbol: RSymbol, pool_index: u32, grade_index: u32, reward_per_block: u128, total_reward: u128) -> DispatchResult {
+            ensure_root(origin.clone())?;
+            let mut stake_pool_vec = Self::stake_pools((symbol, pool_index)).ok_or(Error::<T>::StakePoolNotExist)?;
+            let mut stake_pool = *stake_pool_vec.get(grade_index as usize).ok_or(Error::<T>::GradeIndexOverflow)?;
+            let left_reward = if total_reward > stake_pool.total_reward{
+                total_reward.saturating_sub(stake_pool.total_reward).saturating_add(stake_pool.left_reward)
+            } else {
+                stake_pool.left_reward.saturating_sub(stake_pool.total_reward.saturating_sub(total_reward))
+            };
+
+            stake_pool.reward_per_block = reward_per_block;
+            stake_pool.total_reward = total_reward;
+            stake_pool.left_reward = left_reward;
+
+            stake_pool_vec.push(stake_pool);
+            <StakePools>::insert((symbol, pool_index), stake_pool_vec);
+            Ok(())
+        }
+
         /// remove pool
         #[weight = 10_000]
         pub fn rm_pool(origin, symbol: RSymbol, pool_index: u32, grade_index: u32) -> DispatchResult {
