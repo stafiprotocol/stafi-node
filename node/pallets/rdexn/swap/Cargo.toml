@@ -1,6 +1,6 @@
 [package]
 name = "rdexn-swap"
-version = "0.4.10"
+version = "0.5.0"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
 
