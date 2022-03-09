@@ -105,10 +105,16 @@ decl_module! {
                 T::Currency::transfer(&who, &receiver, fee.saturated_into(), KeepAlive)?;
             }
 
+            let op_migrate_target = <bridge::Module<T>>::migrate_target(symbol);
+
             if symbol == RSymbol::RETH {
                 T::RCurrency::burn(&who, symbol, amount)?;
             } else {
-                T::RCurrency::transfer(&who, &bridger, symbol, amount)?;
+                if op_migrate_target.is_some() && op_migrate_target.unwrap() == dest_id {
+                    T::RCurrency::burn(&who, symbol, amount)?;
+                } else {
+                    T::RCurrency::transfer(&who, &bridger, symbol, amount)?;
+                }
             }
 
             <bridge::Module<T>>::transfer_fungible(who, dest_id, resource, recipient, U256::from(amount))

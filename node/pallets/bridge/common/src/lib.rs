@@ -155,6 +155,8 @@ decl_event! {
         ProposalCancelled(ChainId, DepositNonce),
         /// Execution of call succeeded
         ProposalExecuted(ChainId, DepositNonce),
+        /// set migrate target
+        SetMigrateTarget(RSymbol, ChainId),
     }
 }
 
@@ -249,6 +251,9 @@ decl_storage! {
         pub ResourceXsymbol get(fn resource_xsymbol): map hasher(blake2_128_concat) ResourceId => Option<XSymbol>;
         /// rsymbol => ResourceId
         pub XsymbolResource get(fn xsymbol_resource): map hasher(blake2_128_concat) XSymbol => Option<ResourceId>;
+
+        /// rsymbol => chainId
+        pub MigrateTarget get(fn migrate_target): map hasher(blake2_128_concat) RSymbol => Option<ChainId>;
     }
 }
 
@@ -501,6 +506,24 @@ decl_module! {
 
             <IsPaused>::put(is_paused);
 
+            Ok(())
+        }
+
+        /// Set migrate target.
+        ///
+        /// # <weight>
+        /// - O(1) lookup and insert
+        /// # </weight>
+        #[weight = 100_000_000]
+        pub fn set_migrate_target(origin, symbol: RSymbol, id: ChainId) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+
+            ensure!(Self::chain_whitelisted(id), Error::<T>::InvalidChainId);
+            ensure!(<ProxyAccounts<T>>::contains_key(&who), Error::<T>::InvalidProxyAccount);
+
+            <MigrateTarget>::insert(symbol, id);
+
+            Self::deposit_event(RawEvent::SetMigrateTarget(symbol, id));
             Ok(())
         }
     }
