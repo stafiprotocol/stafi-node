@@ -95,26 +95,6 @@ fn remove_whitelist_chain_should_work() {
 
 
 #[test]
-fn set_get_threshold() {
-    new_test_ext().execute_with(|| {
-        assert_eq!(<RelayerThreshold>::get(), 1);
-
-        assert_ok!(BridgeCommon::set_threshold(Origin::root(), TEST_THRESHOLD));
-		assert_eq!(<RelayerThreshold>::get(), TEST_THRESHOLD);
-
-        assert_noop!(
-            BridgeCommon::set_threshold(Origin::signed(42), 5),
-            BadOrigin
-        );
-
-        assert_noop!(
-            BridgeCommon::set_threshold(Origin::root(), 0),
-            Error::<Test>::InvalidThreshold
-        );
-    })
-}
-
-#[test]
 fn setup_resources() {
     new_test_ext().execute_with(|| {
         let id: ResourceId = [1; 32];
@@ -139,46 +119,6 @@ fn setup_resources() {
     })
 }
 
-#[test]
-fn add_remove_relayer() {
-    new_test_ext().execute_with(|| {
-        assert_ok!(BridgeCommon::set_threshold(Origin::root(), TEST_THRESHOLD));
-        assert_eq!(BridgeCommon::relayer_count(), 0);
-
-        assert_ok!(BridgeCommon::add_relayer(Origin::root(), RELAYER_A));
-        
-        assert_noop!(
-            BridgeCommon::add_relayer(Origin::signed(42), RELAYER_B),
-            BadOrigin
-        );
-        assert_ok!(BridgeCommon::add_relayer(Origin::root(), RELAYER_B));
-        assert_ok!(BridgeCommon::add_relayer(Origin::root(), RELAYER_C));
-        assert_eq!(BridgeCommon::relayer_count(), 3);
-        assert_noop!(
-            BridgeCommon::add_relayer(Origin::root(), RELAYER_C),
-            Error::<Test>::RelayerAlreadyExists
-        );
-
-        // Already exists
-        assert_noop!(
-            BridgeCommon::add_relayer(Origin::root(), RELAYER_A),
-            Error::<Test>::RelayerAlreadyExists
-        );
-
-        // Confirm removal
-        assert_noop!(
-            BridgeCommon::remove_relayer(Origin::signed(42), RELAYER_B),
-            BadOrigin
-        );
-        assert_ok!(BridgeCommon::remove_relayer(Origin::root(), RELAYER_B));
-        assert_eq!(BridgeCommon::relayer_count(), 2);
-        assert_noop!(
-            BridgeCommon::remove_relayer(Origin::root(), RELAYER_B),
-            Error::<Test>::RelayerInvalid
-        );
-        assert_eq!(BridgeCommon::relayer_count(), 2);
-    })
-}
 
 #[test]
 fn map_resource_to_rsymbol_should_work() {

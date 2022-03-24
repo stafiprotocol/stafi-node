@@ -23,8 +23,6 @@ use codec::{Encode};
 use rclaim;
 use bridge_common as bridge;
 use sp_core::U256;
-#[cfg(test)]
-mod tests;
 
 pub mod models;
 pub use models::*;

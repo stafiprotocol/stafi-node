@@ -13,6 +13,9 @@ use sp_io::{hashing::keccak_256, crypto::secp256k1_ecdsa_recover};
 use node_primitives::{RSymbol, ChainType, Sr25519AppCrypto, Ed25519AppCrypto, EcdsaAppCrypto};
 use frame_system::offchain::AppCrypto;
 
+#[cfg(test)]
+mod tests;
+
 pub fn verify_signature(symbol: RSymbol, pubkey: &Vec<u8>, signature: &Vec<u8>, message: &Vec<u8>) -> SigVerifyResult {
     match symbol.chain_type() {
         ChainType::Substrate => {
@@ -178,3 +181,4 @@ pub fn to_ascii_hex(data: &[u8]) -> Vec<u8> {
 	}
 	r
 }
+

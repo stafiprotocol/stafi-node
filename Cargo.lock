@@ -525,6 +525,7 @@ dependencies = [
  "frame-system",
  "hex",
  "node-primitives",
+ "pallet-balances",
  "parity-scale-codec",
  "serde",
  "sp-core",
