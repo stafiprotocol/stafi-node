@@ -5714,6 +5714,7 @@ dependencies = [
  "bridge-common",
  "frame-support",
  "frame-system",
+ "general-signature",
  "hex",
  "hex-literal",
  "node-primitives",
