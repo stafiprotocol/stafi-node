@@ -16,7 +16,7 @@ use codec::{Decode, Encode, EncodeLike};
 use frame_support::{
     Parameter, decl_error, decl_event, decl_module, decl_storage,
     dispatch::DispatchResult, ensure,
-    traits::{EnsureOrigin, Get},
+    traits::{Currency, EnsureOrigin, Get, ExistenceRequirement::{KeepAlive}},
     weights::{GetDispatchInfo, Pays},
 };
 
@@ -24,7 +24,7 @@ use frame_system::{self as system, ensure_signed, ensure_root};
 use sp_core::U256;
 use sp_runtime::{
     RuntimeDebug, ModuleId, DispatchError,
-    traits::{AccountIdConversion, StaticLookup, Dispatchable}
+    traits::{AccountIdConversion, Dispatchable}
 };
 use node_primitives::{ChainId, ETH_CHAIN_ID, BSC_CHAIN_ID, Balance, RSymbol, XSymbol};
 use bridge_relayers as brelayers;
@@ -39,7 +39,7 @@ const MODULE_ID: ModuleId = ModuleId(*b"cb/bridg");
 
 pub type DepositNonce = u64;
 pub type ResourceId = [u8; 32];
-
+type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 /// Helper function to concatenate a chain ID and some bytes to produce a resource ID.
 /// The common format is (31 bytes unique ID + 1 byte chain ID).
 pub fn derive_resource_id(chain: ChainId, id: &[u8]) -> ResourceId {
@@ -115,6 +115,8 @@ impl<AccountId, BlockNumber: Default> Default for ProposalVotes<AccountId, Block
 }
 
 pub trait Trait: system::Trait + brelayers::Trait {
+    /// The currency mechanism.
+    type Currency: Currency<Self::AccountId>;
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
     /// Origin used to administer the pallet
     type AdminOrigin: EnsureOrigin<Self::Origin>;
@@ -131,12 +133,6 @@ decl_event! {
     pub enum Event<T> where
         AccountId = <T as system::Trait>::AccountId
     {
-        /// Vote threshold has changed (new_threshold)
-        RelayerThresholdChanged(u32),
-        /// Relayer added to set
-        RelayerAdded(AccountId),
-        /// Relayer removed from set
-        RelayerRemoved(AccountId),
         /// Chain now available for transfers (chain_id)
         ChainWhitelisted(ChainId),
         /// Chain now unavailable
@@ -155,15 +151,13 @@ decl_event! {
         ProposalCancelled(ChainId, DepositNonce),
         /// Execution of call succeeded
         ProposalExecuted(ChainId, DepositNonce),
+        /// set migrate target
+        SetMigrateTarget(RSymbol, ChainId),
     }
 }
 
 decl_error! {
     pub enum Error for Module<T: Trait> {
-        /// Relayer threshold not set
-        ThresholdNotSet,
-        /// Relayer threshold should larger than 0
-        InvalidThreshold,
         /// Provided chain Id is not valid
         InvalidChainId,
         /// Interactions with this chain is not permitted
@@ -174,10 +168,6 @@ decl_error! {
         InvalidProxyAccount,
         /// Resource ID provided isn't mapped to anything
         ResourceDoesNotExist,
-        /// Relayer already in set
-        RelayerAlreadyExists,
-        /// Provided accountId is not a relayer
-        RelayerInvalid,
         /// Protected operation, must be performed by relayer
         MustBeRelayer,
         /// Relayer has already submitted some vote for this proposal
@@ -249,6 +239,9 @@ decl_storage! {
         pub ResourceXsymbol get(fn resource_xsymbol): map hasher(blake2_128_concat) ResourceId => Option<XSymbol>;
         /// rsymbol => ResourceId
         pub XsymbolResource get(fn xsymbol_resource): map hasher(blake2_128_concat) XSymbol => Option<ResourceId>;
+
+        /// rsymbol => chainId
+        pub MigrateTarget get(fn migrate_target): map hasher(blake2_128_concat) RSymbol => Option<ChainId>;
     }
 }
 
@@ -261,23 +254,6 @@ decl_module! {
         const ProposalLifetime: T::BlockNumber = T::ProposalLifetime::get();
 
         fn deposit_event() = default;
-
-        /// Sets the vote threshold for proposals.
-        ///
-        /// This threshold is used to determine how many votes are required
-        /// before a proposal is executed.
-        ///
-        /// # <weight>
-        /// - O(1) lookup and insert
-        /// # </weight>
-        #[weight = 10_000]
-        pub fn set_threshold(origin, threshold: u32) -> DispatchResult {
-            Self::ensure_admin(origin)?;
-            ensure!(threshold > 0, Error::<T>::InvalidThreshold);
-            <RelayerThreshold>::put(threshold);
-            Self::deposit_event(RawEvent::RelayerThresholdChanged(threshold));
-            Ok(())
-        }
 
         /// Stores a method name on chain under an associated resource ID.
         ///
@@ -303,42 +279,6 @@ decl_module! {
         pub fn remove_resource(origin, id: ResourceId) -> DispatchResult {
             Self::ensure_admin(origin)?;
             <Resources>::remove(id);
-            Ok(())
-        }
-
-        /// Adds a new relayer to the relayer set.
-        ///
-        /// # <weight>
-        /// - O(1) lookup and insert
-        /// # </weight>
-        #[weight = 10_000]
-        pub fn add_relayer(origin, who: <T::Lookup as StaticLookup>::Source) -> DispatchResult {
-            Self::ensure_admin(origin)?;
-            let relayer = T::Lookup::lookup(who)?;
-            ensure!(!Self::is_relayer(&relayer), Error::<T>::RelayerAlreadyExists);
-
-            <Relayers<T>>::insert(&relayer, true);
-            <RelayerCount>::mutate(|i| *i += 1);
-
-            Self::deposit_event(RawEvent::RelayerAdded(relayer));
-            Ok(())
-        }
-
-        /// Removes an existing relayer from the set.
-        ///
-        /// # <weight>
-        /// - O(1) lookup and removal
-        /// # </weight>
-        #[weight = 10_000]
-        pub fn remove_relayer(origin, dest: <T::Lookup as StaticLookup>::Source) -> DispatchResult {
-            Self::ensure_admin(origin)?;
-            let relayer = T::Lookup::lookup(dest)?;
-            ensure!(Self::is_relayer(&relayer), Error::<T>::RelayerInvalid);
-
-            <Relayers<T>>::remove(&relayer);
-            <RelayerCount>::mutate(|i| *i -= 1);
-
-            Self::deposit_event(RawEvent::RelayerRemoved(relayer));
             Ok(())
         }
 
@@ -503,6 +443,33 @@ decl_module! {
 
             Ok(())
         }
+
+        /// Set migrate target.
+        ///
+        /// # <weight>
+        /// - O(1) lookup and insert
+        /// # </weight>
+        #[weight = 100_000_000]
+        pub fn set_migrate_target(origin, symbol: RSymbol, id: ChainId) -> DispatchResult {
+            Self::ensure_admin(origin)?;
+            ensure!(Self::chain_whitelisted(id), Error::<T>::InvalidChainId);
+
+            <MigrateTarget>::insert(symbol, id);
+
+            Self::deposit_event(RawEvent::SetMigrateTarget(symbol, id));
+            Ok(())
+        }
+
+        /// lock initialization native token
+        #[weight = 100_000_000]
+        pub fn lock_initialization_native_token(origin, account: T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+            Self::ensure_admin(origin)?;
+
+            <T as Trait>::Currency::transfer(&account, &Self::account_id(), amount, KeepAlive)?;
+
+            Ok(())
+        }
+
     }
 }
 
@@ -603,11 +570,6 @@ impl<T: Trait> Module<T> {
             to,
         ));
         Ok(())
-    }
-
-    /// Checks if who is a relayer
-    pub fn is_relayer(who: &T::AccountId) -> bool {
-        Self::relayers(who)
     }
 
     /// Commits a vote for a proposal. If the proposal doesn't exist it will be created.

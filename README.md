@@ -18,7 +18,7 @@ git clone https://github.com/stafiprotocol/stafi-node.git
 cd stafi-node
 
 ### Mainnet
-git checkout v0.4.10
+git checkout v0.5.1
 
 ### Testnet
 git checkout seiya
@@ -141,13 +141,13 @@ Seiya is the public testnet of StaFi. You need to have some FIS tokens to partic
 - Join StaFi Faucet Group: [Click Here](https://t.me/StafiFaucet)
 - On the Faucet group, reply /faucet + Account
      + Example: /faucet 35Eb25MdWe3aBuehR3Abx9caw7S68za39aYijvnWB5V3uv3S
-- If your account meets the requirements for issuance, 500 tokens will be automatically distributed to your account, you can view your balance via [StaFi-apps](https://apps.stafi.io).
+- If your account meets the requirements for issuance, 500 tokens will be automatically distributed to your account, you can view your balance via [StaFi-apps](https://test-apps.stafi.io).
 
 ### Faucet distribution rules
 
 - Each Telegram account can receive 1 airdrop within 12 hours.
 - Each address can only receive airdrop for 1 time.
-- The address to receive the airdrop needs to be satisfied with: the address prefix should be start with number 2 or 3 ([Create an account](https://docs.stafi.io/guides/account-creation)).
+- The address to receive the airdrop needs to be satisfied with: the address prefix should be start with number 2 or 3 ([Create an account](https://docs.stafi.io/chain-library/guides/account-creation)).
 - The maximum daily distribution of airdrops is 300, first come first served.
 - The number of each airdrop is a fixed value: 500.
 

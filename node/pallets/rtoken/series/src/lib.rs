@@ -16,20 +16,16 @@ use sp_runtime::{
 };
 use rtoken_balances::{traits::{Currency as RCurrency}};
 use node_primitives::{RSymbol, Balance, ChainType, ChainId};
+use general_signature::{verify_recipient, to_ascii_hex, SigVerifyResult, verify_signature};
 use rtoken_ledger::{self as ledger, Unbonding};
 use rtoken_relayers as relayers;
 use codec::{Encode};
 use rclaim;
 use bridge_common as bridge;
 use sp_core::U256;
-#[cfg(test)]
-mod tests;
 
 pub mod models;
 pub use models::*;
-
-pub mod signature;
-pub use signature::*;
 
 pub const MAX_UNLOCKING_CHUNKS: usize = 32;
 pub const MIN_UNLOCKING_CHUNKS: usize = 16;

@@ -1,6 +1,6 @@
 [package]
 name = "bridge-common"
-version = "0.4.10"
+version = "0.5.1"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
 
@@ -25,6 +25,7 @@ bridge-relayers = { path = "../relayers", default-features = false}
 [dev-dependencies]
 sp-io = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 hex = { version = "0.4", default-features = false}
+pallet-balances = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
 [features]
 default = ["std"]
@@ -37,4 +38,5 @@ std = [
   "frame-support/std",
   "frame-system/std",
   "bridge-relayers/std",
+  "pallet-balances/std",
 ]

@@ -1,5 +1,3 @@
-
-
 /// Copyright 2019-2021 Stafi Protocol.
 // This file is part of Stafi.
 
@@ -11,23 +9,18 @@
 // You should have received a copy of the GNU General Public License
 // along with Stafi.  If not, see <http://www.gnu.org/licenses/>.
 
+use sp_std::{cell::RefCell};
 use sp_runtime::{Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::Header};
 use sp_core::H256;
-use frame_support::{assert_ok, impl_outer_origin, impl_outer_event, impl_outer_dispatch, parameter_types, weights::Weight};
+use frame_support::{assert_ok, impl_outer_origin, impl_outer_dispatch, parameter_types, weights::Weight, traits::{Get}};
 use frame_system::{EnsureRoot};
 use node_primitives::{ChainId, BlockNumber};
-use crate as bridge_common;
 use crate::{Module, Trait, ResourceId};
+
+pub(crate) type Balance = u128;
 
 impl_outer_origin!{
 	pub enum Origin for Test where system = frame_system {}
-}
-impl_outer_event!{
-	pub enum TestEvent for Test {
-		frame_system<T>,
-		bridge_relayers<T>,
-		bridge_common<T>,
-	}
 }
 
 impl_outer_dispatch! {
@@ -62,7 +55,7 @@ impl frame_system::Trait for Test {
 	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = TestEvent;
+	type Event = ();
 	type BlockHashCount = BlockHashCount;
 	type MaximumBlockWeight = MaximumBlockWeight;
 	type DbWeight = ();
@@ -73,14 +66,35 @@ impl frame_system::Trait for Test {
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
 	type PalletInfo = ();
-	type AccountData = ();
+	type AccountData = pallet_balances::AccountData<Balance>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 }
 
 impl bridge_relayers::Trait for Test {
-	type Event = TestEvent;
+	type Event = ();
+}
+
+thread_local! {
+	static EXISTENTIAL_DEPOSIT: RefCell<Balance> = RefCell::new(0);
+}
+
+pub struct ExistentialDeposit;
+impl Get<Balance> for ExistentialDeposit {
+	fn get() -> Balance {
+		EXISTENTIAL_DEPOSIT.with(|v| *v.borrow())
+	}
+}
+
+impl pallet_balances::Trait for Test {
+	type MaxLocks = ();
+	type Balance = Balance;
+	type DustRemoval = ();
+	type Event = ();
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -89,19 +103,17 @@ parameter_types! {
 }
 
 impl Trait for Test {
-	type Event = TestEvent;
+	type Currency = Balances;
+	type Event = ();
 	type AdminOrigin = EnsureRoot<Self::AccountId>;
 	type ChainIdentity = ChainIdentity;
 	type Proposal = Call;
 	type ProposalLifetime = ProposalLifetime;
 }
 
-pub fn new_test_ext() -> sp_io::TestExternalities {
-	let t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-	t.into()
-}
 
 pub type System = frame_system::Module<Test>;
+pub type Balances = pallet_balances::Module<Test>;
 pub type BridgeRelayers = bridge_relayers::Module<Test>;
 pub type BridgeCommon = Module<Test>;
 
@@ -109,8 +121,6 @@ pub type BridgeCommon = Module<Test>;
 pub const RELAYER_A: u64 = 0x2;
 pub const RELAYER_B: u64 = 0x3;
 pub const RELAYER_C: u64 = 0x4;
-// // pub const ENDOWED_BALANCE: u64 = 100_000_000;
-pub const TEST_THRESHOLD: u32 = 2;
 
 pub fn new_test_ext_initialized(
     src_id: ChainId,
@@ -119,13 +129,6 @@ pub fn new_test_ext_initialized(
 ) -> sp_io::TestExternalities {
     let mut t = new_test_ext();
     t.execute_with(|| {
-        // Set and check threshold
-        assert_ok!(BridgeCommon::set_threshold(Origin::root(), TEST_THRESHOLD));
-        assert_eq!(BridgeCommon::relayer_threshold(), TEST_THRESHOLD);
-        // Add relayers
-        assert_ok!(BridgeCommon::add_relayer(Origin::root(), RELAYER_A));
-        assert_ok!(BridgeCommon::add_relayer(Origin::root(), RELAYER_B));
-        assert_ok!(BridgeCommon::add_relayer(Origin::root(), RELAYER_C));
         // Whitelist chain
         assert_ok!(BridgeCommon::whitelist_chain(Origin::root(), src_id));
         // Set and check resource ID mapped to some junk data
@@ -133,4 +136,16 @@ pub fn new_test_ext_initialized(
         assert_eq!(BridgeCommon::resources(r_id).is_some(), true);
     });
     t
+}
+
+pub fn new_test_ext() -> sp_io::TestExternalities {
+	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+	pallet_balances::GenesisConfig::<Test> {
+				balances: vec![
+					(1, 100),
+				],
+			}.assimilate_storage(&mut t).unwrap();
+
+	t.into()
 }

@@ -1,6 +1,6 @@
 [package]
 name = "node-testing"
-version = "0.4.10"
+version = "0.5.1"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 description = "Test utilities for Stafi node."
 edition = "2018"
@@ -18,9 +18,9 @@ codec = { package = "parity-scale-codec", version = "1.3.4" }
 pallet-grandpa = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 pallet-indices = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-keyring = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-node-executor = { version = "0.4.10", path = "../executor" }
-node-primitives = { version = "0.4.10", path = "../primitives" }
-node-runtime = { version = "0.4.10", path = "../runtime" }
+node-executor = { version = "0.5.1", path = "../executor" }
+node-primitives = { version = "0.5.1", path = "../primitives" }
+node-runtime = { version = "0.5.1", path = "../runtime" }
 sp-core = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-io = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 frame-support = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
