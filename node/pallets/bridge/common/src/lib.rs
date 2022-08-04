@@ -16,7 +16,7 @@ use codec::{Decode, Encode, EncodeLike};
 use frame_support::{
     Parameter, decl_error, decl_event, decl_module, decl_storage,
     dispatch::DispatchResult, ensure,
-    traits::{Currency, EnsureOrigin, Get, ExistenceRequirement::{KeepAlive}},
+    traits::{EnsureOrigin, Get},
     weights::{GetDispatchInfo, Pays},
 };
 
@@ -39,7 +39,6 @@ const MODULE_ID: ModuleId = ModuleId(*b"cb/bridg");
 
 pub type DepositNonce = u64;
 pub type ResourceId = [u8; 32];
-type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 /// Helper function to concatenate a chain ID and some bytes to produce a resource ID.
 /// The common format is (31 bytes unique ID + 1 byte chain ID).
 pub fn derive_resource_id(chain: ChainId, id: &[u8]) -> ResourceId {
@@ -115,8 +114,6 @@ impl<AccountId, BlockNumber: Default> Default for ProposalVotes<AccountId, Block
 }
 
 pub trait Trait: system::Trait + brelayers::Trait {
-    /// The currency mechanism.
-    type Currency: Currency<Self::AccountId>;
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
     /// Origin used to administer the pallet
     type AdminOrigin: EnsureOrigin<Self::Origin>;
@@ -457,16 +454,6 @@ decl_module! {
             <MigrateTarget>::insert(symbol, id);
 
             Self::deposit_event(RawEvent::SetMigrateTarget(symbol, id));
-            Ok(())
-        }
-
-        /// lock initialization native token
-        #[weight = 100_000_000]
-        pub fn lock_initialization_native_token(origin, account: T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
-            Self::ensure_admin(origin)?;
-
-            <T as Trait>::Currency::transfer(&account, &Self::account_id(), amount, KeepAlive)?;
-
             Ok(())
         }
 

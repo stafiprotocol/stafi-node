@@ -71,10 +71,10 @@ decl_module! {
             let fee: BalanceOf<T> = fee.saturated_into();
 
             let total_amount = amount.saturating_add(fee);
-            <T as Trait>::Currency::transfer(&source, &bridger, total_amount, KeepAlive)?;
+            T::Currency::transfer(&source, &bridger, total_amount, KeepAlive)?;
 
             if fee > Zero::zero() {
-                <T as Trait>::Currency::transfer(&bridger, &receiver, fee, KeepAlive)?;
+                T::Currency::transfer(&bridger, &receiver, fee, KeepAlive)?;
             }
 
             let resource_id = T::NativeTokenId::get();
@@ -85,7 +85,7 @@ decl_module! {
         #[weight = 195_000_000]
         pub fn transfer_native_back(origin, recipient: T::AccountId, amount: BalanceOf<T>, _resource_id: ResourceId) -> DispatchResult {
             let bridge_id = T::BridgeOrigin::ensure_origin(origin)?;
-            <T as Trait>::Currency::transfer(&bridge_id, &recipient, amount, KeepAlive)?;
+            T::Currency::transfer(&bridge_id, &recipient, amount, KeepAlive)?;
 
             Ok(())
         }
@@ -102,7 +102,7 @@ decl_module! {
             T::RCurrency::ensure_can_withdraw(&who, symbol, amount, new_rbalance)?;
 
             if fee > 0 {
-                <T as Trait>::Currency::transfer(&who, &receiver, fee.saturated_into(), KeepAlive)?;
+                T::Currency::transfer(&who, &receiver, fee.saturated_into(), KeepAlive)?;
             }
 
             if symbol == RSymbol::RETH {
@@ -146,7 +146,7 @@ decl_module! {
             T::XCurrency::ensure_can_withdraw(&who, symbol, amount, new_rbalance)?;
 
             if fee > 0 {
-                <T as Trait>::Currency::transfer(&who, &receiver, fee.saturated_into(), KeepAlive)?;
+                T::Currency::transfer(&who, &receiver, fee.saturated_into(), KeepAlive)?;
             }
             T::XCurrency::burn(&who, symbol, amount)?;
 

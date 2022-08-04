@@ -858,7 +858,6 @@ impl bridge_relayers::Trait for Runtime {
 }
 
 impl bridge_common::Trait for Runtime {
-	type Currency = Balances;
 	type Event = Event;
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type Proposal = Call;
