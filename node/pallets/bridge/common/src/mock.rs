@@ -103,7 +103,6 @@ parameter_types! {
 }
 
 impl Trait for Test {
-	type Currency = Balances;
 	type Event = ();
 	type AdminOrigin = EnsureRoot<Self::AccountId>;
 	type ChainIdentity = ChainIdentity;
@@ -113,7 +112,6 @@ impl Trait for Test {
 
 
 pub type System = frame_system::Module<Test>;
-pub type Balances = pallet_balances::Module<Test>;
 pub type BridgeRelayers = bridge_relayers::Module<Test>;
 pub type BridgeCommon = Module<Test>;
 
