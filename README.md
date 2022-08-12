@@ -18,7 +18,7 @@ git clone https://github.com/stafiprotocol/stafi-node.git
 cd stafi-node
 
 ### Mainnet
-git checkout v0.5.1
+git checkout v0.5.2
 
 ### Testnet
 git checkout seiya
