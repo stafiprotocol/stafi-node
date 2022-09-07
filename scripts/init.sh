@@ -63,10 +63,11 @@ fi
 if ! which rustup >/dev/null 2>&1; then
 	curl https://sh.rustup.rs -sSf | sh -s -- -y
 	source ~/.cargo/env
-	rustup default stable
+	rustup install 1.59.0
+	rustup default 1.59.0
 else
-	rustup update
-	rustup default stable
+	rustup install 1.59.0
+	rustup default 1.59.0
 fi
 
 rustup update nightly
