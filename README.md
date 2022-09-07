@@ -28,6 +28,8 @@ Install system dependencies(recommend ubuntu or macos):
 
 ```bash
 ./scripts/init.sh
+rustup install 1.59.0
+rustup default 1.59.0
 ```
 
 > You can add `export PATH="$HOME/.cargo/bin:$PATH"` in the ~/.bashrc and restart the terminal or run source ~/.cargo/env to update the environment.
