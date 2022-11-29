@@ -405,6 +405,75 @@ decl_module! {
             Ok(())
         }
 
+        /// execute bond and swap
+        #[weight = 100_000]
+        pub fn execute_bond_and_swap(origin, pool: Vec<u8>, blockhash: Vec<u8>, txhash: Vec<u8>, amount: u128,
+            symbol: RSymbol, stafi_recipient: T::AccountId, dest_recipient: Vec<u8>, dest_id: ChainId, reason: BondReason) -> DispatchResult {
+            T::VoterOrigin::ensure_origin(origin)?;
+           
+            ensure!(Self::bond_switch(), Error::<T>::BondSwitchClosed);
+            ensure!(Self::rtoken_bond_switch(symbol), Error::<T>::BondSwitchClosed);
+            ensure!(amount > 0, Error::<T>::LiquidityBondZero);
+            ensure!(Self::is_txhash_available(symbol, &blockhash, &txhash), Error::<T>::TxhashUnavailable);
+            ensure!(ledger::BondedPools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotBonded);
+
+            let record = BondRecord::new(stafi_recipient.clone(), symbol, Vec::new(), pool.clone(), blockhash.clone(), txhash.clone(), amount);
+            let bond_id = <T::Hashing as Hash>::hash_of(&record);
+            ensure!(Self::bond_records(symbol, &bond_id).is_none(), Error::<T>::BondRepeated);
+            let old_count = Self::account_bond_count(symbol, &stafi_recipient);
+            let new_count = old_count.checked_add(1).ok_or(Error::<T>::OverFlow)?;
+
+            if reason != BondReason::Pass {
+                if dest_id != T::ChainIdentity::get() {
+                    let (_, swap_receiver, bridger) = <bridge::Module<T>>::swapable(&dest_recipient, dest_id)?;
+                    <bridge::Module<T>>::rsymbol_resource(&symbol).ok_or(bridge::Error::<T>::RsymbolNotMapped)?;
+
+                    let bond_swap = BondSwap {bonder: stafi_recipient.clone(),swap_fee: 0, swap_receiver, bridger, recipient: dest_recipient, dest_id, expire: Zero::zero(), bond_state: BondState::Fail, refunded: false};
+
+                    <BondSwaps<T>>::insert(symbol, &bond_id, bond_swap);
+                }
+
+                <BondReasons<T>>::insert(symbol, &bond_id, reason);
+                <BondStates>::insert(symbol, (&record.blockhash, &record.txhash), BondState::Fail);
+                return Ok(())
+            }
+
+            let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(symbol, record.amount);
+
+            if dest_id != T::ChainIdentity::get() {
+                let (_, swap_receiver, bridger) = <bridge::Module<T>>::swapable(&dest_recipient, dest_id)?;
+                <bridge::Module<T>>::rsymbol_resource(&symbol).ok_or(bridge::Error::<T>::RsymbolNotMapped)?;
+
+                let bond_swap = BondSwap {bonder: stafi_recipient.clone(),swap_fee: 0, swap_receiver, bridger, recipient: dest_recipient, dest_id, expire: Zero::zero(), bond_state: BondState::Success, refunded: false};
+                let resource = <bridge::Module<T>>::rsymbol_resource(&symbol).ok_or(bridge::Error::<T>::RsymbolNotMapped)?;
+                
+                <T as Trait>::RCurrency::mint(&bond_swap.bridger, symbol, rbalance)?;
+                <bridge::Module<T>>::transfer_fungible(bond_swap.bonder.clone(), bond_swap.dest_id.clone(), resource, bond_swap.recipient.clone(), U256::from(rbalance))?;
+
+                <BondSwaps<T>>::insert(symbol, &bond_id, bond_swap);
+            } else {
+                <T as Trait>::RCurrency::mint(&record.bonder, symbol, rbalance)?;
+            }
+
+            
+            let mut pipe = ledger::BondPipelines::get(symbol, &record.pool).unwrap_or_default();
+            pipe.bond = pipe.bond.checked_add(record.amount).ok_or(Error::<T>::OverFlow)?;
+            pipe.active = pipe.active.checked_add(record.amount).ok_or(Error::<T>::OverFlow)?;
+            
+            <AccountBondCount<T>>::insert(symbol, &stafi_recipient, new_count);
+            <AccountBondRecords<T>>::insert(symbol, (&stafi_recipient, old_count), &bond_id);
+            <BondRecords<T>>::insert(symbol, &bond_id, &record);
+
+            <BondReasons<T>>::insert(symbol, &bond_id, BondReason::Pass);
+            <BondStates>::insert(symbol, (&record.blockhash, &record.txhash), BondState::Success);
+
+            ledger::BondPipelines::insert(symbol, &record.pool, pipe);
+            //update claim info
+            rclaim::Module::<T>::update_claim_info(&record.bonder, symbol, rbalance, record.amount);
+
+            Ok(())
+        }
+
         /// execute bond record
         #[weight = 100_000]
         pub fn execute_bond_record(origin, symbol: RSymbol, bond_id: T::Hash, reason: BondReason) -> DispatchResult {
