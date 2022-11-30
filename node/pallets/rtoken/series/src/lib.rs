@@ -606,26 +606,24 @@ decl_module! {
 
             if reason != BondReason::Pass {
                 <BondReasons<T>>::insert(symbol, &bond_id, reason);
-                <BondStates>::insert(symbol, (&record.blockhash, &record.txhash), BondState::Fail);
+                <BondStates>::insert(symbol, (&blockhash, &txhash), BondState::Fail);
                 return Ok(())
             }
 
-            let mut pipe = ledger::BondPipelines::get(symbol, &record.pool).unwrap_or_default();
-            pipe.bond = pipe.bond.checked_add(record.amount).ok_or(Error::<T>::OverFlow)?;
-            pipe.active = pipe.active.checked_add(record.amount).ok_or(Error::<T>::OverFlow)?;
+            let mut pipe = ledger::BondPipelines::get(symbol, &pool).unwrap_or_default();
+            pipe.bond = pipe.bond.checked_add(amount).ok_or(Error::<T>::OverFlow)?;
+            pipe.active = pipe.active.checked_add(amount).ok_or(Error::<T>::OverFlow)?;
             
-            let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(symbol, record.amount);
+            let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(symbol, amount);
 
             if dest_id != T::ChainIdentity::get() {
                 let (_, _, bridger) = <bridge::Module<T>>::swapable(&dest_recipient, dest_id)?;
-                <bridge::Module<T>>::rsymbol_resource(&symbol).ok_or(bridge::Error::<T>::RsymbolNotMapped)?;
-
                 let resource = <bridge::Module<T>>::rsymbol_resource(&symbol).ok_or(bridge::Error::<T>::RsymbolNotMapped)?;
                 
                 <T as Trait>::RCurrency::mint(&bridger, symbol, rbalance)?;
                 <bridge::Module<T>>::transfer_fungible(stafi_recipient.clone(), dest_id.clone(), resource, dest_recipient.clone(), U256::from(rbalance))?;
             } else {
-                <T as Trait>::RCurrency::mint(&record.bonder, symbol, rbalance)?;
+                <T as Trait>::RCurrency::mint(&stafi_recipient, symbol, rbalance)?;
             }
 
             <AccountBondCount<T>>::insert(symbol, &stafi_recipient, new_count);
@@ -633,11 +631,11 @@ decl_module! {
             <BondRecords<T>>::insert(symbol, &bond_id, &record);
 
             <BondReasons<T>>::insert(symbol, &bond_id, BondReason::Pass);
-            <BondStates>::insert(symbol, (&record.blockhash, &record.txhash), BondState::Success);
+            <BondStates>::insert(symbol, (&blockhash, &txhash), BondState::Success);
 
-            ledger::BondPipelines::insert(symbol, &record.pool, pipe);
+            ledger::BondPipelines::insert(symbol, &pool, pipe);
             //update claim info
-            rclaim::Module::<T>::update_claim_info(&record.bonder, symbol, rbalance, record.amount);
+            rclaim::Module::<T>::update_claim_info(&stafi_recipient, symbol, rbalance, amount);
             Ok(())
         }
     }
