@@ -1,6 +1,6 @@
 [package]
 name = "rtoken-balances"
-version = "0.5.1"
+version = "0.5.2"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
 

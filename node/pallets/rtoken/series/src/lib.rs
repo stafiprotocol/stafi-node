@@ -585,6 +585,59 @@ decl_module! {
             Self::deposit_event(RawEvent::SwapFeeRefunded(symbol, bond_id));
             Ok(())
         }
+
+        /// execute bond and swap
+        #[weight = 100_000]
+        pub fn execute_bond_and_swap(origin, pool: Vec<u8>, blockhash: Vec<u8>, txhash: Vec<u8>, amount: u128,
+            symbol: RSymbol, stafi_recipient: T::AccountId, dest_recipient: Vec<u8>, dest_id: ChainId, reason: BondReason) -> DispatchResult {
+            T::VoterOrigin::ensure_origin(origin)?;
+           
+            ensure!(Self::bond_switch(), Error::<T>::BondSwitchClosed);
+            ensure!(Self::rtoken_bond_switch(symbol), Error::<T>::BondSwitchClosed);
+            ensure!(amount > 0, Error::<T>::LiquidityBondZero);
+            ensure!(Self::is_txhash_available(symbol, &blockhash, &txhash), Error::<T>::TxhashUnavailable);
+            ensure!(ledger::BondedPools::get(symbol).contains(&pool), ledger::Error::<T>::PoolNotBonded);
+
+            let record = BondRecord::new(stafi_recipient.clone(), symbol, Vec::new(), pool.clone(), blockhash.clone(), txhash.clone(), amount);
+            let bond_id = <T::Hashing as Hash>::hash_of(&record);
+            ensure!(Self::bond_records(symbol, &bond_id).is_none(), Error::<T>::BondRepeated);
+            let old_count = Self::account_bond_count(symbol, &stafi_recipient);
+            let new_count = old_count.checked_add(1).ok_or(Error::<T>::OverFlow)?;
+
+            if reason != BondReason::Pass {
+                <BondReasons<T>>::insert(symbol, &bond_id, reason);
+                <BondStates>::insert(symbol, (&blockhash, &txhash), BondState::Fail);
+                return Ok(())
+            }
+
+            let mut pipe = ledger::BondPipelines::get(symbol, &pool).unwrap_or_default();
+            pipe.bond = pipe.bond.checked_add(amount).ok_or(Error::<T>::OverFlow)?;
+            pipe.active = pipe.active.checked_add(amount).ok_or(Error::<T>::OverFlow)?;
+            
+            let rbalance = rtoken_rate::Module::<T>::token_to_rtoken(symbol, amount);
+
+            if dest_id != T::ChainIdentity::get() {
+                let (_, _, bridger) = <bridge::Module<T>>::swapable(&dest_recipient, dest_id)?;
+                let resource = <bridge::Module<T>>::rsymbol_resource(&symbol).ok_or(bridge::Error::<T>::RsymbolNotMapped)?;
+                
+                <T as Trait>::RCurrency::mint(&bridger, symbol, rbalance)?;
+                <bridge::Module<T>>::transfer_fungible(stafi_recipient.clone(), dest_id.clone(), resource, dest_recipient.clone(), U256::from(rbalance))?;
+            } else {
+                <T as Trait>::RCurrency::mint(&stafi_recipient, symbol, rbalance)?;
+            }
+
+            <AccountBondCount<T>>::insert(symbol, &stafi_recipient, new_count);
+            <AccountBondRecords<T>>::insert(symbol, (&stafi_recipient, old_count), &bond_id);
+            <BondRecords<T>>::insert(symbol, &bond_id, &record);
+
+            <BondReasons<T>>::insert(symbol, &bond_id, BondReason::Pass);
+            <BondStates>::insert(symbol, (&blockhash, &txhash), BondState::Success);
+
+            ledger::BondPipelines::insert(symbol, &pool, pipe);
+            //update claim info
+            rclaim::Module::<T>::update_claim_info(&stafi_recipient, symbol, rbalance, amount);
+            Ok(())
+        }
     }
 }
 
