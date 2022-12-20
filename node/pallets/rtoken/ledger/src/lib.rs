@@ -595,6 +595,31 @@ decl_module! {
             Self::deposit_event(RawEvent::TransferReported(symbol, shot_id));
             Ok(())
         }
+
+        /// migrate pool
+        #[weight = 1_000_000]
+        pub fn migrate_pool(origin, symbol: RSymbol, old_pool: Vec<u8>, new_pool: Vec<u8>) -> DispatchResult {
+            ensure_root(origin)?;
+
+            let bonded_pools = Self::bonded_pools(symbol);
+            let op_old_bonded_index = bonded_pools.iter().position(|p| p == &old_pool);
+            ensure!(op_old_bonded_index.is_some(), Error::<T>::PoolNotBonded);
+            let op_new_bonded_index = bonded_pools.iter().position(|p| p == &new_pool);
+            ensure!(op_new_bonded_index.is_some(), Error::<T>::PoolNotBonded);
+
+            let mut old_pipe = Self::bond_pipelines(symbol, &old_pool).unwrap_or_default();
+            ensure!(old_pipe.bond == 0 && old_pipe.unbond == 0 && old_pipe.active > 0, Error::<T>::ActiveAlreadySet);
+            
+            let mut new_pipe = Self::bond_pipelines(symbol, &new_pool).unwrap_or_default();
+            ensure!(new_pipe.bond == 0 && new_pipe.unbond == 0 && new_pipe.active == 0, Error::<T>::ActiveAlreadySet);
+
+            new_pipe.active = old_pipe.active;
+            old_pipe.active = 0;
+
+            <BondPipelines>::insert(symbol, &old_pool, old_pipe);
+            <BondPipelines>::insert(symbol, &new_pool, new_pipe);
+            Ok(())
+        }
     }
 }
 
