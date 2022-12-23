@@ -141,6 +141,8 @@ decl_storage! {
 
         /// bond at least
         pub LeastBond get(fn least_bond): map hasher(blake2_128_concat) RSymbol => Option<u128>;
+        /// pending stake
+        pub PendingStake get(fn pending_stake): map hasher(blake2_128_concat) RSymbol => Option<u128>;
     }
 }
 
@@ -618,6 +620,30 @@ decl_module! {
 
             <BondPipelines>::insert(symbol, &old_pool, old_pipe);
             <BondPipelines>::insert(symbol, &new_pool, new_pipe);
+            Ok(())
+        }
+
+        /// bond link success
+        #[weight = 1_000_000]
+        pub fn bond_report_with_pending_stake(origin, symbol: RSymbol, shot_id: T::Hash, pending_stake: u128) -> DispatchResult {
+            Self::ensure_voter_or_admin(origin)?;
+            let op_snap = Self::snap_shots(symbol, &shot_id);
+            ensure!(op_snap.is_some(), Error::<T>::SnapShotNotFound);
+
+            let mut snap = op_snap.unwrap();
+            ensure!(snap.era_updated(), Error::<T>::StateNotEraUpdated);
+
+            let mut pipe = Self::bond_pipelines(symbol, &snap.pool).unwrap_or_default();
+            pipe.bond = pipe.bond.saturating_sub(snap.bond);
+            pipe.unbond = pipe.unbond.saturating_sub(snap.unbond);
+
+            <BondPipelines>::insert(symbol, &snap.pool, pipe);
+            snap.update_state(PoolBondState::BondReported);
+            <Snapshots<T>>::insert(symbol, &shot_id, snap.clone());
+            <PendingStake>::insert(symbol, pending_stake);
+            
+            Self::deposit_event(RawEvent::BondReported(symbol, shot_id, snap.last_voter));
+
             Ok(())
         }
     }
