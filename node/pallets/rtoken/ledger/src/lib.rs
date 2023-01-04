@@ -612,13 +612,18 @@ decl_module! {
             ensure!(op_new_bonded_index.is_some(), Error::<T>::PoolNotBonded);
 
             let mut old_pipe = Self::bond_pipelines(symbol, &old_pool).unwrap_or_default();
-            ensure!(old_pipe.bond == 0 && old_pipe.unbond == 0 && old_pipe.active > 0, Error::<T>::ActiveAlreadySet);
+            ensure!(old_pipe.active > 0, Error::<T>::ActiveAlreadySet);
             
             let mut new_pipe = Self::bond_pipelines(symbol, &new_pool).unwrap_or_default();
             ensure!(new_pipe.bond == 0 && new_pipe.unbond == 0 && new_pipe.active == 0, Error::<T>::ActiveAlreadySet);
 
             new_pipe.active = old_pipe.active;
+            new_pipe.bond = old_pipe.bond;
+            new_pipe.unbond = old_pipe.unbond;
+            
             old_pipe.active = 0;
+            old_pipe.bond = 0;
+            old_pipe.unbond = 0;
 
             <BondPipelines>::insert(symbol, &old_pool, old_pipe);
             <BondPipelines>::insert(symbol, &new_pool, new_pipe);
