@@ -141,6 +141,10 @@ decl_storage! {
 
         /// bond at least
         pub LeastBond get(fn least_bond): map hasher(blake2_128_concat) RSymbol => Option<u128>;
+        /// pending stake
+        pub PendingStake get(fn pending_stake): map hasher(blake2_128_concat) RSymbol => Option<u128>;
+        /// pending reward
+        pub PendingReward get(fn pending_reward): map hasher(blake2_128_concat) RSymbol => Option<u128>;
     }
 }
 
@@ -646,6 +650,100 @@ decl_module! {
             Self::deposit_event(RawEvent::TransferReported(symbol, shot_id));
             Ok(())
         }
+
+        /// migrate pool
+        #[weight = 1_000_000]
+        pub fn migrate_pool(origin, symbol: RSymbol, old_pool: Vec<u8>, new_pool: Vec<u8>) -> DispatchResult {
+            ensure_root(origin)?;
+
+            let bonded_pools = Self::bonded_pools(symbol);
+            let op_old_bonded_index = bonded_pools.iter().position(|p| p == &old_pool);
+            ensure!(op_old_bonded_index.is_some(), Error::<T>::PoolNotBonded);
+            let op_new_bonded_index = bonded_pools.iter().position(|p| p == &new_pool);
+            ensure!(op_new_bonded_index.is_some(), Error::<T>::PoolNotBonded);
+
+            let mut old_pipe = Self::bond_pipelines(symbol, &old_pool).unwrap_or_default();
+            ensure!(old_pipe.bond == 0 && old_pipe.unbond == 0 && old_pipe.active > 0, Error::<T>::ActiveAlreadySet);
+            
+            let mut new_pipe = Self::bond_pipelines(symbol, &new_pool).unwrap_or_default();
+            ensure!(new_pipe.bond == 0 && new_pipe.unbond == 0 && new_pipe.active == 0, Error::<T>::ActiveAlreadySet);
+
+            new_pipe.active = old_pipe.active;
+            old_pipe.active = 0;
+
+            <BondPipelines>::insert(symbol, &old_pool, old_pipe);
+            <BondPipelines>::insert(symbol, &new_pool, new_pipe);
+            Ok(())
+        }
+
+        /// bond and report active with pending value
+        #[weight = 1_000_000]
+        pub fn bond_and_report_active_with_pending_value(origin, symbol: RSymbol, shot_id: T::Hash, action: BondAction, active: u128, pending_stake: u128, pending_reward: u128) -> DispatchResult {
+            Self::ensure_voter_or_admin(origin)?;
+            let mut snap = Self::snap_shots(symbol, &shot_id).ok_or(Error::<T>::SnapShotNotFound)?;
+            ensure!(snap.era_updated(), Error::<T>::StateNotEraUpdated);
+            ensure!(rtoken_rate::Rate::get(symbol).is_some(), Error::<T>::RateIsNone);
+
+            let mut pipe = Self::bond_pipelines(symbol, &snap.pool).unwrap_or_default();
+            match action {
+                BondAction::BondOnly => pipe.bond = pipe.bond.saturating_sub(snap.bond),
+                BondAction::UnbondOnly => pipe.unbond = pipe.unbond.saturating_sub(snap.unbond),
+                BondAction::BothBondUnbond => {
+                    pipe.bond = pipe.bond.saturating_sub(snap.bond);
+                    pipe.unbond = pipe.unbond.saturating_sub(snap.unbond);
+                }
+                BondAction::EitherBondUnbond => (),
+                BondAction::InterDeduct => {
+                    let deduct = if snap.bond >= snap.unbond { snap.unbond } else { snap.bond };
+                    pipe.bond = pipe.bond.saturating_sub(deduct);
+                    pipe.unbond = pipe.unbond.saturating_sub(deduct);
+                }
+            }
+
+            let receiver = Self::receiver().ok_or(Error::<T>::NoReceiver)?;
+            let mut era_shots = Self::era_snap_shots(symbol, snap.era).unwrap_or(vec![]);
+            let era_index = era_shots.iter().position(|shot| shot == &shot_id).ok_or(Error::<T>::ActiveAlreadySet)?;
+
+            let mut cur_era_shot = Self::current_era_snap_shots(symbol).unwrap_or(vec![]);
+            let cur_era_index = cur_era_shot.iter().position(|shot| shot == &shot_id).ok_or(Error::<T>::ActiveAlreadySet)?;
+
+            let future_active = active;
+            if future_active > snap.active {
+                let fee = Self::commission() * (future_active - snap.active);
+                let rfee = rtoken_rate::Module::<T>::token_to_rtoken(symbol, fee);
+                T::RCurrency::mint(&receiver, symbol, rfee)?;
+            }
+
+            let expected_active = pipe.active.saturating_add(future_active).saturating_sub(snap.active);
+            pipe.active = expected_active;
+            let total_expected_active = Self::total_expected_active(symbol, snap.era).unwrap_or(0).saturating_add(expected_active);
+            era_shots.remove(era_index);
+            if era_shots.is_empty() {
+                let rbalance = T::RCurrency::total_issuance(symbol);
+                let rate = rtoken_rate::Module::<T>::set_rate(symbol, total_expected_active, rbalance);
+                rtoken_rate::EraRate::insert(symbol, snap.era, rate);
+            }
+            <EraSnapShots<T>>::insert(symbol, snap.era, era_shots);
+            <BondPipelines>::insert(symbol, &snap.pool, pipe);
+            <TotalExpectedActive>::insert(symbol, snap.era, total_expected_active);
+
+            <PendingStake>::insert(symbol, pending_stake);
+            <PendingReward>::insert(symbol, pending_reward);
+
+            if Self::pool_unbonds(symbol, (&snap.pool, snap.era)).is_some() {
+                snap.update_state(PoolBondState::ActiveReported);
+                Self::deposit_event(RawEvent::ActiveReported(symbol, shot_id.clone(), snap.last_voter.clone()));
+            } else {
+                snap.update_state(PoolBondState::WithdrawSkipped);
+                cur_era_shot.remove(cur_era_index);
+                <CurrentEraSnapShots<T>>::insert(symbol, cur_era_shot);
+            }
+
+            <Snapshots<T>>::insert(symbol, &shot_id, snap);
+            Ok(())
+        }
+
+        
     }
 }
 
