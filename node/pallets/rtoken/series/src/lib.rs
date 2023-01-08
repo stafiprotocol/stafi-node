@@ -67,6 +67,8 @@ decl_event! {
         ValidatorUpdated(RSymbol, Vec<u8>, Vec<u8>, Vec<u8>, u32),
         /// swap refunded
         SwapFeeRefunded(RSymbol, Hash),
+        /// ExecuteBondAndSwap
+        ExecuteBondAndSwap(AccountId, RSymbol, Hash, u128, Vec<u8>, ChainId),
     }
 }
 
@@ -636,6 +638,8 @@ decl_module! {
             ledger::BondPipelines::insert(symbol, &pool, pipe);
             //update claim info
             rclaim::Module::<T>::update_claim_info(&stafi_recipient, symbol, rbalance, amount);
+
+            Self::deposit_event(RawEvent::ExecuteBondAndSwap(stafi_recipient, symbol, bond_id, amount, dest_recipient, dest_id));
             Ok(())
         }
     }
