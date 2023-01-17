@@ -64,6 +64,8 @@ decl_storage! {
 		/// user mint count (account, rsymbol, cycle)
 		pub UserMintsCount get(fn user_mints_count): map hasher(blake2_128_concat) (T::AccountId, RSymbol, u32) => u64;
 		pub UserREthMintsCount get(fn user_reth_mints_count): map hasher(blake2_128_concat) (Vec<u8>, u32) => u64;
+		/// user mint tx hash
+		pub MintTxHashExist get(fn mint_tx_hash_exist): map hasher(blake2_128_concat) Vec<u8> => bool = false;
 	}
 }
 
@@ -101,6 +103,8 @@ decl_error! {
 		EthSigsFailed,
 		/// pubkey and mint value numnber not equal
 		PubkeyAndValueNumberErr,
+		/// mint tx hash exist
+		MintTxHashExistErr,
 	}
 }
 
@@ -380,10 +384,10 @@ decl_module! {
 		}
 
 		#[weight = 100_000]
-		pub fn update_reth_claim_info(origin, pubkeys: Vec<Vec<u8>>, mint_values: Vec<u128>, native_token_values: Vec<u128>) -> DispatchResult {
+		pub fn update_reth_claim_info(origin, tx_hashs: Vec<Vec<u8>>, pubkeys: Vec<Vec<u8>>, mint_values: Vec<u128>, native_token_values: Vec<u128>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_rewarder(&who), Error::<T>::InvalidREthRewarder);
-			ensure!(pubkeys.len() == mint_values.len() && pubkeys.len() == native_token_values.len() && pubkeys.len() < 200, Error::<T>::PubkeyAndValueNumberErr);
+			ensure!(tx_hashs.len() == pubkeys.len() && pubkeys.len() == mint_values.len() && pubkeys.len() == native_token_values.len() && pubkeys.len() < 200, Error::<T>::PubkeyAndValueNumberErr);
 
 			let now_block = system::Module::<T>::block_number().saturated_into::<u32>();
 			let mut cycle = Self::reth_act_current_cycle();
@@ -415,6 +419,7 @@ decl_module! {
 				return Ok(());
 			}
 			for j in 0..pubkeys.len() {
+				ensure!(!Self::mint_tx_hash_exist(tx_hashs[j].clone()), Error::<T>::MintTxHashExistErr);
 				ensure!(pubkeys[j].len() == 20, Error::<T>::InvalidPubkey);
 				ensure!(mint_values[j] > 0, Error::<T>::ValueZero);
 				ensure!(native_token_values[j] > 0, Error::<T>::ValueZero);
@@ -456,6 +461,8 @@ decl_module! {
 					<UserREthActs>::insert(pubkey.clone(), acts);
 				}
 				<UserREthMintsCount>::insert((pubkey.clone(), cycle), mints_count + 1);
+				
+				<MintTxHashExist>::insert(tx_hashs[k].clone(), true);
 			}
 			<REthActs>::insert(cycle, act);
 			Ok(())
