@@ -618,8 +618,8 @@ decl_module! {
             ensure!(new_pipe.bond == 0 && new_pipe.unbond == 0 && new_pipe.active == 0, Error::<T>::ActiveAlreadySet);
 
             new_pipe.active = old_pipe.active;
-            new_pipe.bond = old_pipe.bond;
-            new_pipe.unbond = old_pipe.unbond;
+            new_pipe.bond = 0;
+            new_pipe.unbond = 0;
             
             old_pipe.active = 0;
             old_pipe.bond = 0;
