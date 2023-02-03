@@ -1,6 +1,6 @@
 [package]
 name = "rfis"
-version = "0.5.2"
+version = "0.6.0"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
 
