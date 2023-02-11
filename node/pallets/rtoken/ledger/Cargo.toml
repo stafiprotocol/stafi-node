@@ -20,6 +20,7 @@ sp-io = { branch = "master", default-features = false, git = 'https://github.com
 frame-support = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 frame-system = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 pallet-balances = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
+sp-arithmetic = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
 node-primitives = { path = "../../../primitives", default-features = false }
 rtoken-balances = { path = "../balances", default-features = false}

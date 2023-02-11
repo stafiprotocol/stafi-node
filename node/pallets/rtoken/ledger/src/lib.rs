@@ -15,9 +15,12 @@ use sp_runtime::{
 use frame_system::{self as system, ensure_root};
 use rtoken_balances::{traits::{Currency as RCurrency}};
 use node_primitives::{RSymbol};
+use sp_arithmetic::{helpers_128bit::multiply_by_rational};
 
 pub mod models;
 pub use models::*;
+
+pub const ACTIVE_CHANGE_RATE_BASE: u128 = 1_000;
 
 pub trait Trait: system::Trait + rtoken_rate::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -101,6 +104,8 @@ decl_error! {
         RateIsNone,
         /// action not supported
         ActionNotSupported,
+        /// active not match
+        ActiveNotMatch,
     }
 }
 
@@ -145,6 +150,8 @@ decl_storage! {
         pub PendingStake get(fn pending_stake): map hasher(blake2_128_concat) RSymbol => Option<u128>;
         /// pending reward
         pub PendingReward get(fn pending_reward): map hasher(blake2_128_concat) RSymbol => Option<u128>;
+        /// active change rate limit
+        pub ActiveChangeRateLimit get(fn active_change_rate_limit): map hasher(blake2_128_concat) RSymbol => u128 = 10;
     }
 }
 
@@ -407,6 +414,7 @@ decl_module! {
             let cur_era_index = cur_era_shot.iter().position(|shot| shot == &shot_id).ok_or(Error::<T>::ActiveAlreadySet)?;
 
             let future_active = active.saturating_add(reward);
+            Self::check_active(symbol, snap.active, future_active)?;
             if future_active > snap.active {
                 let fee = Self::commission() * (future_active - snap.active);
                 let rfee = rtoken_rate::Module::<T>::token_to_rtoken(symbol, fee);
@@ -464,6 +472,7 @@ decl_module! {
             ensure!(op_cur_era_index.is_some(), Error::<T>::ActiveAlreadySet);
             let cur_era_index = op_cur_era_index.unwrap();
 
+            Self::check_active(symbol, snap.active, active)?;
             if active > snap.active {
                 let fee = Self::commission() * (active - snap.active);
                 let rfee = rtoken_rate::Module::<T>::token_to_rtoken(symbol, fee);
@@ -524,6 +533,7 @@ decl_module! {
             let cur_era_index = op_cur_era_index.unwrap();
 
             let active = staked.saturating_add(unstaked);
+            Self::check_active(symbol, snap.active, active)?;
             if active > snap.active {
                 let fee = Self::commission() * (active - snap.active);
                 let rfee = rtoken_rate::Module::<T>::token_to_rtoken(symbol, fee);
@@ -662,6 +672,7 @@ decl_module! {
             let cur_era_index = cur_era_shot.iter().position(|shot| shot == &shot_id).ok_or(Error::<T>::ActiveAlreadySet)?;
 
             let future_active = active;
+            Self::check_active(symbol, snap.active, future_active)?;
             if future_active > snap.active {
                 let fee = Self::commission() * (future_active - snap.active);
                 let rfee = rtoken_rate::Module::<T>::token_to_rtoken(symbol, fee);
@@ -728,6 +739,25 @@ impl<T: Trait> Module<T> {
         T::VoterOrigin::try_origin(o)
             .map(|_| ())
             .or_else(ensure_root)?;
+        Ok(())
+    }
+
+    pub fn check_active(symbol: RSymbol, snap_active: u128, report_active: u128) -> DispatchResult {
+        if snap_active == 0 {
+            return Ok(())
+        }
+        if Self::active_change_rate_limit(symbol) == 0 {
+            return Ok(())
+        }
+
+        let active_change_rate = if report_active > snap_active {
+            multiply_by_rational(report_active.saturating_sub(snap_active), ACTIVE_CHANGE_RATE_BASE, snap_active).unwrap_or(ACTIVE_CHANGE_RATE_BASE)
+        }else{
+            multiply_by_rational(snap_active.saturating_sub(report_active), ACTIVE_CHANGE_RATE_BASE, snap_active).unwrap_or(ACTIVE_CHANGE_RATE_BASE)
+        };
+
+        ensure!(active_change_rate < Self::active_change_rate_limit(symbol), Error::<T>::ActiveNotMatch);
+
         Ok(())
     }
 }
