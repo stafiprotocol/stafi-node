@@ -15,7 +15,6 @@ use sp_runtime::{
 use frame_system::{self as system, ensure_root};
 use rtoken_balances::{traits::{Currency as RCurrency}};
 use node_primitives::{RSymbol};
-use sp_arithmetic::{helpers_128bit::multiply_by_rational};
 
 pub mod models;
 pub use models::*;
@@ -151,7 +150,7 @@ decl_storage! {
         /// pending reward
         pub PendingReward get(fn pending_reward): map hasher(blake2_128_concat) RSymbol => Option<u128>;
         /// active change rate limit
-        pub ActiveChangeRateLimit get(fn active_change_rate_limit): map hasher(blake2_128_concat) RSymbol => u128 = 10;
+        pub ActiveChangeRateLimit get(fn active_change_rate_limit): map hasher(blake2_128_concat) RSymbol => Perbill = Perbill::from_percent(1);
     }
 }
 
@@ -730,6 +729,17 @@ decl_module! {
             Ok(())
         }
 
+        /// set active change rate limit
+        #[weight = 1_000_000]
+		fn set_active_change_rate_limit(origin, symbol: RSymbol, new_part: u32) -> DispatchResult {
+            ensure_root(origin)?;
+            ensure!(new_part < 1_000_000_000, Error::<T>::OverFlow);
+
+			<ActiveChangeRateLimit>::insert(symbol, Perbill::from_parts(new_part));
+
+			Ok(())
+        }
+
         
     }
 }
@@ -746,18 +756,17 @@ impl<T: Trait> Module<T> {
         if snap_active == 0 {
             return Ok(())
         }
-        if Self::active_change_rate_limit(symbol) == 0 {
+        if Self::active_change_rate_limit(symbol) == Perbill::zero() {
             return Ok(())
         }
 
-        let active_change_rate = if report_active > snap_active {
-            multiply_by_rational(report_active.saturating_sub(snap_active), ACTIVE_CHANGE_RATE_BASE, snap_active).unwrap_or(ACTIVE_CHANGE_RATE_BASE)
+        let change = if report_active > snap_active {
+            report_active.saturating_sub(snap_active)
         }else{
-            multiply_by_rational(snap_active.saturating_sub(report_active), ACTIVE_CHANGE_RATE_BASE, snap_active).unwrap_or(ACTIVE_CHANGE_RATE_BASE)
+            snap_active.saturating_sub(report_active)
         };
-
-        ensure!(active_change_rate < Self::active_change_rate_limit(symbol), Error::<T>::ActiveNotMatch);
-
+        
+        ensure!(change < Self::active_change_rate_limit(symbol) * snap_active, Error::<T>::ActiveNotMatch);
         Ok(())
     }
 }
