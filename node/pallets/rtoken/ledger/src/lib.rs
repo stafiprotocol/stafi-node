@@ -697,6 +697,28 @@ decl_module! {
             Ok(())
         }
 
+        /// fix rsol rate
+        #[weight = 1_000_000]
+        pub fn fix_rsol_rate(origin, pool: Vec<u8>, active: u128) -> DispatchResult {
+            ensure_root(origin)?;
+
+            let symbol = RSymbol::RSOL;
+            let deal_era = 410;
+
+            ensure!(Self::chain_eras(symbol).unwrap_or(0) == deal_era, Error::<T>::ActiveAlreadySet);
+
+            let mut pipe = Self::bond_pipelines(symbol, &pool).ok_or(Error::<T>::PoolNotFound)?;
+            pipe.active = active;
+
+            let rbalance = T::RCurrency::total_issuance(symbol);
+
+            let rate = rtoken_rate::Module::<T>::set_rate(symbol, active, rbalance);
+            rtoken_rate::EraRate::insert(symbol, deal_era, rate);
+            <BondPipelines>::insert(symbol, &pool, pipe);
+
+            Ok(())
+        }
+
         
     }
 }
