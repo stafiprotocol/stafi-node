@@ -19,8 +19,6 @@ use node_primitives::{RSymbol};
 pub mod models;
 pub use models::*;
 
-pub const ACTIVE_CHANGE_RATE_BASE: u128 = 1_000;
-
 pub trait Trait: system::Trait + rtoken_rate::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
