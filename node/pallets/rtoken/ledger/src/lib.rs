@@ -101,6 +101,8 @@ decl_error! {
         RateIsNone,
         /// action not supported
         ActionNotSupported,
+        /// active not match
+        ActiveNotMatch,
     }
 }
 
@@ -145,6 +147,8 @@ decl_storage! {
         pub PendingStake get(fn pending_stake): map hasher(blake2_128_concat) RSymbol => Option<u128>;
         /// pending reward
         pub PendingReward get(fn pending_reward): map hasher(blake2_128_concat) RSymbol => Option<u128>;
+        /// active change rate limit
+        pub ActiveChangeRateLimit get(fn active_change_rate_limit): map hasher(blake2_128_concat) RSymbol => Perbill = Perbill::from_percent(1);
     }
 }
 
@@ -458,6 +462,7 @@ decl_module! {
             let cur_era_index = cur_era_shot.iter().position(|shot| shot == &shot_id).ok_or(Error::<T>::ActiveAlreadySet)?;
 
             let future_active = active.saturating_add(reward);
+            Self::check_active(symbol, snap.active, future_active)?;
             if future_active > snap.active {
                 let fee = Self::commission() * (future_active - snap.active);
                 let rfee = rtoken_rate::Module::<T>::token_to_rtoken(symbol, fee);
@@ -515,6 +520,7 @@ decl_module! {
             ensure!(op_cur_era_index.is_some(), Error::<T>::ActiveAlreadySet);
             let cur_era_index = op_cur_era_index.unwrap();
 
+            Self::check_active(symbol, snap.active, active)?;
             if active > snap.active {
                 let fee = Self::commission() * (active - snap.active);
                 let rfee = rtoken_rate::Module::<T>::token_to_rtoken(symbol, fee);
@@ -575,6 +581,7 @@ decl_module! {
             let cur_era_index = op_cur_era_index.unwrap();
 
             let active = staked.saturating_add(unstaked);
+            Self::check_active(symbol, snap.active, active)?;
             if active > snap.active {
                 let fee = Self::commission() * (active - snap.active);
                 let rfee = rtoken_rate::Module::<T>::token_to_rtoken(symbol, fee);
@@ -669,8 +676,8 @@ decl_module! {
             ensure!(new_pipe.bond == 0 && new_pipe.unbond == 0 && new_pipe.active == 0, Error::<T>::ActiveAlreadySet);
 
             new_pipe.active = old_pipe.active;
-            new_pipe.bond = old_pipe.bond;
-            new_pipe.unbond = old_pipe.unbond;
+            new_pipe.bond = 0;
+            new_pipe.unbond = 0;
             
             old_pipe.active = 0;
             old_pipe.bond = 0;
@@ -713,6 +720,7 @@ decl_module! {
             let cur_era_index = cur_era_shot.iter().position(|shot| shot == &shot_id).ok_or(Error::<T>::ActiveAlreadySet)?;
 
             let future_active = active;
+            Self::check_active(symbol, snap.active, future_active)?;
             if future_active > snap.active {
                 let fee = Self::commission() * (future_active - snap.active);
                 let rfee = rtoken_rate::Module::<T>::token_to_rtoken(symbol, fee);
@@ -748,6 +756,39 @@ decl_module! {
             Ok(())
         }
 
+        /// fix rsol rate
+        #[weight = 1_000_000]
+        pub fn fix_rsol_rate(origin, pool: Vec<u8>, active: u128) -> DispatchResult {
+            ensure_root(origin)?;
+
+            let symbol = RSymbol::RSOL;
+            let deal_era = 410;
+
+            ensure!(Self::chain_eras(symbol).unwrap_or(0) == deal_era, Error::<T>::ActiveAlreadySet);
+
+            let mut pipe = Self::bond_pipelines(symbol, &pool).ok_or(Error::<T>::PoolNotFound)?;
+            pipe.active = active;
+
+            let rbalance = T::RCurrency::total_issuance(symbol);
+
+            let rate = rtoken_rate::Module::<T>::set_rate(symbol, active, rbalance);
+            rtoken_rate::EraRate::insert(symbol, deal_era, rate);
+            <BondPipelines>::insert(symbol, &pool, pipe);
+
+            Ok(())
+        }
+
+        /// set active change rate limit
+        #[weight = 1_000_000]
+		fn set_active_change_rate_limit(origin, symbol: RSymbol, new_part: u32) -> DispatchResult {
+            ensure_root(origin)?;
+            ensure!(new_part < 1_000_000_000, Error::<T>::OverFlow);
+
+			<ActiveChangeRateLimit>::insert(symbol, Perbill::from_parts(new_part));
+
+			Ok(())
+        }
+
         
     }
 }
@@ -757,6 +798,24 @@ impl<T: Trait> Module<T> {
         T::VoterOrigin::try_origin(o)
             .map(|_| ())
             .or_else(ensure_root)?;
+        Ok(())
+    }
+
+    pub fn check_active(symbol: RSymbol, snap_active: u128, report_active: u128) -> DispatchResult {
+        if snap_active == 0 {
+            return Ok(())
+        }
+        if Self::active_change_rate_limit(symbol) == Perbill::zero() {
+            return Ok(())
+        }
+
+        let change = if report_active > snap_active {
+            report_active.saturating_sub(snap_active)
+        } else {
+            snap_active.saturating_sub(report_active)
+        };
+        
+        ensure!(change < Self::active_change_rate_limit(symbol) * snap_active, Error::<T>::ActiveNotMatch);
         Ok(())
     }
 }
