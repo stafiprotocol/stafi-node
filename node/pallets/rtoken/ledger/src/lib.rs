@@ -760,7 +760,7 @@ impl<T: Trait> Module<T> {
 
         let change = if report_active > snap_active {
             report_active.saturating_sub(snap_active)
-        }else{
+        } else {
             snap_active.saturating_sub(report_active)
         };
         
