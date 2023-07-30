@@ -1,6 +1,6 @@
 [package]
 name = "node-primitives"
-version = "0.6.0"
+version = "0.6.2"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
 

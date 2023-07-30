@@ -63,13 +63,16 @@ fi
 if ! which rustup >/dev/null 2>&1; then
 	curl https://sh.rustup.rs -sSf | sh -s -- -y
 	source ~/.cargo/env
-	rustup default stable
+	rustup install 1.59.0
+	rustup default 1.59.0
 else
 	rustup update
-	rustup default stable
+	rustup install 1.59.0
+	rustup default 1.59.0
 fi
 
-rustup update nightly
+rustup install nightly-2022-01-06
+rustup default nightly-2022-01-06
 rustup target add wasm32-unknown-unknown --toolchain nightly
 
 echo 'You can add `export PATH="$HOME/.cargo/bin:$PATH"` in the ~/.bashrc and restart the terminal or run source ~/.cargo/env to update environment temporarily.'
