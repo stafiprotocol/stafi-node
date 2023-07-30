@@ -71,6 +71,7 @@ else
 	rustup default 1.59.0
 fi
 
+rustup install nightly-2022-01-06
 rustup default nightly-2022-01-06
 rustup target add wasm32-unknown-unknown --toolchain nightly
 
