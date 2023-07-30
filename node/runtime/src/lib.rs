@@ -102,7 +102,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 27,
+	spec_version: 28,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -556,7 +556,7 @@ impl pallet_collective::Trait<CouncilCollective> for Runtime {
 parameter_types! {
 	pub const CandidacyBond: Balance = 10_000 * DOLLARS;
 	pub const VotingBond: Balance = 10 * DOLLARS;
-	pub const TermDuration: BlockNumber = 28 * DAYS;
+	pub const TermDuration: BlockNumber = 2 * DAYS;
 	pub const DesiredMembers: u32 = 0;
 	pub const DesiredRunnersUp: u32 = 0;
 	pub const ElectionsPhragmenModuleId: LockIdentifier = *b"phrelect";
