@@ -147,7 +147,7 @@ Seiya is the public testnet of StaFi. You need to have some FIS tokens to partic
 
 - Each Telegram account can receive 1 airdrop within 12 hours.
 - Each address can only receive airdrop for 1 time.
-- The address to receive the airdrop needs to be satisfied with: the address prefix should be start with number 2 or 3 ([Create an account](https://docs.stafi.io/chain-library/guides/account-creation)).
+- The address to receive the airdrop needs to be satisfied with: the address prefix should start with number 2 or 3 ([Create an account](https://docs.stafi.io/chain-library/guides/account-creation)).
 - The maximum daily distribution of airdrops is 300, first come first served.
 - The number of each airdrop is a fixed value: 500.
 
@@ -159,7 +159,7 @@ Coming
 
 ### Bond FIS tokens
 
-It is highly recommended that you make your controller and stash accounts be two separate accounts. For this, you will create two accounts and make sure each of them have at least enough funds to pay the fees for making transactions. Keep most of your funds in the stash account since it is meant to be the custodian of your staking funds.
+It is highly recommended that you make your controller and stash accounts be two separate accounts. For this, you will create two accounts and make sure each of them has at least enough funds to pay the fees for making transactions. Keep most of your funds in the stash account since it is meant to be the custodian of your staking funds.
 
 Make sure not to bond all your FIS balance since you will be unable to pay transaction fees from your bonded balance.
 
@@ -214,7 +214,7 @@ Click "Validate".
 
 If you go to the "Staking" tab, you will see a list of active validators currently running on the network. At the top of the page, it shows the number of validator slots that are available as well as the number of nodes that have signaled their intention to be a validator. You can go to the "Waiting" tab to double check to see whether your node is listed there.
 
-The validator set is refreshed every era. In the next era, if there is a slot available and your node is selected to join the validator set, your node will become an active validator. Until then, it will remain in the waiting queue. If your validator is not selected to become part of the validator set, it will remain in the waiting queue until it is. There is no need to re-start if you are not selected for the validator set in a particular era. However, it may be necessary to increase the number of FIS tokens staked or seek out nominators for your validator in order to join the validator set.
+The validator set is refreshed every era. In the next era, if there is a slot available and your node is selected to join the validator set, your node will become an active validator. Until then, it will remain in the waiting queue. If your validator is not selected to become part of the validator set, it will remain in the waiting queue until it is. There is no need to restart if you are not selected for the validator set in a particular era. However, it may be necessary to increase the number of FIS tokens staked or seek out nominators for your validator in order to join the validator set.
 
 Congratulations! If you have followed all of these steps, and been selected to be a part of the validator set, you are now running a StaFi validator!
 
