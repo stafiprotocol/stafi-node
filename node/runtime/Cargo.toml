@@ -1,6 +1,6 @@
 [package]
 name = "node-runtime"
-version = "0.6.2"
+version = "0.6.3"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
 build = "build.rs"
@@ -73,25 +73,25 @@ pallet-utility = { branch = "master", default-features = false, git = 'https://g
 pallet-transaction-payment = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 pallet-transaction-payment-rpc-runtime-api = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 pallet-vesting = { branch = "master", default-features = false, git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
-xtoken-balances = { version = "0.6.2", default-features = false, path = "../pallets/xtoken/balances" }
-rtoken-balances = { version = "0.6.2", default-features = false, path = "../pallets/rtoken/balances" }
-rtoken-rate = { version = "0.6.2", default-features = false, path = "../pallets/rtoken/rate" }
-rfis = { version = "0.6.2", default-features = false, path = "../pallets/rtoken/rfis" }
-bridge-relayers = { version = "0.6.2", default-features = false, path = "../pallets/bridge/relayers" }
-bridge-common = { version = "0.6.2", default-features = false, path = "../pallets/bridge/common", package = "bridge-common" }
-bridge-swap = { version = "0.6.2", default-features = false, path = "../pallets/bridge/swap", package = "bridge-swap" }
-rtoken-relayers = { version = "0.6.2", default-features = false, path = "../pallets/rtoken/relayers" }
-rtoken-votes = { version = "0.6.2", default-features = false, path = "../pallets/rtoken/votes" }
-rtoken-ledger = { version = "0.6.2", default-features = false, path = "../pallets/rtoken/ledger" }
-rtoken-series = { version = "0.6.2", default-features = false, path = "../pallets/rtoken/series" }
-xclaim = { version = "0.6.2", default-features = false, path = "../pallets/claims/xclaim" }
-rclaim = { version = "0.6.2", default-features = false, path = "../pallets/claims/rclaim" }
-rdexn-payers = { version = "0.6.2", default-features = false, path = "../pallets/rdexn/payers" }
-rdexn-signatures = { version = "0.6.2", default-features = false, path = "../pallets/rdexn/signatures" }
-rdexn-swap = { version = "0.6.2", default-features = false, path = "../pallets/rdexn/swap" }
-rdex-swap = { version = "0.6.2", default-features = false, path = "../pallets/rdex/swap" }
-rdex-balances = { version = "0.6.2", default-features = false, path = "../pallets/rdex/balances" }
-rdex-mining = { version = "0.6.2", default-features = false, path = "../pallets/rdex/mining" }
+xtoken-balances = { version = "0.6.3", default-features = false, path = "../pallets/xtoken/balances" }
+rtoken-balances = { version = "0.6.3", default-features = false, path = "../pallets/rtoken/balances" }
+rtoken-rate = { version = "0.6.3", default-features = false, path = "../pallets/rtoken/rate" }
+rfis = { version = "0.6.3", default-features = false, path = "../pallets/rtoken/rfis" }
+bridge-relayers = { version = "0.6.3", default-features = false, path = "../pallets/bridge/relayers" }
+bridge-common = { version = "0.6.3", default-features = false, path = "../pallets/bridge/common", package = "bridge-common" }
+bridge-swap = { version = "0.6.3", default-features = false, path = "../pallets/bridge/swap", package = "bridge-swap" }
+rtoken-relayers = { version = "0.6.3", default-features = false, path = "../pallets/rtoken/relayers" }
+rtoken-votes = { version = "0.6.3", default-features = false, path = "../pallets/rtoken/votes" }
+rtoken-ledger = { version = "0.6.3", default-features = false, path = "../pallets/rtoken/ledger" }
+rtoken-series = { version = "0.6.3", default-features = false, path = "../pallets/rtoken/series" }
+xclaim = { version = "0.6.3", default-features = false, path = "../pallets/claims/xclaim" }
+rclaim = { version = "0.6.3", default-features = false, path = "../pallets/claims/rclaim" }
+rdexn-payers = { version = "0.6.3", default-features = false, path = "../pallets/rdexn/payers" }
+rdexn-signatures = { version = "0.6.3", default-features = false, path = "../pallets/rdexn/signatures" }
+rdexn-swap = { version = "0.6.3", default-features = false, path = "../pallets/rdexn/swap" }
+rdex-swap = { version = "0.6.3", default-features = false, path = "../pallets/rdex/swap" }
+rdex-balances = { version = "0.6.3", default-features = false, path = "../pallets/rdex/balances" }
+rdex-mining = { version = "0.6.3", default-features = false, path = "../pallets/rdex/mining" }
 [build-dependencies]
 wasm-builder-runner = { branch = "master", package = "substrate-wasm-builder-runner", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 
