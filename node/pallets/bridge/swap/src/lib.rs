@@ -26,7 +26,6 @@ use sp_core::U256;
 use sp_arithmetic::traits::SaturatedConversion;
 use node_primitives::{ChainId, RSymbol, XSymbol};
 use rtoken_balances::{traits::{Currency as RCurrency}};
-use xtoken_balances::{traits::{Currency as XCurrency}};
 
 type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
@@ -35,9 +34,6 @@ pub trait Trait: system::Trait + bridge::Trait {
     type Currency: Currency<Self::AccountId>;
     /// Currency mechanism of rtoken
     type RCurrency: RCurrency<Self::AccountId>;
-
-    /// Currency mechanism of rtoken
-    type XCurrency: XCurrency<Self::AccountId>;
 
     /// Specifies the origin check provided by the bridge for calls that can only be called by the bridge pallet
     type BridgeOrigin: EnsureOrigin<Self::Origin, Success = Self::AccountId>;
@@ -131,36 +127,6 @@ decl_module! {
             } else {
                 T::RCurrency::transfer(&bridge_id, &recipient, sym, amount)?;
             }
-            Ok(())
-        }
-
-        /// Transfers some amount of the xtoken to some recipient on a (whitelisted) destination chain.
-        #[weight = 195_000_000]
-        pub fn transfer_xtoken(origin, symbol: XSymbol, amount: u128, recipient: Vec<u8>, dest_id: ChainId) -> DispatchResult {
-            let who = ensure_signed(origin)?;
-
-            let (fee, receiver, _) = <bridge::Module<T>>::swapable(&recipient, dest_id)?;
-            let resource = <bridge::Module<T>>::xsymbol_resource(&symbol).ok_or(Error::<T>::XsymbolNotMapped)?;
-            let new_rbalance = T::XCurrency::free_balance(&who, symbol).checked_sub(amount)
-                .ok_or(Error::<T>::InsufficientXbalance)?;
-            T::XCurrency::ensure_can_withdraw(&who, symbol, amount, new_rbalance)?;
-
-            if fee > 0 {
-                T::Currency::transfer(&who, &receiver, fee.saturated_into(), KeepAlive)?;
-            }
-            T::XCurrency::burn(&who, symbol, amount)?;
-
-            <bridge::Module<T>>::transfer_fungible(who, dest_id, resource, recipient, U256::from(amount))
-        }
-
-        /// Allows the bridge to swap xtoken back
-        #[weight = 195_000_000]
-        pub fn transfer_xtoken_back(origin, recipient: T::AccountId, amount: u128, resource_id: ResourceId) -> DispatchResult {
-            T::BridgeOrigin::ensure_origin(origin)?;
-            let op_sym = <bridge::Module<T>>::resource_xsymbol(&resource_id);
-            ensure!(op_sym.is_some(), Error::<T>::ResourceNotMapped);
-            let sym = op_sym.unwrap();
-            T::XCurrency::mint(&recipient, sym, amount)?;
             Ok(())
         }
     }

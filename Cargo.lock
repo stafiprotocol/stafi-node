@@ -565,7 +565,6 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "xtoken-balances",
 ]
 
 [[package]]
@@ -3742,7 +3741,6 @@ dependencies = [
  "sp-version",
  "static_assertions",
  "substrate-wasm-builder-runner 1.0.6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?branch=master)",
- "xtoken-balances",
 ]
 
 [[package]]
@@ -9336,20 +9334,6 @@ dependencies = [
  "curve25519-dalek",
  "rand_core 0.5.1",
  "zeroize",
-]
-
-[[package]]
-name = "xtoken-balances"
-version = "0.6.3"
-dependencies = [
- "frame-support",
- "frame-system",
- "node-primitives",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-runtime",
- "sp-std",
 ]
 
 [[package]]
