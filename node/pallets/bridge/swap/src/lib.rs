@@ -24,7 +24,7 @@ use frame_system::{self as system, ensure_signed};
 use sp_runtime::{traits::{Zero, Saturating}};
 use sp_core::U256;
 use sp_arithmetic::traits::SaturatedConversion;
-use node_primitives::{ChainId, RSymbol, XSymbol};
+use node_primitives::{ChainId, RSymbol};
 use rtoken_balances::{traits::{Currency as RCurrency}};
 
 type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
@@ -47,7 +47,6 @@ decl_error! {
         InsufficientRbalance,
         InsufficientXbalance,
         RsymbolNotMapped,
-        XsymbolNotMapped,
         ResourceNotMapped,
     }
 }
