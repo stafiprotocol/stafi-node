@@ -3742,7 +3742,6 @@ dependencies = [
  "sp-version",
  "static_assertions",
  "substrate-wasm-builder-runner 1.0.6 (git+https://github.com/stafiprotocol/stafi-blockchain.git?branch=master)",
- "xclaim",
  "xtoken-balances",
 ]
 
@@ -9337,19 +9336,6 @@ dependencies = [
  "curve25519-dalek",
  "rand_core 0.5.1",
  "zeroize",
-]
-
-[[package]]
-name = "xclaim"
-version = "0.6.3"
-dependencies = [
- "frame-support",
- "frame-system",
- "node-primitives",
- "parity-scale-codec",
- "sp-runtime",
- "sp-std",
- "xtoken-balances",
 ]
 
 [[package]]
