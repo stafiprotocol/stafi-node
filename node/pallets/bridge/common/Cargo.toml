@@ -1,6 +1,6 @@
 [package]
 name = "bridge-common"
-version = "0.6.2"
+version = "0.6.3"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 edition = "2018"
 
