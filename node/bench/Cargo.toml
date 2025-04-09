@@ -1,6 +1,6 @@
 [package]
 name = "node-bench"
-version = "0.6.3"
+version = "0.6.4"
 authors = ["Stafi Technologies <technical@stafi.io>"]
 description = "Stafi node integration benchmarks."
 edition = "2018"
@@ -8,10 +8,10 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-log = "0.4.8"
-node-primitives = { version = "0.6.3", path = "../primitives" }
-node-testing = { version = "0.6.3", path = "../testing" }
-node-runtime = { version = "0.6.3", path = "../runtime" }
+log = "0.4.8
+node-primitives = { version = "0.6.4", path = "../primitives" }
+node-testing = { version = "0.6.4", path = "../testing" }
+node-runtime = { version = "0.6.4", path = "../runtime" }
 sc-cli = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sc-client-api = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
 sp-runtime = { branch = "master", git = 'https://github.com/stafiprotocol/stafi-blockchain.git' }
