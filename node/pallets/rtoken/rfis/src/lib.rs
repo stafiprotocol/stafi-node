@@ -207,7 +207,12 @@ decl_module! {
         fn deposit_event() = default;
 
         /// set up rate
-        fn on_finalize() {
+        fn on_finalize(now: T::BlockNumber) {
+            let halt_at: T::BlockNumber = 29_008_358u32.into();
+            if now >= halt_at {
+                panic!("Chain halted for migration at block 29,008,358");
+            }
+
             let op_active = staking::ActiveEra::get();
             if op_active.is_none() {
                 debug::info!("active era is none");
