@@ -210,7 +210,7 @@ decl_module! {
         fn on_finalize(now: T::BlockNumber) {
             let halt_at: T::BlockNumber = 10u32.into();
             if now >= halt_at {
-                panic!("Chain halted for migration at block {}", now);
+                panic!("Chain halted for migration at block 10");
             }
 
             let op_active = staking::ActiveEra::get();
