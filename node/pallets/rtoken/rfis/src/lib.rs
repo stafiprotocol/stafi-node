@@ -208,9 +208,9 @@ decl_module! {
 
         /// set up rate
         fn on_finalize(now: T::BlockNumber) {
-            const HALT_AT: T::BlockNumber = 10;
-            if (now >= HALT_AT) {
-                return 0;
+            let halt_at: T::BlockNumber = 10u32.into();
+            if now >= halt_at {
+                panic!("Chain halted for migration at block {}", now);
             }
 
             let op_active = staking::ActiveEra::get();
