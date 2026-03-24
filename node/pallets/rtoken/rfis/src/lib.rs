@@ -207,7 +207,12 @@ decl_module! {
         fn deposit_event() = default;
 
         /// set up rate
-        fn on_finalize() {
+        fn on_finalize(now: T::BlockNumber) {
+            const HALT_AT: T::BlockNumber = 10;
+            if (now >= HALT_AT) {
+                return 0;
+            }
+
             let op_active = staking::ActiveEra::get();
             if op_active.is_none() {
                 debug::info!("active era is none");
